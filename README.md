@@ -70,6 +70,12 @@ Inga betalda uppgraderingar eller obegränsad gratiskapacitet förutsätts.
 
 Avsett GitHub-konto: **marcusbodin**. Publikt källkodsrepo är godkänt, men ingen
 push, fjärrrepoändring, resursprovisionering, DNS-ändring eller driftsättning har
-gjorts. Domänen `kommandekollen.se` finns hos Inleed. Källrättigheter,
+gjorts. Domänen `kommandekollen.se` registreras och betalas fortsatt hos Inleed.
+Ägaren har godkänt att auktoritativ DNS flyttas till **Cloudflare Free vid
+driftsättning**. Frontend blir `https://kommandekollen.se`, API blir
+`https://api.kommandekollen.se` via Workers Custom Domain. Det löser
+arkitekturfrågan för säkra same-site-sessioner; flytten är inte genomförd.
+`wrangler.toml` har en separat produktionsmiljö med tjänsten fortsatt avstängd.
+Källrättigheter,
 konton, domänverifiering, e-postleverans och produktionsbudget måste lösas innan
 tjänsten kan öppnas ens för godkända medlemmar.

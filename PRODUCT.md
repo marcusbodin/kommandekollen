@@ -44,7 +44,16 @@ Owner approval, rejection and revocation are authenticated server-side operation
 - Initial implemented geographic scope: the 26 municipalities of Stockholms län.
 - Conservative pilot limits: 40 accounts, 200 stored listings, 80 attempted
   emails/day, 2400/month; at most 20 non-digest email attempts/day.
-- DNS remains at Inleed; no hosting, email or SSL purchase is approved.
+- Updated owner decision, 2026-09-25: Inleed remains the registrar and domain
+  billing provider; authoritative DNS may move to Cloudflare Free at deployment.
+  The previous requirement to retain Inleed DNS is superseded.
+- Approved frontend: https://kommandekollen.se on GitHub Pages; approved API:
+  https://api.kommandekollen.se through a Worker Custom Domain in an active
+  Cloudflare zone. This supports same-site secure sessions without bearer tokens.
+- Existing DNS records and DNSSEC/DS must be coordinated during migration.
+  Pages DNS records start DNS-only; nameservers come from the actual Cloudflare
+  account, never guessed values. No DNS/account/deployment action has occurred.
+- No paid DNS, hosting, email or SSL purchase is approved.
 - GitHub authentication, Cloudflare provisioning, Resend verification and
   DNS configuration have not been completed.
 

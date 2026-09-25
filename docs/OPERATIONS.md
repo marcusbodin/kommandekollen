@@ -40,9 +40,18 @@ but cannot recreate a logged-out or revoked session. Email links put tokens in
 the URL fragment, strip it immediately into memory, use no-referrer and require
 an explicit POST to avoid scanner side effects.
 
-**Hosting constraint:** SameSite cookies require a same-site frontend/API.
-See DEPLOYMENT.md before selecting production hosts. Do not weaken to
-third-party cookies and assume all browsers will work.
+**Approved hosting:** the HTTPS frontend at `kommandekollen.se` and API at
+`api.kommandekollen.se` are same-site, but still different origins. The owner
+approved Cloudflare Free authoritative DNS while retaining Inleed as registrar,
+so an active Cloudflare zone can support the API Worker Custom Domain. Preserve
+host-only `__Host-kk_session` cookies on the API: do not add a `Domain` attribute.
+Frontend fetches still require `credentials: "include"` and the API allows only
+the exact `https://kommandekollen.se` origin with credentialed CORS. SameSite
+does not replace these Origin checks. No bearer-token redesign is needed.
+The previous DNS/session-hosting architecture blocker is resolved by this
+decision, but actual zone/domain/certificate setup remains undone. See
+DEPLOYMENT.md for migration safeguards. The initial `github.io` shell is not a
+supported login origin; do not weaken cookies to support cross-site login.
 
 ## Mail reliability and limits
 
