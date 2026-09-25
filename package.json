@@ -13,6 +13,7 @@
     "test:browser": "playwright test",
     "api:dev": "wrangler dev --local",
     "db:local": "wrangler d1 migrations apply kommandekollen --local",
+    "db:migrate": "tsx scripts/migrate.ts",
     "ingest": "tsx scripts/ingest.ts",
     "preview": "vite preview --host 127.0.0.1"
   },
