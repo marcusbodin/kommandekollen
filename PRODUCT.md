@@ -61,10 +61,15 @@ Owner approval, rejection and revocation are authenticated server-side operation
 
 Kommandekollen. Swedish interface. Familiar property-search controls inspired
 by the task flow on Hemnet, without copying its branding or content.
+Confirmed mobile preference: bright/lightweight, default-light interface even
+on a dark-preferring OS, larger touch targets and numeric sliders with optional
+precise entry. Existing ranges and saved-search semantics remain available.
+Use freely licensed local home imagery only as labeled inspiration, never as
+a representation of an actual listing.
 
 ## Evidence on Hand
 
-No real listing dataset, agency permissions, photographs, testimonials or
+No real listing dataset, agency permissions, listing photographs, testimonials or
 coverage measurements have been supplied. No live agency integration is enabled.
 Demonstration data must be labeled and must never send email or create accounts.
 Fastighetsbyran explicitly disallows automated access without special permission
@@ -72,6 +77,9 @@ in https://www.fastighetsbyran.com/robots.txt (checked 2026-09-25).
 Svensk Fast's website terms explicitly prohibit scraping and automatic indexing
 without permission. Other assessed candidate sources remain unverified.
 Private membership does not override source restrictions or create a reuse license.
+A regular free Unsplash interior photo by Francesca Tosolini is locally cropped
+and optimized; its verified source/license is recorded in
+`public/assets/ATTRIBUTION.md`. It is not a Stockholm property or coverage claim.
 
 ## Product Principles
 

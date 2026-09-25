@@ -37,8 +37,12 @@ aldrig hemma i `VITE_*`, JavaScript-paket, git eller Actions-loggar.
 
 ## Det som finns
 
-- Svensk, responsiv sökyta med ljust/mörkt Clawpilot-tema. Kommun, område/gata,
-  bostadstyp, pris, rum, boarea och avgift; saknade uppgifter är inte noll.
+- Mobilanpassad, ljus sökyta med Clawpilot-tema; mörkt läge väljs uttryckligen.
+  Kommun och tryckbara bostadstyper, reglage för pris/rum/boarea/avgift, valfri
+  exakt inmatning och extra sökval under **Fler filter**. Ingen gräns är ett eget
+  val; befintliga exakta sökvärden avrundas inte. Saknade uppgifter är inte noll.
+- En licensverifierad, lokalt optimerad interiörbild, tydligt märkt som
+  inspiration och aldrig kopplad till ett objekt. [Bildkälla och licens](public/assets/ATTRIBUTION.md).
 - Ansökan och lösenordsfri e-postverifiering. En verifierad ny användare stannar
   i **väntar på godkännande**, utan objekttillgång eller mejlbevakning.
 - Ägarvy för granskning, godkännande, avslag och återkallelse. Ägarrollen kommer
@@ -67,6 +71,11 @@ Inga betalda uppgraderingar eller obegränsad gratiskapacitet förutsätts.
 - [Källor, belägg och importformat](docs/SOURCES.md)
 - [Dataskydd, medlemskap och drift](docs/OPERATIONS.md)
 - [Visuellt system](DESIGN.md)
+
+Webbläsartesterna startar en separat frontend på port 5174 och simulerar API:t
+lokalt, utan att skicka mejl eller röra förhandsvisningen på 5173. De täcker
+320/360/390/430px, tangentbordsstyrda reglage, exakta sparade värden,
+medlemsgränser, lokal bildladdning och ljust standardtema även vid mörkt OS.
 
 Avsett GitHub-konto: **marcusbodin**. Publikt källkodsrepo är godkänt, men ingen
 push, fjärrrepoändring, resursprovisionering, DNS-ändring eller driftsättning har

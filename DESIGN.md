@@ -2,19 +2,38 @@
 
 The search surface operates a familiar property-search workflow. The public
 surface is a closed-membership application, not a claim of public inventory.
-No photos, agency branding, fictional coverage claims, maps without map data,
-or decorative listing thumbnails are used.
+One freely licensed, locally optimized interior photograph supplies a compact
+welcoming background, always labeled "Inspirationsbild · inte ett bostadsobjekt".
+It never represents a listing. Provenance and modifications are documented in
+`public/assets/ATTRIBUTION.md`. No agency branding, fictional coverage claims,
+maps without map data or decorative listing thumbnails are used.
 
 Clawpilot light/dark variables in `src/style.css` are the color source of truth.
-All component colors use those tokens. The only accent is rose; status messages
+Light is the default even when the OS prefers dark; dark remains an explicit
+theme-button/query choice. All component colors use those tokens. The only accent is rose; status messages
 also have plain text, not color alone. Typography is Segoe UI, Aptos, Calibri,
 then platform fallbacks. Body is 16px, supporting copy 13–14px, fixed-scale
-headings 18–32px. Controls are at least 44px high with visible keyboard focus.
+headings 18–32px. Inputs remain at least 16px to avoid iOS focus zoom. Primary
+targets and disclosure summaries are at least 44px high with visible keyboard
+focus; checkbox labels provide the larger touch target.
 
-Desktop search: 280px filter rail, flexible two-column factual property cards,
+Desktop search: 320px filter rail, flexible two-column factual property cards,
 then inline saved-search controls and source transparency. Below 1050px,
-properties become one column. Below 700px, the rail and content stack; ranges
-retain paired inputs. The application form and privacy text similarly stack.
+properties become one column. Below 700px, the rail and content stack, with
+112px inspiration bands rather than a full-screen hero. Opaque light panels
+keep text readable; no copy is drawn directly on photography.
+Municipality, touch-choice property types, maximum price and minimum rooms are
+immediately available. "Fler filter" contains the remaining criteria.
+Numeric filters use native range controls with visible Swedish values and
+aria-valuetext. Null is its own "Ingen gräns" stop, distinct from a finite
+endpoint. Typical slider scales are price 0–20M/100k, rooms 0–10/0.5, area
+0–300/5 and fee 0–15k/250. These are not limits: compact exact-entry disclosures
+accept the full shared-schema bounds; larger existing values expand the scale.
+Exact saved values get their own slider stop and are never rounded on render
+or save. Crossed bounds move the paired limit to maintain min <= max.
+The application form and privacy text similarly stack; approved account
+controls collapse, while pending approval and service errors stay explicit.
+No sticky controls obscure forms or the mobile keyboard.
 Use 4px spacing steps, 10px control corners and 16px card corners. No
 drop-shadow-heavy nested panels, gradients, custom scrollbars or entrance effects.
 
