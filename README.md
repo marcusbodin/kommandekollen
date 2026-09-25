@@ -1,8 +1,11 @@
 # Kommandekollen
 
 Sluten bostadssökning och morgonbevakning för Stockholms län.
-**Lokalt implementerad, inte publicerad. Inga livekällor är anslutna och inga
-riktiga mejlutskick har verifierats.** Automatisk insamling från de efterfrågade
+**Webbgränssnitt och avstängd backend är publicerade. Medlemsansökningar,
+inloggning och schemalagda utskick är ännu inte aktiverade. Inga livekällor är
+anslutna.** Ett tekniskt Resend-utskick till kontaktadressen har nått den
+verifierade mottagaren; appens kompletta medlems- och bevakningsflöde återstår.
+Automatisk insamling från de efterfrågade
 mäklarsajterna är fortfarande en uttrycklig lanseringsblockerare, inte en färdig
 funktion som ersatts av en demo.
 
@@ -77,14 +80,17 @@ lokalt, utan att skicka mejl eller röra förhandsvisningen på 5173. De täcker
 320/360/390/430px, tangentbordsstyrda reglage, exakta sparade värden,
 medlemsgränser, lokal bildladdning och ljust standardtema även vid mörkt OS.
 
-Avsett GitHub-konto: **marcusbodin**. Publikt källkodsrepo är godkänt, men ingen
-push, fjärrrepoändring, resursprovisionering, DNS-ändring eller driftsättning har
-gjorts. Domänen `kommandekollen.se` registreras och betalas fortsatt hos Inleed.
-Ägaren har godkänt att auktoritativ DNS flyttas till **Cloudflare Free vid
-driftsättning**. Frontend blir `https://kommandekollen.se`, API blir
-`https://api.kommandekollen.se` via Workers Custom Domain. Det löser
-arkitekturfrågan för säkra same-site-sessioner; flytten är inte genomförd.
-`wrangler.toml` har en separat produktionsmiljö med tjänsten fortsatt avstängd.
-Källrättigheter,
-konton, domänverifiering, e-postleverans och produktionsbudget måste lösas innan
-tjänsten kan öppnas ens för godkända medlemmar.
+Koden finns i [marcusbodin/kommandekollen](https://github.com/marcusbodin/kommandekollen).
+Domänen registreras och betalas fortsatt hos Inleed; auktoritativ DNS är flyttad
+till **Cloudflare Free**. GitHub Pages är kopplat till `kommandekollen.se`;
+dess HTTPS-certifikat inväntas fortfarande. API:t är driftsatt med TLS på
+`https://api.kommandekollen.se` och D1-databasen är migrerad med EU-jurisdiktion.
+Privata nycklar och administratörsuppgifter finns endast i tjänsternas
+hemlighetslagring, inte i repot.
+
+`wrangler.toml` har en separat produktionsmiljö med `SERVICE_ENABLED=false`,
+tom källista och tomt cron-schema. Aktivera inte medlemsdelen innan frontendens
+HTTPS, dataskyddsinformation, schemalagd städning och hela medlemsflödet är
+kontrollerade. Riktiga källor och produktionsbudget måste dessutom verifieras
+innan fungerande bostadsbevakning kan utlovas. Aktuell driftstatus och kvarstående
+kontroller finns i [driftsättningsguiden](docs/DEPLOYMENT.md).

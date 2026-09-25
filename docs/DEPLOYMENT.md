@@ -1,9 +1,24 @@
-# Deployment checklist — not performed
+# Deployment and launch status
 
-The project is local only. The owner approved the architecture below on
-2026-09-25; account setup and execution are still pending. These instructions do not authorize deployment,
-account switching, new resources, repository pushes or DNS changes. The owner
-controls those actions separately. Intended GitHub owner: **marcusbodin**.
+The owner authorized step-by-step deployment on 2026-09-25. The public repository
+and GitHub Pages shell are published under **marcusbodin**. Cloudflare Free DNS
+is active while Inleed remains the registrar. The production Worker is deployed
+on `api.kommandekollen.se` with validated TLS; its EU-jurisdiction D1 database has
+the complete initial schema and migration ledger.
+
+The service is still **closed**: `SERVICE_ENABLED=false`, production cron `[]`,
+and no authorized live sources. Production owner, contact, sender and API
+credentials are stored as Worker secrets, never in this repository. The matching
+ingestion credential is a repository secret, but collection remains disabled.
+Resend domain verification and a real test through contact-address forwarding
+to the owner's inbox succeeded.
+
+Still required: GitHub's frontend HTTPS certificate and enforcement, finalized
+controller/privacy and provider arrangements, complete real membership/session
+and withdrawal tests, scheduled cleanup, validated usable listing sources, and
+measured production CPU/provider/D1 limits. The provider test does not prove the
+application's queued verification or digest workflow. These instructions do not
+authorize paid upgrades or unrelated account changes.
 
 ## Local components
 
@@ -62,7 +77,12 @@ documented apex/www redirect setup and use the canonical apex for login links.
 Do not add `www`, `github.io`, preview deployments or `workers.dev` to production
 CORS merely to make an unconfigured hostname work.
 
-## Safe DNS migration — execution pending
+## Safe DNS migration procedure
+
+The initial migration is complete: Cloudflare is authoritative on the Free plan,
+GitHub's verification TXT is retained and the Pages A records are DNS-only.
+The owner confirmed that no previous custom DNS records or mail service existed.
+No parent DS was present. Retain the safeguards below for future DNS changes.
 
 Before adding Pages site A/CNAME records or a `CNAME` file, verify domain ownership in
 the **marcusbodin GitHub profile's Pages settings** using GitHub's actual
@@ -135,24 +155,40 @@ to `workers.dev`, and do not apply the Pages DNS-only setting to this
 Worker-managed API hostname. Inspect any existing `api` DNS record before
 resolving a conflict; do not overwrite an unrelated service blindly.
 
-This resolves the earlier **architecture decision** blocker. Actual zone
-activation, API custom-domain provisioning and valid TLS on both hosts remain
-required launch work. Test login/explicit confirmation from an email link,
+The zone and API custom domain are active with API TLS validated; GitHub's
+frontend certificate remains pending. Test login/explicit confirmation from an email link,
 credentialed API calls, logout and revocation on desktop and mobile after setup.
 The preliminary `github.io` shell is not a supported production login host.
 
 ## Cloudflare configuration
 
-Once the owner authorizes setup, create a Free Worker/D1 database, replace the
-placeholder database ID in `env.production.d1_databases` in `wrangler.toml`, and apply
-`worker/migrations/0001_initial.sql` remotely via Wrangler's migration command.
+The production binding in `wrangler.toml` now points to the provisioned database.
+Do not create a duplicate database or reimport its initial schema. For subsequent
+authorized migrations, use the target-checked atomic runner:
+
+```sh
+npm run db:migrate -- --remote --env production \
+  --account-id <confirmed-account-id> --database-id <confirmed-database-id>
+```
+
+See [migration notes](../worker/migrations/README.md). Wrangler 4.135's remote
+`d1 migrations apply` query path failed to split the original triggers correctly;
+the runner uses the documented atomic SQL-file import with its ledger update.
+The initial import succeeded, including all capacity/quota triggers. Its
+post-commit progress-output parsing issue was subsequently fixed and actual
+schema/history validated read-only. Do not manually add ledger rows or drop
+schema to recover an uncertain command response.
+
 Do not run remote commands against an account merely because a CLI is logged in.
 Local migration scripts never use `--remote`.
 
 `wrangler.toml` keeps local defaults separate from `env.production`. The
 production environment already declares the exact API Custom Domain, disables
 `workers.dev` and preview URLs, sets the frontend root and exact origin, and
-leaves `SERVICE_ENABLED=false`, the source allowlist empty and credentials unset.
+leaves `SERVICE_ENABLED=false` and the source allowlist empty. Credentials are
+provisioned separately as Worker secrets. `MAIL_FROM` and `PRIVACY_CONTACT`
+are also production secrets rather than tracked vars; the local empty defaults
+may cause an intentional Wrangler non-inherited-vars warning.
 Select `--env production` consistently for future deployment, remote migrations
 and secret setup; bindings/vars/secrets must belong to that environment. A dry
 run may bundle/validate this configuration locally; it does not activate DNS.
@@ -188,9 +224,12 @@ The authorized-source JSON shape is:
 Examples are nonfunctional reserved domains. Never publish permission letters,
 personal contacts, private feed URLs or secrets when editing config.
 
-Cron is every minute, with Stockholm local-time gating and bounded per-invocation
-work. Keep on the Free plan. Before launch measure CPU and D1 use at configured
-caps in the actual Worker; tests validate logic, not production CPU allowance.
+The handler supports a once-per-minute cron with Stockholm local-time gating and
+bounded per-invocation work. Production cron is deliberately empty during setup.
+Enable scheduled cleanup before accepting personal data, and enable dispatch
+only once the service is ready. Keep on the Free plan. Before launch measure CPU
+and D1 use at configured caps in the actual Worker; tests validate logic, not
+production CPU allowance.
 
 ## Resend
 
@@ -225,4 +264,5 @@ same-site frontend/API domains and valid TLS; Free-only resources; private secre
 identity; completed privacy disclosure/provider agreements; a legitimately
 usable and successfully validated source; production CPU/quotas; real mail
 acceptance/deliverability; approved-member access and revocation from desktop
-and mobile. None of those external-account steps is implied by local tests.
+and mobile. Completed external steps are listed at the top of this document;
+local tests do not establish the remaining production evidence.

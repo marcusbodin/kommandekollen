@@ -48,8 +48,8 @@ host-only `__Host-kk_session` cookies on the API: do not add a `Domain` attribut
 Frontend fetches still require `credentials: "include"` and the API allows only
 the exact `https://kommandekollen.se` origin with credentialed CORS. SameSite
 does not replace these Origin checks. No bearer-token redesign is needed.
-The previous DNS/session-hosting architecture blocker is resolved by this
-decision, but actual zone/domain/certificate setup remains undone. See
+Cloudflare DNS and the API custom domain are active with API TLS verified.
+GitHub's frontend HTTPS certificate is still pending. See
 DEPLOYMENT.md for migration safeguards. The initial `github.io` shell is not a
 supported login origin; do not weaken cookies to support cross-site login.
 
@@ -71,7 +71,8 @@ capped at 10,000/day, with 180/IP/hour. Saturated buckets stop generating new
 writes. Cloudflare's own network/abuse limits remain necessary; application
 limits are not a substitute for DDoS protection.
 
-Cron runs every minute. Each invocation does bounded cleanup, prepares at most
+Production cron is currently disabled during setup. When enabled, it runs every
+minute. Each invocation does bounded cleanup, prepares at most
 one member's digest during **07:00–09:59 Europe/Stockholm**, and dispatches at
 most one queued mail. DST uses Intl's IANA zone, not a fixed UTC offset. This
 is a dispatch window, not a promise of delivery precisely at 07:00. The complete
@@ -142,7 +143,9 @@ private browser traces or database dumps to public CI artifacts.
 | Inactive/unrefreshed inventory | 30 days |
 | Pseudonymous owner decision audit | 180 days |
 
-Cleanup runs even when signups/delivery are disabled. Deleting a member cascades
+When the scheduler is enabled, cleanup runs even when signups/delivery are
+disabled. Enable scheduled cleanup before accepting personal data.
+Deleting a member cascades
 through sessions, saved preferences, outbox and seen IDs in the active database.
 Audit IDs are pseudonymous, not raw email. Operational audit processing should
 be included in the controller's finalized privacy/legal-basis assessment.
@@ -153,6 +156,13 @@ before launch. Do not promise instantaneous erasure from providers' backups.
 Set a real privacy contact/controller identity before enabling service. Privacy
 copy in the shell is a functional draft, not a substitute for a controller's
 completed GDPR assessment. No advertising/analytics trackers are included.
+
+The production D1 database was created with EU jurisdiction. Selecting Ireland
+for Resend controls the sending region, not account-data residency: Resend states
+that account data, email metadata, logs and API records are stored in the US.
+Reflect that distinction and the applicable provider/transfer arrangements in
+the finalized privacy information; do not claim that all service data stays
+inside the EU. See [Resend region documentation](https://resend.com/docs/dashboard/domains/regions).
 
 ## Safe maintenance
 

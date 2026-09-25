@@ -33,7 +33,8 @@ async function route(request: Request, env: Env): Promise<Response> {
   if (request.method === "GET" && path === "/api/status") {
     const capacity = await env.DB.prepare("SELECT count(*) AS n FROM subscriptions WHERE email!=?")
       .bind((env.OWNER_EMAIL || "").trim().toLowerCase()).first<{ n: number }>();
-    return json({ serviceReady: serviceReady(env), acceptingApplications: !!capacity && capacity.n < 39, privacyContact: env.PRIVACY_CONTACT || null });
+    const ready = serviceReady(env);
+    return json({ serviceReady: ready, acceptingApplications: ready && !!capacity && capacity.n < 39, privacyContact: env.PRIVACY_CONTACT || null });
   }
   if (request.method === "POST" && (path === "/api/apply" || path === "/api/login")) {
     if (!serviceReady(env)) throw new ApiError(503, "not_ready", "Medlemsansökan och inloggning är inte aktiverade ännu.");

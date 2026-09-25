@@ -61,6 +61,24 @@ beforeEach(async () => {
 afterEach(async () => { await mf.dispose(); });
 
 describe("membership authorization", () => {
+  it("reports applications as closed when the configured service is disabled", async () => {
+    expect(await (await request("/api/status")).json()).toMatchObject({
+      serviceReady: true, acceptingApplications: true,
+    });
+    await mf.setOptions({
+      modules: true, scriptPath: ".worker/index.js", compatibilityDate: "2025-09-24",
+      d1Databases: ["DB"], bindings: { ...bindings, SERVICE_ENABLED: "false" },
+      outboundService: async () => { throw new Error("Disabled service must not send mail"); },
+    });
+    expect(await (await request("/api/status")).json()).toMatchObject({
+      serviceReady: false, acceptingApplications: false,
+    });
+    expect((await request("/api/apply", {
+      email: "closed@example.com", application: "Looking for a home", consent: true, website: "",
+    })).status).toBe(503);
+    expect((await request("/api/login", { email: "owner@example.com", website: "" })).status).toBe(503);
+    expect(sent).toHaveLength(0);
+  });
   it("never exposes inventory or source-run results to anonymous, unverified, pending, rejected or revoked users", async () => {
     expect((await request("/admin/ingest", await fixtureFeed(), undefined, true)).status).toBe(200);
     expect((await request("/api/catalog")).status).toBe(401);

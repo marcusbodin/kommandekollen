@@ -37,7 +37,7 @@ Owner approval, rejection and revocation are authenticated server-side operation
 - Public code is not public inventory. Real listings, source-run results and
   saved searches require an approved backend-validated membership session.
 - The owner role is fixed by private server configuration, never first-signup
-  or a client-selected role. Owner identity remains unset until account setup.
+  or a client-selected role. Owner identity is configured privately in production.
 - Cloudflare Workers/D1 and Resend approved only on free plans.
 - Subscriber information and secrets must not be public.
 - A domain purchase is the only cost explicitly accepted.
@@ -52,10 +52,15 @@ Owner approval, rejection and revocation are authenticated server-side operation
   Cloudflare zone. This supports same-site secure sessions without bearer tokens.
 - Existing DNS records and DNSSEC/DS must be coordinated during migration.
   Pages DNS records start DNS-only; nameservers come from the actual Cloudflare
-  account, never guessed values. No DNS/account/deployment action has occurred.
+  account, never guessed values. Cloudflare Free DNS is now active.
 - No paid DNS, hosting, email or SSL purchase is approved.
-- GitHub authentication, Cloudflare provisioning, Resend verification and
-  DNS configuration have not been completed.
+- Source code and the public shell are published under marcusbodin.
+  The production API and EU-jurisdiction D1 database are provisioned.
+  Frontend HTTPS, complete membership testing and production capacity checks
+  remain launch prerequisites; applications and scheduled jobs are disabled.
+- The Resend sending subdomain is verified. A real technical test message
+  reached the private inbox via the approved public contact forwarding address.
+  This is not evidence of a working listing digest or live property coverage.
 
 ## Brand Commitments
 
