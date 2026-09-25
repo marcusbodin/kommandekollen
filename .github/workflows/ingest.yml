@@ -1,0 +1,28 @@
+name: Bounded private inventory import
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "15 3 * * *"
+permissions:
+  contents: read
+concurrency:
+  group: private-ingestion
+  cancel-in-progress: false
+jobs:
+  collect:
+    if: github.repository_owner == 'marcusbodin' && vars.INGEST_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run ingest
+        env:
+          INGEST_API_URL: ${{ secrets.INGEST_API_URL }}
+          INGEST_TOKEN: ${{ secrets.INGEST_TOKEN }}
+          COLLECTION_CONFIG: ${{ secrets.COLLECTION_CONFIG }}
+      # Do not upload inventory, tokens, response bodies or private logs as artifacts.

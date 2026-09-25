@@ -1,0 +1,51 @@
+import { test, expect } from "@playwright/test";
+
+test("public shell is a closed-membership application, never real inventory", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "En privat väg till nästa hem." })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Skicka medlemsansökan" })).toBeDisabled();
+  await expect(page.getByText("Tjänsten är inte konfigurerad")).toBeVisible();
+  await expect(page.locator(".property")).toHaveCount(0);
+  await page.getByRole("button", { name: "Har du redan ansökt? Logga in" }).click();
+  await expect(page.getByRole("heading", { name: "Logga in med mejllänk" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Begär inloggningslänk" })).toBeDisabled();
+  await expect(page.locator("html")).toHaveAttribute("lang", "sv");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.screenshot({ path: test.info().outputPath("membership-light.png"), fullPage: true });
+});
+test("demo filters work, unknown values are honest and no email submission occurs", async ({ page }) => {
+  const requests: string[] = [];
+  page.on("request", request => { if (request.method() === "POST") requests.push(request.url()); });
+  await page.goto("/?demo=1&scoutTheme=light");
+  await expect(page.getByText("Demonstrationsläge")).toBeVisible();
+  await expect(page.locator(".property")).toHaveCount(6);
+  await page.getByRole("combobox", { name: "Kommun", exact: true }).selectOption("Solna");
+  await expect(page.locator(".property")).toHaveCount(1);
+  await expect(page.locator(".property")).toContainText("Pris ej angivet");
+  await page.getByRole("group", { name: "Pris kr" }).getByLabel("Till").fill("5000000");
+  await expect(page.locator(".property")).toHaveCount(0);
+  await page.getByLabel("Ta även med objekt").check();
+  await expect(page.locator(".property")).toHaveCount(1);
+  await page.getByRole("button", { name: "Rensa", exact: true }).click();
+  await expect(page.locator(".property")).toHaveCount(6);
+  await page.getByRole("combobox", { name: "Sortera", exact: true }).selectOption("price");
+  await expect(page.locator(".property").first()).toContainText("Demostigen");
+  await page.getByLabel("Jag vill få bostadsbevakning").check();
+  await page.getByRole("button", { name: "Förhandsvisa bevakning" }).click();
+  await expect(page.getByRole("status")).toContainText("Ingen prenumeration har skapats");
+  expect(requests).toHaveLength(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.screenshot({ path: test.info().outputPath("search-light.png"), fullPage: true });
+  await page.getByRole("button", { name: "Byt till mörkt tema" }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await page.screenshot({ path: test.info().outputPath("search-dark.png"), fullPage: true });
+});
+test("email action needs explicit POST and token is removed from address bar", async ({ page }) => {
+  const requests: string[] = [];
+  page.on("request", request => { if (request.method() === "POST") requests.push(request.url()); });
+  await page.goto("/#confirm=" + "a".repeat(64));
+  await expect(page.getByRole("heading", { name: "Bekräfta och logga in" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Fortsätt", exact: true })).toBeDisabled();
+  expect(page.url()).not.toContain("aaaa");
+  expect(requests).toHaveLength(0);
+});

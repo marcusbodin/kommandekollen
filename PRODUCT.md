@@ -9,7 +9,8 @@ web
 ## Users
 
 Swedish-speaking home seekers looking for upcoming homes in Stockholm.
-The owner confirmed that this is an open service, not a personal-only tool.
+The owner changed the scope on 2026-09-25: this is a CLOSED membership service.
+People may apply; only the configured owner can approve verified applicants.
 
 ## Product Purpose
 
@@ -18,9 +19,12 @@ results by email each morning.
 
 ## Operating Context
 
-Users configure Hemnet-like preferences, review matching homes, verify their
-email address and receive daily notifications. Every email must support
-unsubscribing.
+Public visitors see an application/login shell and explicitly synthetic demo.
+Application -> email verification -> pending manual approval -> approved,
+rejected or revoked. Verification alone never grants inventory access or alerts.
+Approved members configure familiar property-search preferences, review matching
+homes and explicitly activate morning alerts. Every email permits account deletion.
+Owner approval, rejection and revocation are authenticated server-side operations.
 
 ## Capabilities and Constraints
 
@@ -30,10 +34,17 @@ unsubscribing.
 - Owner purchased kommandekollen.se.
 - Intended personal GitHub owner is marcusbodin.
 - Public source repository approved for free GitHub Pages.
+- Public code is not public inventory. Real listings, source-run results and
+  saved searches require an approved backend-validated membership session.
+- The owner role is fixed by private server configuration, never first-signup
+  or a client-selected role. Owner identity remains unset until account setup.
 - Cloudflare Workers/D1 and Resend approved only on free plans.
 - Subscriber information and secrets must not be public.
 - A domain purchase is the only cost explicitly accepted.
-- Exact geographic scope within Stockholm is still open.
+- Initial implemented geographic scope: the 26 municipalities of Stockholms län.
+- Conservative pilot limits: 40 accounts, 200 stored listings, 80 attempted
+  emails/day, 2400/month; at most 20 non-digest email attempts/day.
+- DNS remains at Inleed; no hosting, email or SSL purchase is approved.
 - GitHub authentication, Cloudflare provisioning, Resend verification and
   DNS configuration have not been completed.
 
@@ -45,14 +56,18 @@ by the task flow on Hemnet, without copying its branding or content.
 ## Evidence on Hand
 
 No real listing dataset, agency permissions, photographs, testimonials or
-coverage measurements have been supplied. Demonstration data must be labeled.
+coverage measurements have been supplied. No live agency integration is enabled.
+Demonstration data must be labeled and must never send email or create accounts.
 Fastighetsbyran explicitly disallows automated access without special permission
 in https://www.fastighetsbyran.com/robots.txt (checked 2026-09-25).
+Svensk Fast's website terms explicitly prohibit scraping and automatic indexing
+without permission. Other assessed candidate sources remain unverified.
+Private membership does not override source restrictions or create a reuse license.
 
 ## Product Principles
 
 - Honest source coverage and freshness.
 - Useful filters before marketing content.
-- Verified subscriptions with straightforward withdrawal.
+- Email-verified, owner-approved membership with straightforward withdrawal.
 - Explicit failures rather than fabricated listings or success messages.
 - Bounded operation within free service quotas.

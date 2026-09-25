@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="sv">
+  <head>
+    <meta charset="UTF-8" />
+    <script>
+      (() => {
+        const param = new URLSearchParams(window.location.search).get("scoutTheme");
+        const theme = param === "light" || param === "dark" ? param :
+          (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+        document.documentElement.setAttribute("data-theme", theme);
+      })();
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="description" content="Sök kommande bostäder i Stockholms län och bevaka dina önskemål. Se alltid aktuell källtäckning." />
+    <meta name="color-scheme" content="light dark" />
+    <title>Kommandekollen – kommande bostäder i Stockholm</title>
+  </head>
+  <body>
+    <!-- THESIS: A property-search workbench, not a marketing landing page.
+    OWN-WORLD: Clawpilot warm neutrals, rose actions, Segoe UI, familiar labeled controls.
+    STORY: Set preferences, compare factual attributes, understand coverage, verify an alert.
+    FIRST VIEWPORT: Compact navigation, explicit data state, filter rail and useful property rows.
+    FORM: User-pinned familiar property search in Operate mode. No invented coverage or photography. -->
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

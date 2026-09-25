@@ -1,0 +1,5 @@
+# Copy to .dev.vars locally; never commit actual values.
+ADMIN_TOKEN=
+TOKEN_SECRET=
+RESEND_API_KEY=
+OWNER_EMAIL=
