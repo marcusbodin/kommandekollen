@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { createRequire } from "node:module";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { parseArgs, promisify } from "node:util";
+import { parseArgs, promisify, stripVTControlCharacters } from "node:util";
 import { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 
@@ -23,6 +23,21 @@ export type Execute = (input: Input) => Promise<Results>;
 const schemaQuery = "SELECT type,name,sql FROM sqlite_schema WHERE name NOT GLOB 'sqlite_*' AND name NOT GLOB '_cf_*' ORDER BY type,name;";
 const objectSchema = z.object({ type: z.string(), name: z.string(), sql: z.string().nullable() });
 type SchemaObject = z.infer<typeof objectSchema>;
+
+export async function readWranglerResult(command: Promise<{ stdout: string }>): Promise<Results> {
+  // Await first: a nonzero exit must reject even if stdout contains success-shaped JSON.
+  const { stdout } = await command;
+  const lines = stripVTControlCharacters(stdout).trim().split(/\r?\n/);
+  // Wrangler 4.135's non-TTY import spinner bypasses its --json logger level.
+  while (lines.length && !lines[0].trimStart().startsWith("[")) {
+    const line = lines.shift()!.trim();
+    if (line && !/^(?:├ Checking if file needs uploading|├ 🌀 Uploading .+|│(?: 🌀 Uploading complete\.)?)$/.test(line)) {
+      throw new Error("Unexpected Wrangler output before JSON. Import status is unverified; inspect migration history.");
+    }
+  }
+  if (!lines.length) throw new Error("Wrangler returned no JSON result. Import status is unverified; inspect migration history.");
+  return resultsSchema.parse(JSON.parse(lines.join("\n")));
+}
 
 export function checkRemoteTarget(configured: { accountId?: string; databaseId?: string }, requested: { accountId?: string; databaseId?: string }) {
   const target = z.object({ accountId: z.string().regex(/^[a-f0-9]{32}$/), databaseId: z.string().uuid() }).parse(requested);
@@ -143,11 +158,10 @@ async function main() {
     }), { mode: 0o600 });
     args.push("--config", snapshot);
     const execute: Execute = async input => {
-      const { stdout } = await run(process.execPath, [
+      return readWranglerResult(run(process.execPath, [
         cli, ...args, ...("file" in input ? ["--file", input.file] : ["--command", input.command]),
       ], { cwd: root, env: { ...process.env, WRANGLER_SEND_METRICS: "false",
-        ...(target ? { CLOUDFLARE_ACCOUNT_ID: target.accountId } : {}) }, timeout: 120_000, maxBuffer: 4 * 1024 * 1024 });
-      return resultsSchema.parse(JSON.parse(stdout));
+        ...(target ? { CLOUDFLARE_ACCOUNT_ID: target.accountId } : {}) }, timeout: 120_000, maxBuffer: 4 * 1024 * 1024 }));
     };
     await applyMigrations(join(root, "worker/migrations"), execute);
   } finally {

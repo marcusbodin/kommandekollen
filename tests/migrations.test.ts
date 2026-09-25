@@ -3,7 +3,7 @@ import { DatabaseSync } from "node:sqlite";
 import { mkdtemp, readFile, rm, rmdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { applyMigrations, checkRemoteTarget, migrationBundle, type Execute } from "../scripts/migrate";
+import { applyMigrations, checkRemoteTarget, migrationBundle, readWranglerResult, type Execute } from "../scripts/migrate";
 
 const databases: DatabaseSync[] = [];
 const directories: string[] = [];
@@ -41,6 +41,31 @@ async function fixture(sql: string) {
   await writeFile(join(dir, "0001_test.sql"), sql);
   return dir;
 }
+
+describe("Wrangler JSON output contract", () => {
+  const result = [{ results: [{ "Total queries executed": 18, "Rows written": 1 }], success: true, finalBookmark: "test-bookmark" }];
+  const json = JSON.stringify(result, null, 2);
+  const progress = "├ Checking if file needs uploading\n│\n├ 🌀 Uploading /tmp/migration/0001_initial.sql\n│ 🌀 Uploading complete.\n│\n";
+  it("accepts the remote import spinner followed by a complete validated JSON result", async () => {
+    await expect(readWranglerResult(Promise.resolve({ stdout: progress + json + "\n" })))
+      .resolves.toEqual([{ results: result[0].results, success: true }]);
+  });
+  it("accepts plain query JSON and ANSI-colored CRLF import progress", async () => {
+    await expect(readWranglerResult(Promise.resolve({ stdout: json }))).resolves.toHaveLength(1);
+    await expect(readWranglerResult(Promise.resolve({ stdout: "\x1b[90m" + progress.replaceAll("\n", "\r\n") + "\x1b[0m" + json }))).resolves.toHaveLength(1);
+  });
+  it.each([
+    "", progress, progress + "[", progress + "[]", progress + '[{"success":false,"results":[]}]',
+    progress + '[{"success":true}]', progress + json + "\nUnexpected trailing output",
+    "[ERROR] import failed\n" + json, "Unrecognized output\n" + json,
+  ])("fails closed on missing, invalid, failed or ambiguous output: %s", async stdout => {
+    await expect(readWranglerResult(Promise.resolve({ stdout }))).rejects.toThrow();
+  });
+  it("propagates a nonzero process error unchanged instead of parsing its stdout", async () => {
+    const error = Object.assign(new Error("Wrangler failed with exit code 1"), { code: 1, stdout: progress + json, stderr: "Provider rejected the import" });
+    await expect(readWranglerResult(Promise.reject(error))).rejects.toBe(error);
+  });
+});
 
 describe("atomic migration file transport", () => {
   it("requires an exact explicit account and database match", () => {

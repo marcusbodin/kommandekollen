@@ -28,6 +28,12 @@ the project's SQLite-compatible migrations; a future migration requiring
 provider-specific SQL needs its own supported rehearsal rather than bypassing
 these checks.
 
+Wrangler 4.135 can print its import spinner before the JSON result even with
+`--json`. The runner accepts only the known spinner lines followed by a complete,
+nonempty success-result array. Nonzero exits, failed results, missing/truncated
+JSON and unexpected output still fail visibly. A parsing failure can occur
+**after a successful commit**: inspect schema/history before doing anything else.
+
 Wrangler 4.135 `d1 migrations apply --remote` instead posts the combined SQL
 string to `/query`, whose server-side statement splitting can reject valid
 trigger bodies with `incomplete input: SQLITE_ERROR`. Local migrations use a
