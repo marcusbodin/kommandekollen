@@ -14,8 +14,11 @@ People may apply; only the configured owner can approve verified applicants.
 
 ## Product Purpose
 
-Let users filter upcoming homes from estate agents and subscribe to matching
-results by email each morning.
+Let approved members describe their next home, clarify material ambiguity,
+review hard requirements, soft preferences and unverified criteria, then
+explicitly save their personal selection. Manual filters remain a fallback.
+New matching objects may be emailed each morning only after separate consent
+and source readiness; with no ready sources, save paused.
 
 ## Operating Context
 
@@ -38,7 +41,21 @@ Owner approval, rejection and revocation are authenticated server-side operation
   saved searches require an approved backend-validated membership session.
 - The owner role is fixed by private server configuration, never first-signup
   or a client-selected role. Owner identity is configured privately in production.
+- Authorized public controller identity: Marcus Bodin (privatperson);
+  public contact kontakt@kommandekollen.se. This is disclosure, not the private
+  email used to authorize the owner role.
 - Cloudflare Workers/D1 and Resend approved only on free plans.
+- Cloudflare Workers AI Free is approved for draft interpretation only, with
+  housing text/prior preference state but no account or email metadata added.
+  Fixed Llama 3.3 70B JSON-mode model, strict untrusted-output validation,
+  conservative 6,000-neuron daily reservation cap; flag OFF until native
+  binding and quality checks. No paid fallbacks or AI per listing/day.
+- A bounded versioned profile preserves hard filters, alternatives, exclusions,
+  supported soft ranking and visibly unverified criteria. Unsupported MUST
+  criteria require explicit manual-check acceptance. The model never saves,
+  grants membership or gives alert consent.
+- Drafts expire after 30 minutes. Explicit atomic, member/version-bound
+  confirmation saves only the reviewed profile; stale tabs and replays fail.
 - Subscriber information and secrets must not be public.
 - A domain purchase is the only cost explicitly accepted.
 - Initial implemented geographic scope: the 26 municipalities of Stockholms län.

@@ -1,6 +1,9 @@
 import { z } from "zod";
 import { defaultFilters, feedSchema, filterSchema, listingId, sourceIds } from "../shared/model";
 import { sources } from "../shared/sources";
+import { manualProfile } from "../shared/preferences";
+import { aiReady } from "./ai";
+import { preferenceRoute, savedProfile } from "./preferences";
 import { approvalNotice, cleanup, dispatchOne, prepareDigest, queueVerification } from "./mail";
 import {
   ApiError, authenticate, authorizations, equalSecrets, hash, isOwner, json, keyed, randomToken,
@@ -139,9 +142,11 @@ async function route(request: Request, env: Env): Promise<Response> {
   if (request.method === "GET" && path === "/api/me") {
     const member = await authenticate(request, env, false);
     return json({ id: member.id, email: member.email, state: member.state, owner: isOwner(env, member),
-      filters: filterSchema.parse(JSON.parse(member.filters)), alertsEnabled: !!member.alerts_enabled });
+      filters: filterSchema.parse(JSON.parse(member.filters)), alertsEnabled: !!member.alerts_enabled,
+      profile: savedProfile(member), searchVersion: member.search_version, aiReady: aiReady(env) && serviceReady(env) });
   }
   const member = await authenticate(request, env);
+  if (path.startsWith("/api/preferences/")) return preferenceRoute(request, env, ipHash);
   if (request.method === "GET" && path === "/api/catalog") {
     const ids = new Set(authorizations(env).map(source => source.id));
     const rows = await env.DB.prepare("SELECT id,data,first_seen,last_seen FROM listings WHERE active=1 ORDER BY first_seen DESC LIMIT 200")
@@ -155,13 +160,19 @@ async function route(request: Request, env: Env): Promise<Response> {
     });
   }
   if (request.method === "POST" && path === "/api/search") {
-    const data = z.object({ filters: filterSchema, enabled: z.boolean(), consent: z.literal(true) }).strict().parse(await readJson(request));
-    if (data.enabled && !authorizations(env).length) throw new ApiError(503, "no_sources", "Ingen tillåten källa är ansluten. Bevakning kan inte aktiveras ännu.");
-    await env.DB.batch([
-      env.DB.prepare("UPDATE subscriptions SET filters=?,alerts_enabled=?,consent_version=? WHERE id=?")
-        .bind(JSON.stringify(data.filters), Number(data.enabled), "2026-09-25-alerts", member.id),
-      env.DB.prepare("DELETE FROM outbox WHERE subscription_id=? AND kind='digest' AND state='pending'").bind(member.id),
+    const data = z.object({ filters: filterSchema, enabled: z.boolean(), consent: z.literal(true), expectedVersion: z.number().int().nonnegative() }).strict().parse(await readJson(request));
+    if (data.enabled && (!serviceReady(env) || !authorizations(env).length)) throw new ApiError(503, "no_sources", "Ingen tillåten källa är ansluten. Bevakning kan inte aktiveras ännu.");
+    const profile = JSON.stringify(data.filters) === JSON.stringify(filterSchema.parse(JSON.parse(member.filters)))
+      ? savedProfile(member) : manualProfile(data.filters);
+    const commit = crypto.randomUUID();
+    const results = await env.DB.batch([
+      env.DB.prepare("UPDATE subscriptions SET filters=?,preference_profile=?,alerts_enabled=?,consent_version=?,search_version=search_version+1,search_commit=?,draft_id=NULL WHERE id=? AND state='approved' AND search_version=?")
+        .bind(JSON.stringify(data.filters), JSON.stringify(profile), Number(data.enabled), "2026-09-25-alerts", commit, member.id, data.expectedVersion),
+      env.DB.prepare(`UPDATE outbox SET state='expired',payload='',error_code=CASE WHEN first_attempt IS NULL THEN 'search_changed' ELSE 'delivery_uncertain' END
+        WHERE subscription_id=? AND kind='digest' AND state IN ('pending','sending') AND EXISTS(SELECT 1 FROM subscriptions WHERE id=? AND search_commit=?)`).bind(member.id, member.id, commit),
+      env.DB.prepare("DELETE FROM search_drafts WHERE member_id=? AND EXISTS(SELECT 1 FROM subscriptions WHERE id=? AND search_commit=?)").bind(member.id, member.id, commit),
     ]);
+    if (results[0].meta.changes !== 1) throw new ApiError(409, "stale_search", "Sökningen ändrades i en annan flik. Läs in den igen; inget skrevs över.");
     return json({ message: data.enabled ? "Sökningen är sparad och bevakningen aktiverad. Bara nya matchningar skickas." : "Sökningen är sparad. Bostadsmejlen är pausade." });
   }
   if (path.startsWith("/api/admin/")) {

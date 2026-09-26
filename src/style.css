@@ -106,6 +106,34 @@ nav a { min-height: 44px; color: var(--cp-text); text-decoration: none; font-wei
 .coverage-strip a { min-height: 44px; margin-left: auto; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
 .search-layout { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 24px; align-items: start; }
 .filter-panel { padding: 20px; display: grid; gap: 20px; }
+.preference-flow { max-width: 880px; margin: 0 auto 28px; padding: 24px; }
+.preference-flow form { display: grid; gap: 12px; }
+.preference-flow form p { margin: 0; }
+.preference-flow form > label:first-child { font-size: 1.125rem; }
+.example-chips, .flow-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.example-chips button { font-size: .875rem; text-align: left; }
+.preference-flow > .notice, .preference-flow > .error { margin-top: 20px; }
+.draft-review { margin: 28px 0; padding-top: 24px; border-top: 1px solid var(--cp-border); }
+.draft-review > .check { margin: 16px 0; }
+.preference-summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 24px; margin-bottom: 20px; }
+.preference-summary ul { padding-left: 22px; margin: 0 0 12px; overflow-wrap: anywhere; }
+.preference-summary h3 { margin-top: 8px; }
+.unverified-summary { grid-column: 1 / -1; }
+.manual-search, .saved-profile { border-top: 1px solid var(--cp-border); margin-top: 20px; padding-top: 8px; }
+.manual-controls { padding: 0; margin: 0; border: 0; min-width: 0; }
+.manual-controls > .filter-panel { border: 0; padding: 12px 0; border-radius: 0; }
+.manual-controls > button, .criterion-editor > button { margin-top: 12px; }
+.scope-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 16px; }
+.scope-editor fieldset { margin: 12px 0; padding: 0; border: 0; }
+.criterion-editor { display: grid; gap: 12px; margin: 20px 0; }
+.personal-results { margin-top: 24px; }
+.match-reasons { padding-left: 20px; }
+@media (max-width: 600px) {
+  .preference-flow { padding: 18px 16px; }
+  .preference-summary, .scope-options { grid-template-columns: minmax(0, 1fr); }
+  .flow-actions > button { flex: 1 1 auto; }
+  .example-chips > button { max-width: 100%; overflow-wrap: anywhere; }
+}
 .section-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .section-heading h2 { margin: 0; }
 .text-button { min-height: 44px; min-width: 44px; border: 0; background: none; color: var(--cp-accent); font-size: .875rem; padding: 8px; }

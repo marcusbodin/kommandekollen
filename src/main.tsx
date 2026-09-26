@@ -1,10 +1,12 @@
 import { StrictMode, useEffect, useMemo, useState, type FormEvent } from "react";
 import { createRoot } from "react-dom/client";
 import { z } from "zod";
-import { defaultFilters, filterSchema, listingSchema, matches, municipalities, sourceIds, types, type Filters, type Listing } from "../shared/model";
+import { defaultFilters, filterSchema, listingSchema, municipalities, sourceIds, types, type Filters, type Listing } from "../shared/model";
+import { assess, manualProfile, profileSchema, ranked, type Profile } from "../shared/preferences";
 import { sources, type Source } from "../shared/sources";
 import { demoListings } from "./demo";
 import { NumericFilter } from "./NumericFilter";
+import { PreferenceFlow } from "./PreferenceFlow";
 import "./style.css";
 
 const apiBase = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
@@ -87,6 +89,7 @@ function ActionPage() {
 const memberSchema = z.object({
   id: z.string(), email: z.string(), state: z.enum(["unverified", "pending", "approved", "rejected", "revoked"]),
   owner: z.boolean(), filters: filterSchema, alertsEnabled: z.boolean(),
+  profile: profileSchema, searchVersion: z.number().int().nonnegative(), aiReady: z.boolean(),
 });
 type Member = z.infer<typeof memberSchema>;
 type Application = { id: string; email: string; application: string; state: string };
@@ -140,7 +143,7 @@ function Membership({ member, ready, accepting, refresh }: { member: Member | nu
       <div className="member-actions"><button disabled={busy} onClick={() => accountAction("/api/logout")}>Logga ut</button><button className="text-button" onClick={() => setDeleteConfirm(value => !value)}>Radera medlemskapet</button></div>
       {deleteConfirm && <div className="notice"><p>Detta raderar ansökan, medlemskapet och bevakningen. Du behöver ansöka på nytt om du vill återvända.</p><button disabled={busy} onClick={() => accountAction("/api/delete-account")}>Bekräfta radering</button></div>}
       </div></details>
-    </> : <div className="membership-grid"><div className="membership-welcome"><Inspiration /><div className="welcome-copy"><h1>En privat väg till nästa hem.</h1><p>Kommande bostäder i Stockholms län, för godkända medlemmar.</p></div></div>
+    </> : <div className="membership-grid"><div className="membership-welcome"><Inspiration /><div className="welcome-copy"><h1>En privat väg till nästa hem.</h1><p>Beskriv ditt nästa hem, förtydliga vid behov och godkänn din sökning. Bara för godkända medlemmar.</p></div></div>
       <form onSubmit={submit}><h2>{login ? "Logga in med mejllänk" : "Ansök om medlemskap"}</h2>
         <p className="small muted">{login ? "Få en säker länk till din e-post. Inget lösenord behövs." : "Ansök, verifiera din e-post och invänta ägarens godkännande."}</p>
         {!ready && <p className="notice">Tjänsten är inte konfigurerad för ansökningar eller mejl ännu.</p>}
@@ -201,7 +204,8 @@ function FilterPanel({ filters, onChange }: { filters: Filters; onChange: (value
     {!filterSchema.safeParse(filters).success && <p role="alert" className="error">Kontrollera intervallen. Minsta värdet får inte vara större än det högsta.</p>}
   </aside>;
 }
-function Property({ listing }: { listing: Listing }) {
+function Property({ listing, profile }: { listing: Listing; profile: Profile }) {
+  const assessment = assess(listing, profile);
   return <article className="property surface">
     <div className="property-top"><span className="badge">{demo ? "Demo · kommande" : "Kommande"}</span><span className="small muted">{listing.type}</span></div>
     <div className="property-location">{listing.area} · {listing.municipality}</div>
@@ -212,44 +216,15 @@ function Property({ listing }: { listing: Listing }) {
       <div><dt>Rum</dt><dd>{listing.rooms === null ? "Ej angivet" : number(listing.rooms)}</dd></div>
       <div><dt>Avgift/mån</dt><dd>{listing.fee === null ? "Ej angivet" : `${number(listing.fee)} kr`}</dd></div>
     </dl>
+    <p className="small">{assessment.needsCheck ? "Matchar kända filter. Manuell kontroll krävs." : "Matchar dina faktabaserade krav."}</p>
+    {assessment.reasons.length > 0 && <ul className="match-reasons small">{assessment.reasons.map(reason => <li key={reason}>{reason}</li>)}</ul>}
+    {profile.unverified.length > 0 && <p className="small muted">Inte bedömt: {profile.unverified.map(c => c.text).join("; ")}.</p>}
     <div className="property-bottom">
       {demo ? <span className="small muted">Fiktivt objekt · ingen annons</span> : <><div className="small muted">{sources.find(source => source.id === listing.sourceId)?.name}<br />
         <span className={stale(listing.lastSeen) ? "stale" : ""}>{stale(listing.lastSeen) ? "Äldre uppgift: " : "Kontrollerad: "}{date(listing.lastSeen)}</span></div>
         <a href={listing.url} target="_blank" rel="noopener noreferrer">Visa objekt<Icon name="arrow" /></a></>}
     </div>
   </article>;
-}
-function Subscription({ filters, enabled, active, refresh }: { filters: Filters; enabled: boolean; active: boolean; refresh: () => void }) {
-  const [message, setMessage] = useState(""), [error, setError] = useState(""), [busy, setBusy] = useState(false);
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); setError(""); setMessage("");
-    if (demo) { setMessage("Det här är bara en förhandsvisning. Ingen prenumeration har skapats, ingen e-postadress har sparats och inget mejl har skickats."); return; }
-    setBusy(true);
-    try {
-      setMessage(await post("/api/search", { filters, enabled: true, consent: true })); refresh();
-    } catch (error) { setError(error instanceof Error ? error.message : "Ett fel uppstod."); }
-    finally { setBusy(false); }
-  }
-  return <section className="subscription surface" id="bevakning" aria-labelledby="subscription-title">
-    <div className="subscription-intro"><div className="title-icon"><Icon name="bell" /><h2 id="subscription-title">Låt nästa hem hitta till dig</h2></div>
-      <p>Bevaka den här sökningen som godkänd medlem. Nya matchningar köas varje morgon, kl. 07–10 svensk tid.</p>
-      <p className="saved-search">{filters.municipality || "Hela Stockholms län"} · {filters.type || "Alla bostadstyper"}{filters.maxPrice !== null ? ` · högst ${number(filters.maxPrice)} kr` : ""}</p>
-      <p className="small muted">Alla filter ovan sparas. Bara nya matchningar, högst 20 per mejl. Pausa när du vill. En sparad sökning per medlem.</p>
-    </div>
-    <form onSubmit={submit}>
-      {demo && <p className="notice small"><strong>Demo.</strong> Formuläret visar flödet men skickar eller sparar ingenting.</p>}
-      {!demo && !enabled && <p className="notice" role="status">Bevakning är inte tillgänglig ännu. Ingen prenumeration kan skapas.</p>}
-      <p className="small">Status: {demo ? "endast demonstration" : active ? "bevakning aktiverad" : "bevakning pausad"}. Mejl skickas endast till medlemskapets verifierade adress.</p>
-      <label className="check"><input name="consent" type="checkbox" required disabled={!demo && !enabled} /><span>Jag vill få bostadsbevakning via mejl och har läst <a href="#integritet">integritetsinformationen</a>.</span></label>
-      <button className="primary" disabled={busy || (!demo && !enabled) || !filterSchema.safeParse(filters).success}>{busy ? "Sparar…" : demo ? "Förhandsvisa bevakning" : "Spara och aktivera bevakning"}<Icon name="arrow" /></button>
-      {!demo && active && <button type="button" disabled={busy} onClick={async () => {
-        setBusy(true); setError(""); try { setMessage(await post("/api/search", { filters, enabled: false, consent: true })); refresh(); }
-        catch (error) { setError(error instanceof Error ? error.message : "Kunde inte pausa."); } finally { setBusy(false); }
-      }}>Pausa bostadsmejlen</button>}
-      {error && <p className="error" role="alert">{error}</p>}{message && <p role="status" className="notice">{message}</p>}
-      <p className="small muted">Gratisgränser och driftfel kan fördröja mejl. Inget utskick om nya träffar saknas. Länken i varje mejl avslutar hela medlemskapet.</p>
-    </form>
-  </section>;
 }
 function Sources({ data }: { data: SourceState[] }) {
   return <section id="kallor" className="sources-section">
@@ -264,12 +239,12 @@ function Sources({ data }: { data: SourceState[] }) {
 }
 function App() {
   const [theme, setTheme] = useState(document.documentElement.dataset.theme || "light");
-  const [filters, setFilters] = useState<Filters>({ ...defaultFilters });
+  const [demoProfile, setDemoProfile] = useState<Profile>(manualProfile());
   const [catalog, setCatalog] = useState<Catalog>({ listings: demo ? demoListings : [], sources, serviceReady: false, privacyContact: null });
   const [loading, setLoading] = useState(!demo && !!apiBase);
   const [error, setError] = useState("");
   const [reload, setReload] = useState(0);
-  const [sort, setSort] = useState("newest");
+  const [sort, setSort] = useState("personal");
   const [member, setMember] = useState<Member | null>(null);
   const [ready, setReady] = useState(false), [accepting, setAccepting] = useState(false);
   const [accountLoading, setAccountLoading] = useState(!demo && !!apiBase && !action);
@@ -295,7 +270,7 @@ function App() {
       }
       if (!memberResponse.ok) throw new Error("Kunde inte kontrollera medlemskapet. Logga in igen.");
       const account = memberSchema.parse(await memberResponse.json());
-      if (active) { setMember(account); setFilters(account.filters); }
+      if (active) setMember(account);
     }).catch(error => {
       if (active) {
         setMember(null); setCatalog(current => ({ ...current, listings: [], sources, serviceReady: false }));
@@ -328,12 +303,13 @@ function App() {
       .finally(() => { clearTimeout(timeout); if (active) setLoading(false); });
     return () => { active = false; clearTimeout(timeout); controller.abort(); };
   }, [reload, member]);
-  const valid = filterSchema.safeParse(filters).success;
-  const filtered = useMemo(() => valid ? catalog.listings.filter(listing => matches(listing, filters)).sort((a, b) => {
+  const profile = demo ? demoProfile : member?.profile ?? manualProfile();
+  const filtered = useMemo(() => ranked(catalog.listings, profile).sort((a, b) => {
     if (sort === "price") return (a.price ?? Infinity) - (b.price ?? Infinity);
     if (sort === "size") return (b.size ?? -1) - (a.size ?? -1);
-    return b.firstSeen.localeCompare(a.firstSeen);
-  }) : [], [filters, catalog.listings, sort, valid]);
+    if (sort === "newest") return b.firstSeen.localeCompare(a.firstSeen);
+    return 0;
+  }), [profile, catalog.listings, sort]);
   const enabledSources = catalog.sources.filter(source => source.authorized).length;
   const changeTheme = () => { const next = theme === "dark" ? "light" : "dark"; setTheme(next); document.documentElement.dataset.theme = next; };
   return <>
@@ -352,35 +328,37 @@ function App() {
           <Membership member={member} ready={ready} accepting={accepting} refresh={refresh} />
         </>}
         {canSearch && <>
-        <section className="search-heading"><Inspiration /><div className="search-heading-copy"><h1>Hitta hem, innan det är till salu.</h1><p>Kommande bostäder i Stockholms län.</p>
-          <a className="button secondary" href="#bevakning"><Icon name="bell" />Bevaka sökningen</a></div></section>
+        <section className="search-heading"><Inspiration /><div className="search-heading-copy"><h1>Beskriv ditt nästa hem.</h1><p>Dina krav. Dina önskemål. Du godkänner innan något sparas.</p></div></section>
+        <PreferenceFlow apiBase={apiBase} demo={demo} member={member} ready={catalog.serviceReady && !error && !loading} refresh={refresh}
+          renderFilters={(filters, change) => <FilterPanel filters={filters} onChange={change} />} onDemoPreview={setDemoProfile} />
         <div className="coverage-strip"><span className="status-dot" aria-hidden="true" /><span>{demo ? "6 exempelbostäder · 0 anslutna livekällor" : `${enabledSources} tillåtna källor · begränsad täckning`}</span><a href="#kallor">Se källstatus<Icon name="arrow" /></a></div>
         {!demo && !apiBase && <section className="notice config-state" role="status"><h2>Tjänsten är inte ansluten ännu</h2><p>Livekällor och bevakning är inte tillgängliga. Du kan prova sökningen med tydligt märkta exempelbostäder.</p><a className="button secondary" href="?demo=1">Prova med exempel</a></section>}
-        <div className="search-layout">
-          <FilterPanel filters={filters} onChange={setFilters} />
+        <div className="personal-results">
           <section className="results" aria-label="Sökresultat">
             <div className="results-toolbar"><h2 aria-live="polite">{loading ? "Hämtar bostäder…" : `${filtered.length} ${demo ? "exempelbostäder" : "bostäder"}`}</h2>
-              <label className="sort">Sortera<select value={sort} onChange={event => setSort(event.target.value)}><option value="newest">Senast upptäckta</option><option value="price">Lägst pris</option><option value="size">Störst boarea</option></select></label></div>
+              <label className="sort">Sortera<select value={sort} onChange={event => setSort(event.target.value)}><option value="personal">Dina önskemål först</option><option value="newest">Senast upptäckta</option><option value="price">Lägst pris</option><option value="size">Störst boarea</option></select></label></div>
+            {!demo && <p className="small muted">Resultat för din sparade sökning. Osparade utkast påverkar inte detta urval.</p>}
             {error && <div role="alert" className="notice"><h3>Det gick inte att uppdatera</h3><p>{error}</p><p>Eventuella tidigare resultat är inte uppdaterade.</p><button className="secondary" onClick={() => setReload(value => value + 1)}>Försök igen</button></div>}
             {!demo && catalog.listings.some(listing => stale(listing.lastSeen)) && <p className="notice">Vissa uppgifter är äldre än 48 timmar. De skickas inte i bevakningsmejl. Kontrollera status hos källan.</p>}
             {loading ? <div aria-busy="true" aria-label="Läser in bostäder" className="property-grid">{[1, 2, 3, 4].map(i => <div className="skeleton surface" key={i}><div/><div/><div/></div>)}</div> :
-              filtered.length ? <div className="property-grid">{filtered.map(listing => <Property listing={listing} key={listing.id} />)}</div> :
-                <div className="empty surface"><Icon name="home" /><h3>{!valid ? "Kontrollera dina filter" : catalog.listings.length ? "Inga bostäder matchar just nu" : "Inga liveobjekt att visa ännu"}</h3>
-                  <p>{!valid ? "Ange giltiga intervall i sökningen." : catalog.listings.length ? "Prova ett större område, justera priset eller inkludera objekt med saknade uppgifter." : "Vi inväntar tillåtna datakällor. Importstödet finns, men automatisk insamling från mäklarna är inte aktiv."}</p>
-                  {catalog.listings.length > 0 && <button className="secondary" onClick={() => setFilters({ ...defaultFilters })}>Rensa alla filter</button>}</div>}
+              filtered.length ? <div className="property-grid">{filtered.map(listing => <Property listing={listing} profile={profile} key={listing.id} />)}</div> :
+                <div className="empty surface"><Icon name="home" /><h3>{catalog.listings.length ? "Inga bostäder matchar just nu" : "Inga liveobjekt att visa ännu"}</h3>
+                  <p>{catalog.listings.length ? "Prova ett större område eller andra gränser. Ändra och godkänn din sökning ovan." : "Vi inväntar tillåtna datakällor. Importstödet finns, men automatisk insamling från mäklarna är inte aktiv."}</p></div>}
             <p className="results-note small muted">{demo ? "Exemplen visar hur sökningen fungerar, inte marknadsläget." : "Kommande-status och uppgifter kommer från källan och kan ändras. Objekt med okänt pris sorteras sist."}</p>
           </section>
         </div>
-        <Subscription filters={filters} enabled={catalog.serviceReady && !error && !loading} active={member?.alertsEnabled || false} refresh={refresh} />
         <Sources data={catalog.sources} />
         {member?.owner && <OwnerPanel ownerId={member.id} />}
         </>}
       </>}
       <section id="integritet" className="privacy">
         <h2>Din bevakning, dina uppgifter</h2>
-        <div className="privacy-columns"><div><h3>Det här sparas</h3><p>Din e-postadress, ansökan, medlemsbeslut, sökfilter, samtyckesversion och vilka objekt som skickats. Uppgifterna används för medlemskapet och din valda bevakning. Inga reklamspårare eller analyskakor används. En nödvändig säker sessionskaka håller dig inloggad i högst 12 timmar.</p><p>Overifierade ansökningar raderas efter 48 timmar. Väntande, avslagna och återkallade medlemskap sparas högst 30 dagar, godkända högst 180 dagar. Mejllänkar gäller i 30 minuter.</p></div>
+        <div className="privacy-columns"><div><h3>Det här sparas</h3><p>Din e-postadress, ansökan, medlemsbeslut, sökfilter, godkänd preferensprofil, samtyckesversion och vilka objekt som skickats. Uppgifterna används för medlemskapet och din valda bevakning. Inga reklamspårare eller analyskakor används. En nödvändig säker sessionskaka håller dig inloggad i högst 12 timmar.</p><p>Overifierade ansökningar raderas efter 48 timmar. Väntande, avslagna och återkallade medlemskap sparas högst 30 dagar, godkända högst 180 dagar. Mejllänkar gäller i 30 minuter.</p></div>
           <div><h3>Avsluta och radera</h3><p>Logga in för att ändra dina filter eller pausa bostadsmejlen. Varje mejl innehåller även en länk som avslutar och raderar hela medlemskapet. Uppgifter om ägarens beslut sparas pseudonymiserat i högst 180 dagar för spårbarhet.</p><p>Cloudflare lagrar uppgifterna och Resend hanterar mejlen. Tillfälliga, pseudonymiserade identifierare begränsar missbruk. Driftmetadata sparas högst 35 dagar, utom aggregerade kvoter och osäkra leveranser som behöver utredas.</p></div></div>
-        <p className="small muted">{catalog.privacyContact ? <>Personuppgiftskontakt: <a href={`mailto:${catalog.privacyContact}`}>{catalog.privacyContact}</a>. Rättslig grund: samtycke. Du kan återkalla samtycket när som helst och kontakta IMY med klagomål.</> : "Tjänsten är inte öppnad för registrering. Ansvarig och integritetskontakt måste anges före lansering."} Leverantörernas säkerhetskopior och mejlloggar kan omfattas av separata lagringstider; se tjänstens driftinformation före lansering.</p>
+        <p>Personuppgiftsansvarig: <strong>Marcus Bodin (privatperson)</strong>. Kontakt: <a href="mailto:kontakt@kommandekollen.se">kontakt@kommandekollen.se</a>. Rättslig grund: samtycke. Du kan återkalla samtycket när som helst och kontakta IMY med klagomål.</p>
+        <p className="small muted">D1-databasen har EU-jurisdiktion. Resend lagrar kontouppgifter, mejlmetadata, loggar och API-poster i USA; sändningsregionen ändrar inte detta. Leverantörernas säkerhetskopior och mejlloggar kan ha separata lagringstider. Radering här innebär inte omedelbar radering ur alla leverantörsbackuper.</p>
+        <h3>Valfri AI-texthjälp</h3><p>Med ditt godkännande skickas din bostadstext och föregående preferensutkast till Cloudflare Workers AI (Llama 3.3). Vi skickar inte med konto, mejladress eller medlemsansökan. Skriv inte personliga eller känsliga uppgifter i bostadstexten. Cloudflare uppger att kundinnehåll inte används för modellträning utan uttryckligt samtycke; ingen särskild behandlingsregion utlovas här.</p>
+        <p>Vi sparar inte din råa prompt eller en chatthistorik. Utkast med tolkade önskemål och aktuell fråga gäller i 30 minuter och rensas vid underhåll; radering eller återkallat medlemskap tar bort dem direkt. Slutförda AI-kvotposter är pseudonymiserade och rensas efter två dagar, osäkra anrop behålls tills de utretts. En godkänd profil sparas med medlemskapet. AI kan feltolka: granska innan du sparar, eller använd vanliga filter utan AI.</p>
       </section>
     </main>
     <footer className="site-footer"><span>kommandekollen.</span><a href="#integritet">Integritet & radering</a><a href={`${import.meta.env.BASE_URL}assets/ATTRIBUTION.md`}>Bild & licens</a>{canSearch && <a href="#kallor">Källstatus</a>}<span className="small">Privat tjänst · medlemskap efter godkännande</span></footer>

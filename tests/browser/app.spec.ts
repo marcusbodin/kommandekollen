@@ -1,15 +1,18 @@
 import { test, expect, type Page } from "@playwright/test";
 import { defaultFilters, type Filters } from "../../shared/model";
 import { sources } from "../../shared/sources";
+import { manualProfile, type Draft } from "../../shared/preferences";
 
 const api = "http://127.0.0.1:8787";
 const ownerId = "00000000-0000-4000-8000-000000000001";
 const applicantId = "00000000-0000-4000-8000-000000000002";
-type MockOptions = { ready?: boolean; state?: string; owner?: boolean; filters?: Filters };
+type MockOptions = { ready?: boolean; state?: string; owner?: boolean; filters?: Filters; ai?: boolean; aiError?: boolean; catalogReady?: boolean };
 
 async function mockApi(page: Page, options: MockOptions = {}) {
   let filters = options.filters ?? { ...defaultFilters };
   let alertsEnabled = false;
+  let profile = manualProfile(filters), version = 0, revision = 0, aiRound = 0;
+  let draft: Draft | null = null;
   const posts: { path: string; body: Record<string, unknown> }[] = [];
   const reads: string[] = [];
   await page.route(`${api}/**`, async route => {
@@ -17,20 +20,42 @@ async function mockApi(page: Page, options: MockOptions = {}) {
     if (request.method() === "POST") {
       const body = request.postDataJSON();
       posts.push({ path, body });
-      if (path === "/api/search") { filters = body.filters; alertsEnabled = body.enabled; }
+      if (path === "/api/search") { filters = body.filters; alertsEnabled = body.enabled; version++; }
+      if (path === "/api/preferences/interpret") {
+        if (options.aiError) { await route.fulfill({ status: 502, json: { message: "Texthjälpens svar gick inte att kontrollera. Inget har sparats." } }); return; }
+        const p = manualProfile({ ...defaultFilters, minRooms: 3, type: "Lägenhet", maxPrice: aiRound++ ? 5000000 : null });
+        p.alternatives.municipalities = ["Solna", "Sundbyberg"];
+        p.wishes = [{ ...defaultFilters, minSize: 80 }];
+        p.unverified = [{ text: "Tyst gata", must: true }];
+        draft = { id: body.id, revision: ++revision, baseVersion: version, profile: p, turns: aiRound, expiresAt: Date.now() + 1800000,
+          question: aiRound === 1 ? { text: "Är 5 miljoner ett fast pristak?", choices: ["Ja, högst 5 miljoner"], required: true } : null, conflicts: [] };
+        await route.fulfill({ json: { draft } }); return;
+      }
+      if (path === "/api/preferences/draft") {
+        draft = { id: body.id, revision: ++revision, baseVersion: version, profile: body.profile, turns: 0,
+          expiresAt: Date.now() + 1800000, question: body.resolveQuestions ? null : draft?.question ?? null, conflicts: [] };
+        await route.fulfill({ json: { draft } }); return;
+      }
+      if (path === "/api/preferences/confirm") {
+        if (!draft || body.id !== draft.id || body.revision !== draft.revision || !body.consent) { await route.fulfill({ status: 409, json: { message: "Utkastet ändrades." } }); return; }
+        profile = draft.profile; filters = profile.filters; alertsEnabled = body.enabled; version++; draft = null;
+        await route.fulfill({ json: { message: alertsEnabled ? "Sökningen är sparad. Daglig bevakning är startad." : "Sökningen är sparad pausad. Inga bostadsmejl aktiverades.", searchVersion: version } }); return;
+      }
+      if (path === "/api/preferences/cancel") draft = null;
       await route.fulfill({ json: { message: "Testsvaret har tagits emot." } });
       return;
     }
     reads.push(path);
     if (path === "/api/status") await route.fulfill({ json: { serviceReady: options.ready ?? false, acceptingApplications: options.ready ?? false, privacyContact: null } });
     else if (path === "/api/me" && ["approved", "pending"].includes(options.state ?? "")) await route.fulfill({ json: {
-      id: ownerId, email: "member@example.com", state: options.state, owner: options.owner ?? false, filters, alertsEnabled,
+      id: ownerId, email: "member@example.com", state: options.state, owner: options.owner ?? false, filters, alertsEnabled, profile, searchVersion: version, aiReady: options.ai ?? false,
     } });
     else if (path === "/api/me") await route.fulfill({ status: 401, json: { message: "Ingen giltig medlemssession." } });
     else if (path === "/api/catalog" && options.state === "approved") await route.fulfill({ json: {
-      listings: [], sources: sources.map(source => ({ ...source, authorized: false, run: null })),
-      serviceReady: options.ready ?? false, privacyContact: null,
+      listings: [], sources: sources.map(source => ({ ...source, authorized: !!options.catalogReady && source.id === "authorized", run: null })),
+      serviceReady: options.catalogReady ?? false, privacyContact: null,
     } });
+    else if (path === "/api/preferences/draft") await route.fulfill({ json: { draft, aiReady: options.ai ?? false } });
     else if (path === "/api/admin/members" && options.owner) await route.fulfill({ json: { members: [
       { id: applicantId, email: "long.application.address.for.mobile@example.com", application: "Jag söker ett mindre hem i Stockholm.", state: "pending" },
       { id: ownerId, email: "member@example.com", application: "", state: "approved" },
@@ -124,11 +149,12 @@ test("native sliders filter synthetic results, distinguish finite endpoints and 
   await page.goto("/?demo=1");
   await expect(page.getByText("Demonstrationsläge")).toBeVisible();
   await expect(page.locator(".property")).toHaveCount(6);
+  await page.locator(".manual-search > summary").click();
   const price = page.getByRole("slider", { name: "Högsta pris", exact: true });
   await expect(price).toHaveAttribute("aria-valuetext", "Ingen gräns");
   await price.focus();
-  expect(await price.evaluate(el => getComputedStyle(el).outlineStyle)).toBe("solid");
   await price.press("Home");
+  expect(await price.evaluate(el => getComputedStyle(el).outlineStyle)).toBe("solid");
   await expect(price).toHaveAttribute("aria-valuetext", "0 kr");
   for (let i = 0; i < 40; i++) await price.press("ArrowRight");
   await expect(price).toHaveAttribute("aria-valuetext", "4 000 000 kr");
@@ -163,11 +189,11 @@ test("native sliders filter synthetic results, distinguish finite endpoints and 
   await page.getByRole("button", { name: "Rensa", exact: true }).click();
   await page.getByRole("combobox", { name: "Sortera", exact: true }).selectOption("price");
   await expect(page.locator(".property").first()).toContainText("Demostigen");
-  await page.getByLabel("Jag vill få bostadsbevakning").check();
-  await page.getByRole("button", { name: "Förhandsvisa bevakning" }).click();
-  await expect(page.locator(".subscription [role=status]")).toContainText("Ingen prenumeration har skapats");
+  await page.getByRole("button", { name: "Granska ändringarna" }).click();
+  await page.getByLabel("Jag godkänner den här sökningen").check();
+  await page.getByRole("button", { name: "Förhandsvisa sparande" }).click();
+  await expect(page.locator(".preference-flow [role=status]")).toContainText("ingen prenumeration har skapats");
   expect(posts).toHaveLength(0);
-  await page.locator(".more-filters > summary").click();
   await page.evaluate(() => window.scrollTo(0, 0));
   await imageLoaded(page);
   await readableContrast(page);
@@ -180,19 +206,23 @@ test("native sliders filter synthetic results, distinguish finite endpoints and 
 
 test("exact saved values survive rendering and saving; bounds remain coordinated", async ({ page }) => {
   const original: Filters = { ...defaultFilters, minPrice: 3250123, maxPrice: 4250123, minRooms: 2.7, maxRooms: 4.25, minSize: 56.75, maxSize: 142.25, maxFee: 4321 };
-  const { posts } = await mockApi(page, { ready: true, state: "approved", filters: original });
+  const { posts } = await mockApi(page, { ready: true, state: "approved", filters: original, catalogReady: true });
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Inga liveobjekt att visa ännu" })).toBeVisible();
+  await page.locator(".manual-search > summary").click();
   const price = page.getByRole("slider", { name: "Högsta pris", exact: true });
   await expect(price).toHaveAttribute("aria-valuetext", "4 250 123 kr");
-  await page.getByLabel("Jag vill få bostadsbevakning").check();
-  await page.getByRole("button", { name: "Spara och aktivera bevakning" }).click();
-  await expect(page.locator(".subscription [role=status]")).toHaveText("Testsvaret har tagits emot.");
-  expect(posts[0]).toEqual({ path: "/api/search", body: { filters: original, enabled: true, consent: true } });
-  await expect(page.locator(".subscription")).toContainText("Status: bevakning aktiverad");
+  await page.getByRole("button", { name: "Granska ändringarna" }).click();
+  await page.getByLabel("Jag godkänner den här sökningen").check();
+  await page.getByRole("button", { name: "Spara och starta daglig bevakning" }).click();
+  await expect(page.locator(".preference-flow [role=status]")).toContainText("Daglig bevakning är startad");
+  expect(posts[0].body.profile).toEqual(manualProfile(original));
+  expect(posts[1].body).toMatchObject({ enabled: true, consent: true, expectedVersion: 0 });
+  await expect(page.locator(".saved-profile > summary")).toContainText("bevakning startad");
+  await page.locator(".manual-search > summary").click();
   await price.press("ArrowLeft");
   await expect(price).toHaveAttribute("aria-valuetext", "4 200 000 kr");
-  expect(posts).toHaveLength(1);
+  expect(posts).toHaveLength(2);
   await page.locator(".more-filters > summary").click();
   await expect(page.getByRole("slider", { name: "Minsta boarea", exact: true })).toHaveAttribute("aria-valuetext", "56,75 m²");
   await expect(page.getByRole("slider", { name: "Högsta månadsavgift", exact: true })).toHaveAttribute("aria-valuetext", "4 321 kr/mån");
@@ -217,15 +247,17 @@ test("exact saved values survive rendering and saving; bounds remain coordinated
   await expect(price).toHaveAttribute("max", expandedMax!);
   await exact.fill("100000001");
   await expect(price).toHaveAttribute("aria-invalid", "true");
-  await expect(page.getByRole("button", { name: "Spara och aktivera bevakning" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Granska ändringarna" })).toBeDisabled();
   await page.getByRole("button", { name: "Ingen gräns: Högsta pris", exact: true }).click();
   await expect(price).toHaveAttribute("aria-valuetext", "Ingen gräns");
   await page.getByRole("button", { name: "Rensa", exact: true }).click();
   await price.press("Home");
   await price.press("ArrowRight");
-  await page.getByRole("button", { name: "Spara och aktivera bevakning" }).click();
-  await expect.poll(() => posts.length).toBe(2);
-  expect(posts[1].body.filters).toEqual({ ...defaultFilters, maxPrice: 100000 });
+  await page.getByRole("button", { name: "Granska ändringarna" }).click();
+  await page.getByLabel("Jag godkänner den här sökningen").check();
+  await page.getByRole("button", { name: "Spara och starta daglig bevakning" }).click();
+  await expect.poll(() => posts.length).toBe(4);
+  expect(posts[2].body.profile).toEqual(manualProfile({ ...defaultFilters, maxPrice: 100000 }));
   await noOverflow(page);
 });
 
@@ -250,6 +282,7 @@ test("320–430px layouts retain application, optional sliders and local images 
       expect(posts[0].path).toBe("/api/apply");
     }
     await page.goto("/?demo=1");
+    await page.locator(".manual-search > summary").click();
     await page.getByRole("combobox", { name: "Kommun", exact: true }).selectOption("Stockholm");
     await page.locator(".more-filters > summary").click();
     const size = page.getByRole("slider", { name: "Minsta boarea", exact: true });
@@ -315,4 +348,121 @@ test("email action needs explicit POST and token is removed from address bar", a
   await page.getByRole("button", { name: "Fortsätt", exact: true }).click();
   await expect(page.locator(".action-page [role=status]")).toBeVisible();
   expect(posts).toEqual([{ path: "/api/confirm", body: { token: "a".repeat(64) } }]);
+});
+
+test("personal prompt, one clarification, edited summary and explicit paused save", async ({ page }) => {
+  const { posts } = await mockApi(page, { ready: true, state: "approved", ai: true });
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "Inga liveobjekt att visa ännu" })).toBeVisible();
+  await page.getByRole("button", { name: "Använd exempel: lägenhet" }).click();
+  expect(posts).toHaveLength(0);
+  await page.getByRole("textbox", { name: "Beskriv ditt nästa hem", exact: true }).fill("Lägenhet i Solna eller Sundbyberg, minst 3 rum, runt 5 miljoner, gärna 80 m² och tyst gata.");
+  await expect(page.getByRole("button", { name: "Hjälp mig att precisera" })).toBeDisabled();
+  await page.getByLabel("Jag vill använda AI-texthjälpen").check();
+  await page.getByRole("button", { name: "Hjälp mig att precisera" }).click();
+  await expect(page.getByRole("textbox", { name: "Är 5 miljoner ett fast pristak?" })).toBeFocused();
+  await expect(page.getByRole("button", { name: "Spara pausad sökning" })).toBeDisabled();
+  expect(posts.map(p => p.path)).toEqual(["/api/preferences/interpret"]);
+  await page.getByRole("button", { name: "Ja, högst 5 miljoner", exact: true }).click();
+  expect(posts).toHaveLength(1);
+  await page.getByRole("button", { name: "Tolka mitt svar" }).click();
+  await expect(page.getByRole("heading", { name: "Stämmer det här?" })).toBeFocused();
+  await expect(page.locator(".draft-review")).toContainText("Solna eller Sundbyberg");
+  await expect(page.locator(".draft-review")).toContainText("Minst 80 m²");
+  await expect(page.locator(".draft-review")).toContainText("Tyst gata");
+  await page.getByLabel("Jag accepterar att själv kontrollera").check();
+  await page.getByLabel("Jag godkänner den här sökningen").check();
+  await page.getByRole("textbox", { name: "Vill du rätta eller lägga till något?" }).fill("Jag vill också ha balkong");
+  await expect(page.getByRole("button", { name: "Spara pausad sökning" })).toBeDisabled();
+  await expect(page.getByLabel("Jag godkänner den här sökningen")).not.toBeChecked();
+  await page.getByRole("textbox", { name: "Vill du rätta eller lägga till något?" }).fill("");
+  await page.getByLabel("Jag godkänner den här sökningen").check();
+  await page.locator(".manual-search > summary").click();
+  const price = page.getByRole("slider", { name: "Högsta pris", exact: true });
+  await price.press("ArrowLeft");
+  await expect(page.getByRole("button", { name: "Spara pausad sökning" })).toBeDisabled();
+  await expect(page.getByLabel("Jag godkänner den här sökningen")).not.toBeChecked();
+  await page.getByRole("button", { name: "Granska ändringarna" }).click();
+  await expect(page.locator(".draft-review")).toContainText("4 900 000 kr");
+  await expect(page.getByLabel("Jag accepterar att själv kontrollera")).not.toBeChecked();
+  await page.getByLabel("Jag accepterar att själv kontrollera").check();
+  await page.getByLabel("Jag godkänner den här sökningen").check();
+  expect(posts.some(p => p.path === "/api/preferences/confirm")).toBe(false);
+  await touchAndType(page);
+  await readableContrast(page);
+  await noOverflow(page);
+  await page.screenshot({ path: test.info().outputPath("personal-summary.png"), fullPage: true });
+  await page.getByRole("button", { name: "Spara pausad sökning" }).click();
+  await expect(page.locator(".preference-flow [role=status]")).toContainText("Inga bostadsmejl aktiverades");
+  expect(posts.at(-1)).toMatchObject({ path: "/api/preferences/confirm", body: { enabled: false, consent: true, acceptUnverified: true, expectedVersion: 0 } });
+  await page.reload();
+  await page.locator(".saved-profile > summary").click();
+  await expect(page.locator(".saved-profile")).toContainText("4 900 000 kr");
+  await expect(page.locator(".saved-profile")).toContainText("Tyst gata");
+  await expect(page.locator(".draft-review")).toHaveCount(0);
+});
+
+test("model failure keeps search intact and manual fallback works at 320px", async ({ page }) => {
+  const { posts } = await mockApi(page, { ready: true, state: "approved", ai: true, aiError: true,
+    filters: { ...defaultFilters, maxPrice: 4250123 } });
+  await page.setViewportSize({ width: 320, height: 844 });
+  await page.goto("/");
+  await page.getByRole("textbox", { name: "Beskriv ditt nästa hem", exact: true }).fill("Jag söker en villa i Nacka.");
+  await page.getByLabel("Jag vill använda AI-texthjälpen").check();
+  await page.getByRole("button", { name: "Hjälp mig att precisera" }).click();
+  await expect(page.getByRole("alert")).toContainText("Inget har sparats");
+  await page.locator(".saved-profile > summary").click();
+  await expect(page.locator(".saved-profile")).toContainText("4 250 123 kr");
+  expect(posts).toHaveLength(1);
+  await page.locator(".manual-search > summary").click();
+  await expect(page.getByRole("slider", { name: "Högsta pris", exact: true })).toHaveAttribute("aria-valuetext", "4 250 123 kr");
+  await page.getByRole("combobox", { name: "Kommun", exact: true }).selectOption("Nacka");
+  await page.getByRole("button", { name: "Granska ändringarna" }).click();
+  await expect(page.locator(".draft-review")).toContainText("Nacka");
+  await page.getByLabel("Jag godkänner den här sökningen").check();
+  await page.getByRole("button", { name: "Spara pausad sökning" }).click();
+  await expect(page.locator(".saved-profile")).toContainText("Nacka");
+  await touchAndType(page);
+  await noOverflow(page);
+});
+
+test("anonymous illustrative prompt is deterministic and never uses the model or saves", async ({ page }) => {
+  const { posts, reads } = await mockApi(page);
+  await page.goto("/?demo=1");
+  await expect(page.getByText("Detta är ett fast, illustrativt exempel", { exact: false })).toBeVisible();
+  await page.getByRole("button", { name: "Visa exempelutkast" }).click();
+  await page.getByRole("button", { name: "Ja, högst 5 miljoner", exact: true }).click();
+  await page.getByRole("button", { name: "Visa exemplets svar" }).click();
+  await page.getByLabel("Jag godkänner den här sökningen").check();
+  await page.getByRole("button", { name: "Förhandsvisa sparande" }).click();
+  await expect(page.locator(".preference-flow [role=status]")).toContainText("inget mejl har skickats");
+  expect(posts).toHaveLength(0);
+  expect(reads).toHaveLength(0);
+  for (const width of [320, 360, 390, 430]) {
+    await page.setViewportSize({ width, height: 844 });
+    await touchAndType(page);
+    await imageLoaded(page);
+    await noOverflow(page);
+  }
+});
+
+test("canceling a pending interpretation cannot replace the saved search", async ({ page }) => {
+  const { posts } = await mockApi(page, { ready: true, state: "approved", ai: true, filters: { ...defaultFilters, maxPrice: 4250123 } });
+  let release!: () => void;
+  const held = new Promise<void>(resolve => { release = resolve; });
+  await page.route(`${api}/api/preferences/interpret`, async route => {
+    await held;
+    await route.fulfill({ status: 409, json: { message: "Utkastet avbröts." } });
+  });
+  await page.goto("/");
+  await page.getByRole("textbox", { name: "Beskriv ditt nästa hem", exact: true }).fill("Villa i Nacka");
+  await page.getByLabel("Jag vill använda AI-texthjälpen").check();
+  await page.getByRole("button", { name: "Hjälp mig att precisera" }).click();
+  await page.getByRole("button", { name: "Avbryt", exact: true }).click();
+  release();
+  await expect(page.locator(".preference-flow [role=status]")).toContainText("Den sparade sökningen är oförändrad");
+  await expect(page.locator(".draft-review")).toHaveCount(0);
+  await page.locator(".saved-profile > summary").click();
+  await expect(page.locator(".saved-profile")).toContainText("4 250 123 kr");
+  expect(posts.some(p => p.path === "/api/preferences/confirm")).toBe(false);
 });

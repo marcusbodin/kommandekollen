@@ -40,8 +40,15 @@ aldrig hemma i `VITE_*`, JavaScript-paket, git eller Actions-loggar.
 
 ## Det som finns
 
+- Personligt sökflöde: beskriv hemmet, besvara högst en fråga åt gången,
+  granska **Måste ha / Gärna / Behöver kontrolleras av dig**, redigera och
+  godkänn uttryckligen. Utan redo källor sparas sökningen **pausad**.
+  Cloudflare Workers AI är valfri, endast för godkända medlemmar och avstängd
+  som standard. Den nya funktionen behöver migration `0002` och samordnad
+  driftsättning; den aktiverar inte den publicerade tjänsten av sig själv.
 - Mobilanpassad, ljus sökyta med Clawpilot-tema; mörkt läge väljs uttryckligen.
-  Kommun och tryckbara bostadstyper, reglage för pris/rum/boarea/avgift, valfri
+  Manuella filter är alternativet utan AI: kommun och bostadstyper,
+  reglage för pris/rum/boarea/avgift, valfri
   exakt inmatning och extra sökval under **Fler filter**. Ingen gräns är ett eget
   val; befintliga exakta sökvärden avrundas inte. Saknade uppgifter är inte noll.
 - En licensverifierad, lokalt optimerad interiörbild, tydligt märkt som
@@ -74,6 +81,13 @@ Inga betalda uppgraderingar eller obegränsad gratiskapacitet förutsätts.
 - [Källor, belägg och importformat](docs/SOURCES.md)
 - [Dataskydd, medlemskap och drift](docs/OPERATIONS.md)
 - [Visuellt system](DESIGN.md)
+- [Personliga sökprofiler, AI-kontrakt, gratisbudget och migration](docs/PREFERENCES.md)
+
+AI-hjälpen reserverar konservativt 1 000 neuroner per försök, högst 6 000 per
+UTC-dygn för hela appen och tre försök per medlem/IP. Kontots Free-kvot delas med
+annan användning. Inga betalda modeller eller automatiska kostnadsfallbacks används.
+**Built with Llama**; modellvillkor och begränsade verkliga utvärderingsresultat
+finns i dokumentationen ovan. Manuella sökningar kräver inte AI.
 
 Webbläsartesterna startar en separat frontend på port 5174 och simulerar API:t
 lokalt, utan att skicka mejl eller röra förhandsvisningen på 5173. De täcker

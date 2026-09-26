@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { sourceIds } from "../shared/model";
+import type { HousingAI } from "./ai";
 
 export interface Env {
   DB: D1Database;
@@ -13,6 +14,8 @@ export interface Env {
   SERVICE_ENABLED: string;
   AUTHORIZED_SOURCES: string;
   OWNER_EMAIL: string;
+  AI_ENABLED?: string;
+  AI?: HousingAI;
 }
 export class ApiError extends Error {
   constructor(public status: number, public code: string, message: string) { super(message); }
@@ -45,7 +48,7 @@ export async function unseal<T>(secret: string, value: string): Promise<T> {
   const data = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, await encryptionKey(secret), ciphertext);
   return JSON.parse(new TextDecoder().decode(data)) as T;
 }
-export async function readJson(request: Request, maxBytes = 4096): Promise<unknown> {
+export async function readJson(request: Pick<Request, "headers" | "body">, maxBytes = 4096): Promise<unknown> {
   if (!request.headers.get("content-type")?.startsWith("application/json")) {
     throw new ApiError(415, "content_type", "Skicka JSON.");
   }
@@ -92,6 +95,7 @@ export function serviceReady(env: Env) {
 export type MemberState = "unverified" | "pending" | "approved" | "rejected" | "revoked";
 export interface Member {
   id: string; email: string; state: MemberState; filters: string; alerts_enabled: number; application: string;
+  preference_profile: string | null; search_version: number;
 }
 export function isOwner(env: Env, member: Member) {
   return !!env.OWNER_EMAIL && member.email === env.OWNER_EMAIL.trim().toLowerCase();
@@ -106,7 +110,7 @@ export async function authenticate(request: Request, env: Env, approved = true):
   const value = (request.headers.get("cookie") || "").split(";").map(part => part.trim())
     .find(part => part.startsWith(`${cookieName(request)}=`))?.slice(cookieName(request).length + 1);
   if (!value || !/^[a-f0-9]{64}$/.test(value)) throw new ApiError(401, "login_required", "Logga in för att fortsätta.");
-  const member = await env.DB.prepare(`SELECT s.id,s.email,s.state,s.filters,s.alerts_enabled,s.application
+  const member = await env.DB.prepare(`SELECT s.id,s.email,s.state,s.filters,s.alerts_enabled,s.application,s.preference_profile,s.search_version
     FROM sessions t JOIN subscriptions s ON s.id=t.member_id WHERE t.token_hash=? AND t.expires_at>? AND s.expires_at>?`)
     .bind(await hash(value), Date.now(), Date.now()).first<Member>();
   if (!member || member.state === "rejected" || member.state === "revoked") throw new ApiError(401, "login_required", "Sessionen har gått ut eller åtkomsten har återkallats.");

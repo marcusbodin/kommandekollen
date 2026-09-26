@@ -17,13 +17,19 @@ headings 18–32px. Inputs remain at least 16px to avoid iOS focus zoom. Primary
 targets and disclosure summaries are at least 44px high with visible keyboard
 focus; checkbox labels provide the larger touch target.
 
-Desktop search: 320px filter rail, flexible two-column factual property cards,
-then inline saved-search controls and source transparency. Below 1050px,
-properties become one column. Below 700px, the rail and content stack, with
+The primary search interaction is a compact housing-description textarea,
+optional explicitly selected examples, one material followup and an editable
+summary separating requirements, wishes and manual checks. One explicit
+confirmation saves the reviewed profile; with no ready sources it saves paused.
+No endless chat transcript or fake AI in the deterministic public demo.
+Desktop uses a readable 880px central input/review panel, then flexible
+two-column factual property cards and source transparency. Below 1050px,
+properties become one column. Below 700px, content stacks, with
 112px inspiration bands rather than a full-screen hero. Opaque light panels
 keep text readable; no copy is drawn directly on photography.
-Municipality, touch-choice property types, maximum price and minimum rooms are
-immediately available. "Fler filter" contains the remaining criteria.
+Manual controls are secondary under "Använd vanliga filter" / "Ändra själv med
+filter". Municipality, touch-choice property types, maximum price and minimum
+rooms are immediately available there. "Fler filter" contains remaining criteria.
 Numeric filters use native range controls with visible Swedish values and
 aria-valuetext. Null is its own "Ingen gräns" stop, distinct from a finite
 endpoint. Typical slider scales are price 0–20M/100k, rooms 0–10/0.5, area
@@ -40,8 +46,11 @@ drop-shadow-heavy nested panels, gradients, custom scrollbars or entrance effect
 Explicit states: public/unconfigured, email verification, pending approval,
 approved member, owner review, revoked/expired login, demo, loading, error,
 empty, unknown factual values, stale inventory, paused/active alerts. Demo is
-labeled globally and on each object. Changing a filter updates the current
-view but never changes the saved search until explicit member action.
+labeled globally and on each object. Only demo manual filters immediately
+preview results. Member results and digests use the approved saved profile;
+drafting or manual editing never changes it before explicit confirmation.
+Every edit invalidates prior draft approval. Generated, expired, failed,
+cancelled and stale-version states remain visible and recoverable.
 
 Token links require a button-triggered POST; opening a link never verifies,
 unsubscribes or removes a member. Actions and errors use live-region feedback.

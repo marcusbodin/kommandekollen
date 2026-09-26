@@ -1,12 +1,16 @@
-import { filterSchema, matches, stockholmClock, type Listing } from "../shared/model";
+import { stockholmClock, type Listing } from "../shared/model";
+import { assess, hardDescription, ranked } from "../shared/preferences";
+import { savedProfile } from "./preferences";
 import { actionUrl, authorizations, escapeHtml, seal, unseal, unsubscribeToken, type Env } from "./support";
 
 interface Subscription {
   id: string; email: string; filters: string; created_at: number; activated_at: number;
+  preference_profile: string | null; search_version: number;
 }
 interface Outbox {
   id: string; subscription_id: string; kind: string; payload: string; listing_ids: string;
   created_at: number; first_attempt: number | null; attempts: number;
+  search_version: number;
 }
 export interface Mail { from: string; to: string; subject: string; text: string; html: string }
 export async function queueVerification(env: Env, id: string, email: string, token: string, now: number) {
@@ -35,7 +39,7 @@ export async function approvalNotice(env: Env, member: { id: string; email: stri
 export async function prepareDigest(env: Env, now = Date.now()) {
   const { day, hour } = stockholmClock(new Date(now));
   if (hour < 7 || hour >= 10) return;
-  const subscriber = await env.DB.prepare(`SELECT id,email,filters,created_at,activated_at FROM subscriptions
+  const subscriber = await env.DB.prepare(`SELECT id,email,filters,preference_profile,search_version,created_at,activated_at FROM subscriptions
     WHERE state='approved' AND alerts_enabled=1 AND expires_at>? AND (last_digest_day IS NULL OR last_digest_day<?)
     AND NOT EXISTS(SELECT 1 FROM outbox WHERE subscription_id=subscriptions.id
       AND (state IN ('pending','sending') OR error_code='delivery_uncertain'))
@@ -47,25 +51,28 @@ export async function prepareDigest(env: Env, now = Date.now()) {
     ORDER BY l.first_seen,l.id LIMIT 200`)
     .bind(new Date(now - 48 * 3600_000).toISOString(), subscriber.id)
     .all<{ id: string; data: string; first_seen: string; last_seen: string }>();
-  const filters = filterSchema.parse(JSON.parse(subscriber.filters));
+  const profile = savedProfile(subscriber);
   const allowed = new Set<string>(authorizations(env).map(source => source.id));
-  const listings: Listing[] = rows.results.map(row => ({
+  const listings = ranked<Listing>(rows.results.map(row => ({
     ...JSON.parse(row.data), id: row.id, firstSeen: row.first_seen, lastSeen: row.last_seen,
-  })).filter(l => allowed.has(l.sourceId) && matches(l, filters)).slice(0, 20);
-  const markDay = env.DB.prepare("UPDATE subscriptions SET last_digest_day=? WHERE id=?").bind(day, subscriber.id);
+  })).filter(l => allowed.has(l.sourceId)), profile).slice(0, 20);
+  const markDay = env.DB.prepare("UPDATE subscriptions SET last_digest_day=? WHERE id=? AND search_version=?").bind(day, subscriber.id, subscriber.search_version);
   if (!listings.length) { await markDay.run(); return; }
   const remove = actionUrl(env, "unsubscribe", await unsubscribeToken(env, subscriber.id));
   const facts = (l: Listing) => `${l.type} · ${l.rooms ?? "?"} rum · ${l.size ?? "?"} m² · ${l.price === null ? "Pris saknas" : `${l.price.toLocaleString("sv-SE")} kr`}`;
+  const checks = profile.unverified.map(c => `${c.must ? "Krav att kontrollera själv" : "Önskemål att kontrollera själv"}: ${c.text}`).join("\n");
+  const why = (l: Listing) => [assess(l, profile).needsCheck ? "Matchar kända filter; manuell kontroll krävs." : "Matchar dina faktabaserade krav.",
+    ...assess(l, profile).reasons].join("\n");
   const mail: Mail = {
-    from: env.MAIL_FROM, to: subscriber.email, subject: `${listings.length} nya matchningar – Kommandekollen`,
-    text: `Nya matchningar för din bevakning, ${day}.\n\n${listings.map(l => `${l.address}, ${l.area}, ${l.municipality}\n${facts(l)}\n${l.url}`).join("\n\n")}\n\nHögst 20 objekt per mejl. Fler nya matchningar kommer vid nästa utskick. Uppgifter kan ändras; kontrollera hos källan.\nAvsluta och radera din bevakning: ${remove}`,
-    html: `<h1>Dina nya matchningar</h1><p>${day}. Uppgifter kan ändras; kontrollera hos källan.</p>${listings.map(l => `<h2>${escapeHtml(l.address)}</h2><p>${escapeHtml(`${l.area}, ${l.municipality}`)}<br>${escapeHtml(facts(l))}</p><p><a href="${escapeHtml(l.url)}">Visa hos källan</a></p>`).join("")}<p>Högst 20 objekt per mejl. Fler nya matchningar kommer vid nästa utskick.</p><p><a href="${escapeHtml(remove)}">Avsluta och radera din bevakning</a></p>`,
+    from: env.MAIL_FROM, to: subscriber.email, subject: `${listings.length} nya bostadsförslag – Kommandekollen`,
+    text: `Nya bostadsförslag för din godkända sökning, ${day}.\nKrav: ${hardDescription(profile).join("; ")}\n${checks}\n\n${listings.map(l => `${l.address}, ${l.area}, ${l.municipality}\n${facts(l)}\n${why(l)}\n${l.url}`).join("\n\n")}\n\nHögst 20 objekt per mejl. Bara nya objekt, inte varje ändring. Uppgifter kan ändras; kontrollera hos källan.\nAvsluta och radera din bevakning: ${remove}`,
+    html: `<h1>Dina nya bostadsförslag</h1><p>${day}. Uppgifter kan ändras; kontrollera hos källan.</p><p>Krav: ${escapeHtml(hardDescription(profile).join("; "))}</p><p>${escapeHtml(checks).replaceAll("\n", "<br>")}</p>${listings.map(l => `<h2>${escapeHtml(l.address)}</h2><p>${escapeHtml(`${l.area}, ${l.municipality}`)}<br>${escapeHtml(facts(l))}</p><p>${escapeHtml(why(l)).replaceAll("\n", "<br>")}</p><p><a href="${escapeHtml(l.url)}">Visa hos källan</a></p>`).join("")}<p>Högst 20 objekt per mejl. Bara nya objekt, inte varje ändring.</p><p><a href="${escapeHtml(remove)}">Avsluta och radera din bevakning</a></p>`,
   };
   await env.DB.batch([
-    env.DB.prepare(`INSERT OR IGNORE INTO outbox(id,subscription_id,kind,day,payload,listing_ids,created_at,next_attempt)
-      VALUES(?,?,'digest',?,?,?,?,?)`).bind(
+    env.DB.prepare(`INSERT OR IGNORE INTO outbox(id,subscription_id,kind,day,payload,listing_ids,created_at,next_attempt,search_version)
+      SELECT ?,?,'digest',?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM subscriptions WHERE id=? AND state='approved' AND alerts_enabled=1 AND search_version=?)`).bind(
       crypto.randomUUID(), subscriber.id, day, await seal(env.TOKEN_SECRET, mail),
-      JSON.stringify(listings.map(l => l.id)), now, now),
+      JSON.stringify(listings.map(l => l.id)), now, now, subscriber.search_version, subscriber.id, subscriber.search_version),
     markDay,
   ]);
 }
@@ -78,10 +85,11 @@ export async function dispatchOne(env: Env, now = Date.now()) {
   const eligible = () => env.DB.prepare(`SELECT id FROM subscriptions WHERE id=? AND expires_at>?
     AND ((?='verification' AND state IN ('unverified','pending','approved'))
       OR (?='notice' AND state='approved')
-      OR (?='digest' AND state='approved' AND alerts_enabled=1))`)
-    .bind(outbox.subscription_id, now, outbox.kind, outbox.kind, outbox.kind).first();
+      OR (?='digest' AND state='approved' AND alerts_enabled=1 AND search_version=?
+        AND EXISTS(SELECT 1 FROM outbox WHERE id=? AND state='sending')))`)
+    .bind(outbox.subscription_id, now, outbox.kind, outbox.kind, outbox.kind, outbox.search_version, outbox.id).first();
   if (!await eligible()) {
-    await env.DB.prepare("DELETE FROM outbox WHERE id=?").bind(outbox.id).run();
+    await env.DB.prepare(`UPDATE outbox SET state='expired',payload='',error_code=CASE WHEN first_attempt IS NULL THEN 'ineligible' ELSE 'delivery_uncertain' END WHERE id=?`).bind(outbox.id).run();
     return;
   }
   if (outbox.kind === "verification" && now - outbox.created_at > 25 * 60_000) {
@@ -162,6 +170,8 @@ export async function cleanup(env: Env, now = Date.now()) {
   await env.DB.batch([
     env.DB.prepare("DELETE FROM subscriptions WHERE expires_at<?").bind(now),
     env.DB.prepare("DELETE FROM sessions WHERE expires_at<?").bind(now),
+    env.DB.prepare("DELETE FROM search_drafts WHERE expires_at<?").bind(now),
+    env.DB.prepare("DELETE FROM ai_attempts WHERE state='done' AND created_at<?").bind(now - 2 * 86400_000),
     env.DB.prepare("DELETE FROM admin_audit WHERE created_at<?").bind(now - 180 * 86400_000),
     env.DB.prepare("DELETE FROM rate_limits WHERE expires_at<?").bind(now),
     env.DB.prepare("DELETE FROM send_attempts WHERE created_at<?").bind(now - 35 * 86400_000),

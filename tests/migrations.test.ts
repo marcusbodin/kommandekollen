@@ -143,7 +143,7 @@ describe("atomic migration file transport", () => {
     const h = harness();
     await applyMigrations("worker/migrations", h.execute, () => {});
     expect(h.db.prepare("SELECT name FROM sqlite_schema WHERE type='trigger' ORDER BY name").all().map(row => row.name))
-      .toEqual(["inventory_capacity", "reserve_quota", "subscription_capacity"]);
+      .toEqual(["ai_budget", "inventory_capacity", "reserve_quota", "revoke_search_drafts", "subscription_capacity"]);
     const sql = await readFile("worker/migrations/0001_initial.sql", "utf8");
     expect(h.files[0]).toContain(sql);
     h.db.exec("INSERT INTO quotas VALUES('day',79,0),('month',2399,0)");
@@ -151,5 +151,22 @@ describe("atomic migration file transport", () => {
     expect(() => h.db.exec("INSERT INTO send_attempts VALUES('two','outbox','day','month','digest',0)")).toThrow("mail_quota");
     expect(h.db.prepare("SELECT total FROM quotas ORDER BY period").all()).toEqual([{ total: 80 }, { total: 2400 }]);
     expect(h.db.prepare("SELECT count(*) AS count FROM send_attempts").get()).toMatchObject({ count: 1 });
+    expect(h.files).toHaveLength(2);
+    await applyMigrations("worker/migrations", h.execute, () => {});
+    expect(h.files).toHaveLength(2);
+  });
+  it("upgrades existing 0001 members without rewriting filters, consent, seen history or initial SQL", async () => {
+    const h = harness();
+    const initial = await readFile("worker/migrations/0001_initial.sql", "utf8");
+    h.db.exec(migrationBundle("0001_initial.sql", initial));
+    h.db.prepare(`INSERT INTO subscriptions(id,email,email_hash,filters,state,application,token_hash,token_expires,created_at,expires_at,consent_version,last_digest_day)
+      VALUES('member','member@example.com','hash','{\"maxPrice\":4250123}','approved','example','token',1,1,2,'old-consent','2026-09-25')`).run();
+    await applyMigrations("worker/migrations", h.execute, () => {});
+    expect(h.files).toHaveLength(1);
+    expect(h.files[0]).toContain("0002_preferences.sql");
+    expect(h.db.prepare("SELECT filters,consent_version,last_digest_day,search_version,preference_profile FROM subscriptions").get())
+      .toEqual({ filters: '{"maxPrice":4250123}', consent_version: "old-consent", last_digest_day: "2026-09-25", search_version: 0, preference_profile: null });
+    expect(await readFile("worker/migrations/0001_initial.sql", "utf8")).toBe(initial);
+    expect(h.db.prepare("SELECT name FROM d1_migrations ORDER BY id").all()).toEqual([{ name: "0001_initial.sql" }, { name: "0002_preferences.sql" }]);
   });
 });
