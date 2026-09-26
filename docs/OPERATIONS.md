@@ -2,6 +2,14 @@
 
 ## Access model
 
+The following describes the default `membership` mode. The approved optional
+`ACCESS_MODE=shared` mode replaces applications/owner approval with a shared
+server password and anonymous guest drafts, asking for email only at saving.
+It preserves existing account data and all budgets. Its full API, 0004
+migration, same-browser verification, second-confirmation rules, guest retention
+and operator-only secret/rotation steps are in [SHARED_ACCESS.md](SHARED_ACCESS.md).
+Do not assume this optional mode is deployed merely because its code exists.
+
 The public Pages site contains code, a membership form and synthetic demo only.
 `GET /api/status` exposes configuration readiness and capacity, never owner
 identity, real listings, source-run results or member data.
@@ -141,6 +149,8 @@ private browser traces or database dumps to public CI artifacts.
 | Rejected/revoked account | 30 days after decision |
 | Approved membership + own search + seen IDs | 180 days after approval |
 | Session | 12 hours, or immediate logout/revocation/deletion |
+| Shared-mode guest session | 12 hours; credential rotation denies access immediately |
+| Guest draft / save challenge / gated email-login binding | 30 minutes; associated state cascades on logout/deletion/revocation |
 | HMAC rate buckets | At most two bucket periods (up to 48 hours) |
 | Provider attempt metadata | 35 days, no address or message body |
 | Sent/failed/expired ordinary outbox metadata | 7 days; content cleared on terminal state |

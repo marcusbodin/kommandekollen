@@ -4,6 +4,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import { Miniflare } from "miniflare";
 import worker from "../../worker/index";
 import { hash, keyed, type Env } from "../../worker/support";
+import { dispatchOne } from "../../worker/mail";
 import { defaultFilters } from "../../shared/model";
 import { manualProfile, type Interpretation } from "../../shared/preferences";
 
@@ -48,7 +49,10 @@ test.beforeEach(async ({ page }) => {
       const response = await worker.fetch(new Request(`${base}${req.url}`, {
         method: req.method, headers, body: body.length ? body : undefined,
       }), env);
-      res.writeHead(response.status, Object.fromEntries(response.headers));
+      res.writeHead(response.status, {
+        ...Object.fromEntries([...response.headers].filter(([name]) => name !== "set-cookie")),
+        ...(response.headers.getSetCookie().length ? { "Set-Cookie": response.headers.getSetCookie() } : {}),
+      });
       res.end(Buffer.from(await response.arrayBuffer()));
     } catch (error) {
       console.error("Synthetic HTTP bridge failed", error);
@@ -200,4 +204,145 @@ test("an external saved-version refresh warns without erasing local edits or the
   const saved = await env.DB.prepare("SELECT filters,search_version FROM subscriptions").first<{ filters: string; search_version: number }>();
   expect(saved?.search_version).toBe(1);
   expect(JSON.parse(saved!.filters).maxPrice).toBe(3000000);
+});
+
+const gatePassword = "a".repeat(64);
+async function sharedGuest(page: Page, keepAccount = false) {
+  env.ACCESS_MODE = "shared"; env.SHARED_ACCESS_PASSWORD = gatePassword;
+  if (!keepAccount) await page.context().clearCookies();
+  await page.goto("/");
+  await page.getByLabel("Gemensamt lösenord").fill(gatePassword);
+  await page.getByRole("button", { name: "Öppna", exact: true }).click();
+  await expect(page.getByRole("textbox", { name: "Beskriv ditt nästa hem", exact: true })).toBeVisible();
+}
+async function deliverVerification() {
+  let delivered = "";
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async (input, init) => {
+    if (String(input) !== "https://api.resend.com/emails") throw new Error("Unexpected fixture provider URL");
+    delivered = (JSON.parse(String(init?.body)) as { text: string }).text;
+    return Response.json({ id: "synthetic-email-provider-id" });
+  };
+  try { await dispatchOne(env); } finally { globalThis.fetch = realFetch; }
+  expect(delivered).toContain("samma webbläsare");
+  return delivered.match(/http:\/\/127\.0\.0\.1:5174\/#guest-confirm=[a-f0-9]{64}/)![0];
+}
+test("shared password guest can try AI then verify email and explicitly confirm a paused search", async ({ page }) => {
+  await sharedGuest(page);
+  await expect(page.getByRole("heading", { name: "Ansök om medlemskap" })).toHaveCount(0);
+  await expect(page.getByText("6 av 6 AI-försök återstår för hela tjänsten idag (UTC).", { exact: true })).toBeVisible();
+  expect(await env.DB.prepare("SELECT count(*) AS n FROM subscriptions").first()).toEqual({ n: 1 });
+  await page.getByRole("textbox", { name: "Beskriv ditt nästa hem", exact: true }).fill("Lägenhet i Solna, högst 4 miljoner.");
+  await page.getByLabel("Jag vill använda AI-texthjälpen").check();
+  await page.getByRole("button", { name: "Hjälp mig att precisera" }).click();
+  await expect(page.getByRole("heading", { name: "Stämmer det här?" })).toBeFocused();
+  await page.getByLabel("Jag godkänner den här sökningen").check();
+  await page.getByRole("button", { name: "Spara pausad sökning", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Verifiera e-post för att spara" })).toBeFocused();
+  await page.getByLabel("E-postadress", { exact: true }).first().fill("new-browser@example.com");
+  await page.getByRole("button", { name: "Skicka verifieringslänk" }).click();
+  await expect(page.locator(".preference-flow [role=status]")).toContainText("Inget har sparats ännu");
+  const link = await deliverVerification();
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Stämmer det här?" })).toBeVisible();
+  await page.goto(link);
+  await expect(page.getByRole("heading", { name: "Bekräfta och logga in" })).toBeVisible();
+  expect(new URL(page.url()).hash).toBe("");
+  expect(await env.DB.prepare("SELECT state,search_version FROM subscriptions WHERE email='new-browser@example.com'").first())
+    .toEqual({ state: "unverified", search_version: 0 });
+  await page.getByRole("button", { name: "Fortsätt", exact: true }).click();
+  await expect(page.locator(".action-page [role=status]")).toContainText("Sökningen är inte sparad");
+  await page.getByRole("link", { name: "Till sökningen och granskningen" }).click();
+  await expect(page.getByText("E-postadressen är verifierad. Granska den här sammanfattningen", { exact: false })).toBeVisible();
+  const confirm = page.getByRole("button", { name: "Bekräfta och spara pausad sökning" });
+  await expect(confirm).toBeDisabled();
+  expect(await env.DB.prepare("SELECT state,search_version,alerts_enabled FROM subscriptions WHERE email='new-browser@example.com'").first())
+    .toEqual({ state: "approved", search_version: 0, alerts_enabled: 0 });
+  await page.getByLabel("Jag godkänner den här sökningen").check();
+  await confirm.click();
+  await expect(page.getByRole("heading", { name: "Sökningen är sparad pausad", exact: true })).toBeInViewport();
+  expect(await env.DB.prepare("SELECT search_version,alerts_enabled FROM subscriptions WHERE email='new-browser@example.com'").first())
+    .toEqual({ search_version: 1, alerts_enabled: 0 });
+  expect(calls).toBe(1);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.locator(".preference-flow").screenshot({ path: test.info().outputPath("guest-saved.png") });
+});
+test("wrong-password errors are visible and a separate browser cannot claim the verification", async ({ page, browser }) => {
+  env.ACCESS_MODE = "shared"; env.SHARED_ACCESS_PASSWORD = gatePassword;
+  await page.context().clearCookies();
+  await page.goto("/");
+  const originalViewport = page.viewportSize()!;
+  for (const width of [320, 360, 390, 430]) {
+    await page.setViewportSize({ width, height: 850 });
+    await expect(page.getByLabel("Gemensamt lösenord")).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    expect(await page.getByLabel("Gemensamt lösenord").evaluate(input => parseFloat(getComputedStyle(input).fontSize))).toBeGreaterThanOrEqual(16);
+    const button = await page.getByRole("button", { name: "Öppna", exact: true }).boundingBox();
+    expect(button!.height).toBeGreaterThanOrEqual(44);
+  }
+  await page.setViewportSize(originalViewport);
+  await expect.poll(() => page.locator(".inspiration img").evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
+  await page.getByLabel("Gemensamt lösenord").fill("wrong");
+  await page.getByRole("button", { name: "Öppna", exact: true }).click();
+  await expect(page.getByRole("alert")).toContainText("Lösenordet kunde inte godkännas");
+  await expect(page.getByRole("alert")).toBeFocused();
+  await page.locator(".membership-public").screenshot({ path: test.info().outputPath("shared-gate.png") });
+  await page.getByLabel("Gemensamt lösenord").fill(gatePassword);
+  await page.getByRole("button", { name: "Öppna", exact: true }).click();
+  await page.locator(".manual-search > summary").click();
+  await page.getByRole("combobox", { name: "Kommun", exact: true }).selectOption("Solna");
+  await page.getByRole("button", { name: "Granska ändringarna" }).click();
+  await page.getByLabel("Jag godkänner den här sökningen").check();
+  await page.getByRole("button", { name: "Spara pausad sökning", exact: true }).click();
+  await page.getByLabel("E-postadress", { exact: true }).first().fill("device@example.com");
+  await page.getByRole("button", { name: "Skicka verifieringslänk" }).click();
+  await expect(page.locator(".preference-flow [role=status]")).toContainText("Inget har sparats ännu");
+  const link = await deliverVerification();
+  const other = await browser.newContext();
+  try {
+    const second = await other.newPage();
+    await second.route(`${api}/**`, async route => {
+      await route.fulfill({ response: await route.fetch({ url: `${base}${new URL(route.request().url()).pathname}` }) });
+    });
+    await second.goto(link);
+    await second.getByRole("button", { name: "Fortsätt", exact: true }).click();
+    await expect(second.locator(".action-page [role=alert]")).toContainText("gemensamma lösenordet");
+    await expect(second.locator(".action-page [role=alert]")).toBeFocused();
+    await expect(second.locator(".action-page [role=alert]")).toBeInViewport();
+    await expect(second.getByText("Om länken öppnades på en annan enhet:", { exact: false })).toBeVisible();
+  } finally { await other.close(); }
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Stämmer det här?" })).toBeVisible();
+  expect(await env.DB.prepare("SELECT verified,consumed FROM guest_saves").first()).toEqual({ verified: 0, consumed: 0 });
+  expect(calls).toBe(0);
+});
+test("gate rotation blocks an existing owner session while keeping its saved profile unchanged", async ({ page }) => {
+  const saved = manualProfile({ ...defaultFilters, maxPrice: 4250123 });
+  await env.DB.prepare("UPDATE subscriptions SET preference_profile=?,filters=?,search_version=4").bind(JSON.stringify(saved), JSON.stringify(saved.filters)).run();
+  await sharedGuest(page, true);
+  await page.locator(".saved-profile > summary").click();
+  await expect(page.locator(".saved-profile")).toContainText("4 250 123 kr");
+  await expect(page.getByRole("heading", { name: "Hantera medlemskap" })).toBeVisible();
+  env.SHARED_ACCESS_PASSWORD = "b".repeat(64);
+  await page.reload();
+  await expect(page.getByLabel("Gemensamt lösenord")).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Beskriv ditt nästa hem", exact: true })).toHaveCount(0);
+  expect(await env.DB.prepare("SELECT preference_profile,search_version FROM subscriptions").first()).toEqual({ preference_profile: JSON.stringify(saved), search_version: 4 });
+  expect(calls).toBe(0);
+});
+test("a guest with exhausted shared AI can still review manually without spending or activating anything", async ({ page }) => {
+  await seedCompletedAttempts(6);
+  await sharedGuest(page);
+  await page.getByRole("textbox", { name: "Beskriv ditt nästa hem", exact: true }).fill("Lägenhet i Solna.");
+  await page.getByLabel("Jag vill använda AI-texthjälpen").check();
+  await page.getByRole("button", { name: "Hjälp mig att precisera" }).click();
+  await expect(page.locator(".preference-flow [role=alert]")).toBeFocused();
+  await expect(page.locator(".preference-flow [role=alert]")).toContainText("gratisgräns");
+  await page.getByRole("button", { name: "Använd vanliga filter", exact: true }).click();
+  await page.getByRole("combobox", { name: "Kommun", exact: true }).selectOption("Solna");
+  await page.getByRole("button", { name: "Granska ändringarna" }).click();
+  await expect(page.getByRole("heading", { name: "Stämmer det här?" })).toBeVisible();
+  expect(calls).toBe(0);
+  expect(await env.DB.prepare("SELECT sum(reserved) AS total FROM ai_attempts").first()).toEqual({ total: 6000 });
+  expect(await env.DB.prepare("SELECT count(*) AS n FROM outbox").first()).toEqual({ n: 0 });
 });

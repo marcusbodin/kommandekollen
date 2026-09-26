@@ -1,7 +1,7 @@
 import { stockholmClock, type Listing } from "../shared/model";
 import { assess, hardDescription, ranked } from "../shared/preferences";
 import { savedProfile } from "./preferences";
-import { actionUrl, authorizations, escapeHtml, seal, unseal, unsubscribeToken, type Env } from "./support";
+import { actionUrl, authorizations, escapeHtml, seal, sharedAccess, unseal, unsubscribeToken, type Env } from "./support";
 
 interface Subscription {
   id: string; email: string; filters: string; created_at: number; activated_at: number;
@@ -13,17 +13,21 @@ interface Outbox {
   search_version: number;
 }
 export interface Mail { from: string; to: string; subject: string; text: string; html: string }
-export async function queueVerification(env: Env, id: string, email: string, token: string, now: number) {
-  const confirm = actionUrl(env, "confirm", token);
+export async function queueVerification(env: Env, id: string, email: string, token: string, now: number, action = "confirm", challenge: string | null = null) {
+  const confirm = actionUrl(env, action, token);
   const remove = actionUrl(env, "unsubscribe", await unsubscribeToken(env, id));
+  const instructions = action === "guest-confirm"
+    ? "Öppna länken i samma webbläsare där du gjorde utkastet, med lösenordsåtkomsten kvar. Tryck på Fortsätt. Gå sedan tillbaka och granska och bekräfta sparandet. Verifieringen sparar ingen sökning och startar inga bostadsmejl."
+    : sharedAccess(env) ? "Öppna länken i samma webbläsare med lösenordsåtkomsten kvar och tryck på Fortsätt. Inga sökningar eller bevakningar ändras av inloggningen."
+    : "Öppna länken och tryck på Fortsätt. Nya medlemmar måste dessutom godkännas av ägaren. E-postverifiering ger inte tillgång till bostäder eller bevakning.";
   const mail: Mail = {
     from: env.MAIL_FROM, to: email, subject: "Din inloggningslänk till Kommandekollen",
-    text: `Bekräfta din e-post och logga in inom 30 minuter: ${confirm}\nÖppna länken och tryck på Fortsätt. Nya medlemmar måste dessutom godkännas av ägaren. E-postverifiering ger inte tillgång till bostäder eller bevakning.\nBegärde du inte detta? Ignorera mejlet eller radera ansökan och medlemskapet: ${remove}`,
-    html: `<h1>Fortsätt till Kommandekollen</h1><p>Bekräfta din e-post och logga in inom 30 minuter.</p><p><a href="${escapeHtml(confirm)}">Öppna säker inloggning</a></p><p>Nya medlemmar måste också godkännas av ägaren. Verifiering ger inte tillgång till bostäder eller bevakning.</p><p>Begärde du inte detta? Ignorera mejlet eller <a href="${escapeHtml(remove)}">radera ansökan och medlemskapet</a>.</p>`,
+    text: `Bekräfta din e-post och logga in inom 30 minuter: ${confirm}\n${instructions}\nBegärde du inte detta? Ignorera mejlet eller radera kontot: ${remove}`,
+    html: `<h1>Fortsätt till Kommandekollen</h1><p>Bekräfta din e-post och logga in inom 30 minuter.</p><p><a href="${escapeHtml(confirm)}">Öppna säker inloggning</a></p><p>${escapeHtml(instructions)}</p><p>Begärde du inte detta? Ignorera mejlet eller <a href="${escapeHtml(remove)}">radera kontot</a>.</p>`,
   };
   return env.DB.prepare(`INSERT INTO outbox(id,subscription_id,kind,day,payload,listing_ids,created_at,next_attempt)
-    VALUES(?,?,'verification',?,?,'[]',?,?)`)
-    .bind(crypto.randomUUID(), id, crypto.randomUUID(), await seal(env.TOKEN_SECRET, mail), now, now);
+    SELECT ?,?,'verification',?,?,'[]',?,? WHERE ? IS NULL OR EXISTS(SELECT 1 FROM guest_saves WHERE id=?)`)
+    .bind(crypto.randomUUID(), id, crypto.randomUUID(), await seal(env.TOKEN_SECRET, mail), now, now, challenge, challenge);
 }
 export async function approvalNotice(env: Env, member: { id: string; email: string }, now: number, auditId: string) {
   const remove = actionUrl(env, "unsubscribe", await unsubscribeToken(env, member.id));
@@ -171,6 +175,10 @@ export async function cleanup(env: Env, now = Date.now()) {
     env.DB.prepare("DELETE FROM subscriptions WHERE expires_at<?").bind(now),
     env.DB.prepare("DELETE FROM sessions WHERE expires_at<?").bind(now),
     env.DB.prepare("DELETE FROM search_drafts WHERE expires_at<?").bind(now),
+    env.DB.prepare("DELETE FROM guest_sessions WHERE expires_at<?").bind(now),
+    env.DB.prepare("DELETE FROM guest_saves WHERE expires_at<?").bind(now),
+    env.DB.prepare("DELETE FROM guest_drafts WHERE expires_at<?").bind(now),
+    env.DB.prepare("DELETE FROM gate_logins WHERE expires_at<?").bind(now),
     env.DB.prepare("DELETE FROM ai_attempts WHERE state='done' AND created_at<?").bind(now - 2 * 86400_000),
     env.DB.prepare("DELETE FROM admin_audit WHERE created_at<?").bind(now - 180 * 86400_000),
     env.DB.prepare("DELETE FROM rate_limits WHERE expires_at<?").bind(now),

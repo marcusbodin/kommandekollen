@@ -1,4 +1,4 @@
-import { StrictMode, useEffect, useMemo, useState, type FormEvent } from "react";
+import { StrictMode, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { createRoot } from "react-dom/client";
 import { z } from "zod";
 import { defaultFilters, filterSchema, listingSchema, municipalities, sourceIds, types, type Filters, type Listing } from "../shared/model";
@@ -7,12 +7,17 @@ import { sources, type Source } from "../shared/sources";
 import { demoListings } from "./demo";
 import { NumericFilter } from "./NumericFilter";
 import { PreferenceFlow } from "./PreferenceFlow";
+import { gateSchema, GatePanel, GateStatus, type Gate } from "./SharedAccess";
 import "./style.css";
 
 const apiBase = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
 const demo = import.meta.env.VITE_DEMO === "true" || new URLSearchParams(location.search).get("demo") === "1";
-const action = /^(confirm|unsubscribe)=(.+)$/.exec(location.hash.slice(1));
-if (action) history.replaceState(null, "", location.pathname + location.search);
+function takeAction() {
+  const match = /^(confirm|guest-confirm|unsubscribe)=(.+)$/.exec(location.hash.slice(1));
+  if (match) history.replaceState(null, "", location.pathname + location.search);
+  return match;
+}
+const initialAction = takeAction();
 type Run = { last_success: string | null; last_attempt: string; status: string; error_code: string | null; item_count: number };
 type SourceState = Source & { authorized?: boolean; run?: Run | null };
 type Catalog = { listings: Listing[]; sources: SourceState[]; serviceReady: boolean; privacyContact: string | null };
@@ -65,25 +70,33 @@ async function post(path: string, body: unknown): Promise<string> {
   if (typeof result.message !== "string") throw new Error("Bekräftelse saknas i serverns svar.");
   return result.message;
 }
-function ActionPage() {
+function ActionPage({ shared, action }: { shared: boolean; action: RegExpExecArray }) {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const confirm = action?.[1] === "confirm";
+  const outcome = useRef<HTMLParagraphElement>(null);
+  useEffect(() => {
+    if (!busy && (error || message)) { outcome.current?.focus({ preventScroll: true }); outcome.current?.scrollIntoView({ block: "center" }); }
+  }, [busy, error, message]);
+  const guestConfirm = action?.[1] === "guest-confirm";
+  const confirm = action?.[1] === "confirm" || guestConfirm;
   async function submit() {
     setBusy(true); setError("");
-    try { setMessage(await post(`/api/${confirm ? "confirm" : "unsubscribe"}`, { token: action![2] })); }
+    try { setMessage(await post(guestConfirm ? "/api/guest/preferences/verify" : `/api/${confirm ? "confirm" : "unsubscribe"}`, { token: action![2] })); }
     catch (error) { setError(error instanceof Error ? error.message : "Ett fel uppstod."); }
     finally { setBusy(false); }
   }
   return <section className="action-page surface">
     <Icon name={confirm ? "bell" : "home"} />
     <h1>{confirm ? "Bekräfta och logga in" : "Avsluta ditt medlemskap"}</h1>
-    <p>{confirm ? "Bekräfta din e-post för att fortsätta. En ny ansökan behöver därefter godkännas av ägaren; verifiering ensam ger ingen tillgång till bostäder eller bevakningar." : "Din e-postadress, ditt medlemskap och dina sökpreferenser raderas ur den aktiva databasen när du avslutar."} Ingenting ändras bara av att öppna länken.</p>
-    {error && <p role="alert" className="error">{error}</p>}
-    {message ? <p role="status" className="notice">{message}</p> : <button className="primary" disabled={busy || demo || !apiBase} onClick={submit}>{busy ? "Arbetar…" : confirm ? "Fortsätt" : "Avsluta och radera"}</button>}
+    <p>{confirm ? shared || guestConfirm ? "Bekräfta din e-post i samma webbläsare där du begärde länken, med lösenordsåtkomsten kvar. Verifieringen sparar ingen sökning och startar inga bostadsmejl. Återgå därefter och granska sökningen innan du bekräftar sparandet."
+      : "Bekräfta din e-post för att fortsätta. En ny ansökan behöver därefter godkännas av ägaren; verifiering ensam ger ingen tillgång till bostäder eller bevakningar."
+      : "Din e-postadress, ditt medlemskap och dina sökpreferenser raderas ur den aktiva databasen när du avslutar."} Ingenting ändras bara av att öppna länken.</p>
+    {error && <p role="alert" className="error" tabIndex={-1} ref={outcome}>{error}</p>}
+    {message ? <p role="status" className="notice" tabIndex={-1} ref={outcome}>{message}</p> : <button className="primary" disabled={busy || demo || !apiBase} onClick={submit}>{busy ? "Arbetar…" : confirm ? "Fortsätt" : "Avsluta och radera"}</button>}
     {(demo || !apiBase) && <p className="notice">Länken kan inte behandlas i demo eller utan konfigurerat API. Öppna mejlets länk på den riktiga tjänsten.</p>}
-    <a href={location.pathname + location.search}>Till medlemskapet</a>
+    {error && (shared || guestConfirm) && <p>Om länken öppnades på en annan enhet: öppna mejlet i ursprungliga webbläsaren. Om lösenordsåtkomsten har gått ut behöver du öppna tjänsten och begära en ny länk. Skriv inte token eller lösenord i ett supportmeddelande.</p>}
+    <a href={location.pathname + location.search}>{shared || guestConfirm ? "Till sökningen och granskningen" : "Till medlemskapet"}</a>
   </section>;
 }
 const memberSchema = z.object({
@@ -93,7 +106,7 @@ const memberSchema = z.object({
 });
 type Member = z.infer<typeof memberSchema>;
 type Application = { id: string; email: string; application: string; state: string };
-function OwnerPanel({ ownerId }: { ownerId: string }) {
+function OwnerPanel({ ownerId, shared = false }: { ownerId: string; shared?: boolean }) {
   const [members, setMembers] = useState<Application[]>([]), [error, setError] = useState(""), [message, setMessage] = useState(""), [busy, setBusy] = useState(false);
   async function load() {
     try {
@@ -110,15 +123,15 @@ function OwnerPanel({ ownerId }: { ownerId: string }) {
     catch (error) { setError(error instanceof Error ? error.message : "Åtgärden misslyckades."); }
     finally { setBusy(false); }
   }
-  return <section className="owner-panel surface" id="medlemmar"><h2>Hantera medlemskap</h2><p className="small muted">Endast verifierade ansökningar kan godkännas. Återkallelse stoppar åtkomst och väntande mejl.</p>
+  return <section className="owner-panel surface" id="medlemmar"><h2>Hantera medlemskap</h2><p className="small muted">{shared ? "Konton verifieras via e-post utan manuella godkännanden." : "Endast verifierade ansökningar kan godkännas."} Återkallelse stoppar kontots åtkomst och väntande mejl.</p>
     {error && <p role="alert" className="error">{error}</p>}{message && <p role="status" className="notice">{message}</p>}
     {members.map(member => <div className="member-row" key={member.id}><div><strong>{member.email}</strong><p className="small">{member.application}</p><span className="small muted">{{ unverified: "Ej verifierad", pending: "Väntar på beslut", approved: "Godkänd", rejected: "Avslagen", revoked: "Återkallad" }[member.state]}</span></div>
-      <div className="member-actions">{member.state === "pending" && <><button className="primary" disabled={busy} onClick={() => review(member.id, "approve")}>Godkänn</button><button disabled={busy} onClick={() => review(member.id, "reject")}>Avslå</button></>}
+      <div className="member-actions">{!shared && member.state === "pending" && <><button className="primary" disabled={busy} onClick={() => review(member.id, "approve")}>Godkänn</button><button disabled={busy} onClick={() => review(member.id, "reject")}>Avslå</button></>}
         {member.state === "approved" && member.id !== ownerId && <button disabled={busy} onClick={() => review(member.id, "revoke")}>Återkalla</button>}</div></div>)}
   </section>;
 }
-function Membership({ member, ready, accepting, refresh }: { member: Member | null; ready: boolean; accepting: boolean; refresh: () => void }) {
-  const [login, setLogin] = useState(false), [message, setMessage] = useState(""), [error, setError] = useState(""), [busy, setBusy] = useState(false), [deleteConfirm, setDeleteConfirm] = useState(false);
+function Membership({ member, ready, accepting, refresh, shared = false }: { member: Member | null; ready: boolean; accepting: boolean; refresh: () => void; shared?: boolean }) {
+  const [login, setLogin] = useState(shared), [message, setMessage] = useState(""), [error, setError] = useState(""), [busy, setBusy] = useState(false), [deleteConfirm, setDeleteConfirm] = useState(false);
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setBusy(true); setError(""); setMessage("");
     const data = new FormData(event.currentTarget);
@@ -137,15 +150,23 @@ function Membership({ member, ready, accepting, refresh }: { member: Member | nu
   }
   return <section className={`membership surface ${member ? "membership-account" : "membership-public"}`} id="medlemskap">
     {member ? <><details className="account-details" open={member.state !== "approved" ? true : undefined}>
-      <summary>{member.state === "approved" ? "Ditt medlemskap" : "Din ansökan väntar på godkännande"}<span>{member.email}</span></summary>
+      <summary>{member.state === "approved" ? "Ditt medlemskap" : shared ? "Verifiera ditt konto på nytt" : "Din ansökan väntar på godkännande"}<span>{member.email}</span></summary>
       <div className="account-content">
-      {member.state !== "approved" && <p className="notice">Din e-postadress är verifierad. Ägaren behöver nu godkänna ansökan. Du har ännu ingen tillgång till bostäder, källresultat eller bevakning.</p>}
+      {member.state !== "approved" && <p className="notice">{shared ? "Verifiera din e-post på nytt via en inloggningslänk för att använda det befintliga kontot. Ett gammalt väntande medlemskap aktiveras inte automatiskt."
+        : "Din e-postadress är verifierad. Ägaren behöver nu godkänna ansökan. Du har ännu ingen tillgång till bostäder, källresultat eller bevakning."}</p>}
       <div className="member-actions"><button disabled={busy} onClick={() => accountAction("/api/logout")}>Logga ut</button><button className="text-button" onClick={() => setDeleteConfirm(value => !value)}>Radera medlemskapet</button></div>
-      {deleteConfirm && <div className="notice"><p>Detta raderar ansökan, medlemskapet och bevakningen. Du behöver ansöka på nytt om du vill återvända.</p><button disabled={busy} onClick={() => accountAction("/api/delete-account")}>Bekräfta radering</button></div>}
+      {shared && member.state !== "approved" && <button disabled={busy} onClick={async () => {
+        setBusy(true); setError("");
+        try { setMessage(await post("/api/login", { email: member.email, website: "" })); }
+        catch (error) { setError(error instanceof Error ? error.message : "Mejlförfrågan misslyckades."); }
+        finally { setBusy(false); }
+      }}>Begär en ny mejllänk</button>}
+      {deleteConfirm && <div className="notice"><p>{shared ? "Detta raderar kontot, utkasten och bevakningen. Åtkomsten stängs. AI-kvoten återställs inte." : "Detta raderar ansökan, medlemskapet och bevakningen. Du behöver ansöka på nytt om du vill återvända."}</p><button disabled={busy} onClick={() => accountAction("/api/delete-account")}>Bekräfta radering</button></div>}
       </div></details>
-    </> : <div className="membership-grid"><div className="membership-welcome"><Inspiration /><div className="welcome-copy"><h1>En privat väg till nästa hem.</h1><p>Beskriv ditt nästa hem, förtydliga vid behov och godkänn din sökning. Bara för godkända medlemmar.</p></div></div>
+    </> : <div className={shared ? "" : "membership-grid"}>{!shared && <div className="membership-welcome"><Inspiration /><div className="welcome-copy"><h1>En privat väg till nästa hem.</h1><p>Beskriv ditt nästa hem, förtydliga vid behov och godkänn din sökning. Bara för godkända medlemmar.</p></div></div>}
       <form onSubmit={submit}><h2>{login ? "Logga in med mejllänk" : "Ansök om medlemskap"}</h2>
-        <p className="small muted">{login ? "Få en säker länk till din e-post. Inget lösenord behövs." : "Ansök, verifiera din e-post och invänta ägarens godkännande."}</p>
+        <p className="small muted">{shared ? "Logga in till ditt befintliga konto med en mejllänk. Det gemensamma lösenordet behövs också för åtkomst."
+          : login ? "Få en säker länk till din e-post. Inget personligt lösenord behövs." : "Ansök, verifiera din e-post och invänta ägarens godkännande."}</p>
         {!ready && <p className="notice">Tjänsten är inte konfigurerad för ansökningar eller mejl ännu.</p>}
         {!accepting && ready && !login && <p className="notice">Piloten är full. Nya ansökningar är tillfälligt pausade.</p>}
         <label>E-postadress<input type="email" name="email" required autoComplete="email" maxLength={254} placeholder="namn@example.com" /></label>
@@ -153,9 +174,9 @@ function Membership({ member, ready, accepting, refresh }: { member: Member | nu
           <label className="check"><input type="checkbox" name="consent" required /><span>Jag godkänner att min ansökan behandlas enligt <a href="#integritet">integritetsinformationen</a>.</span></label></>}
         <div className="honeypot" aria-hidden="true"><label>Lämna tomt<input name="website" tabIndex={-1} autoComplete="off" /></label></div>
         <button className="primary" disabled={busy || !ready || (!login && !accepting)}>{busy ? "Skickar begäran…" : login ? "Begär inloggningslänk" : "Skicka medlemsansökan"}</button>
-        <button type="button" className="text-button" onClick={() => { setLogin(value => !value); setMessage(""); setError(""); }}>{login ? "Ny här? Ansök om medlemskap" : "Har du redan ansökt? Logga in"}</button>
-        <details className="membership-info"><summary>Så fungerar medlemskapet</summary><p className="small muted">Högst 40 medlemskap inklusive väntande ansökningar. E-postverifiering är inte ett medlemsbeslut. Bostäder och bevakningar visas bara för godkända medlemmar. Vi samlar inte in objekt från källor där användningen är förbjuden eller oklar.</p></details>
-        <a className="demo-link" href="?demo=1">Prova sökningen med fiktiva exempel<Icon name="arrow" /></a>
+        {!shared && <><button type="button" className="text-button" onClick={() => { setLogin(value => !value); setMessage(""); setError(""); }}>{login ? "Ny här? Ansök om medlemskap" : "Har du redan ansökt? Logga in"}</button>
+          <details className="membership-info"><summary>Så fungerar medlemskapet</summary><p className="small muted">Högst 40 medlemskap inklusive väntande ansökningar. E-postverifiering är inte ett medlemsbeslut. Bostäder och bevakningar visas bara för godkända medlemmar. Vi samlar inte in objekt från källor där användningen är förbjuden eller oklar.</p></details>
+          <a className="demo-link" href="?demo=1">Prova sökningen med fiktiva exempel<Icon name="arrow" /></a></>}
       </form></div>}
     {error && <p className="error" role="alert">{error}</p>}{message && <p className="notice" role="status">{message}</p>}
   </section>;
@@ -238,6 +259,12 @@ function Sources({ data }: { data: SourceState[] }) {
   </section>;
 }
 function App() {
+  const [action, setAction] = useState(initialAction);
+  useEffect(() => {
+    const handle = () => { const next = takeAction(); if (next) setAction(next); };
+    window.addEventListener("hashchange", handle);
+    return () => window.removeEventListener("hashchange", handle);
+  }, []);
   const [theme, setTheme] = useState(document.documentElement.dataset.theme || "light");
   const [demoProfile, setDemoProfile] = useState<Profile>(manualProfile());
   const [catalog, setCatalog] = useState<Catalog>({ listings: demo ? demoListings : [], sources, serviceReady: false, privacyContact: null });
@@ -246,14 +273,16 @@ function App() {
   const [reload, setReload] = useState(0);
   const [sort, setSort] = useState("personal");
   const [member, setMember] = useState<Member | null>(null);
+  const [shared, setShared] = useState(false), [gate, setGate] = useState<Gate | null>(null);
   const [ready, setReady] = useState(false), [accepting, setAccepting] = useState(false);
   const [accountLoading, setAccountLoading] = useState(!demo && !!apiBase && !action);
   const [accountError, setAccountError] = useState("");
   const [accountReload, setAccountReload] = useState(0);
   const refresh = () => setAccountReload(value => value + 1);
-  const canSearch = demo || member?.state === "approved";
+  const canSearch = demo || (shared ? !!gate : member?.state === "approved");
+  const guestFlow = shared && !!gate && (!member || member.state !== "approved" || gate.pendingSave || gate.hasDraft);
   useEffect(() => {
-    if (demo || !apiBase || action) return;
+    if (demo || !apiBase) return;
     let active = true;
     setAccountLoading(true); setAccountError("");
     Promise.all([
@@ -261,19 +290,29 @@ function App() {
       fetch(`${apiBase}/api/me`, { credentials: "include", signal: AbortSignal.timeout(20_000) }),
     ]).then(async ([statusResponse, memberResponse]) => {
       if (!statusResponse.ok) throw new Error("Kunde inte kontrollera tjänstens status.");
-      const status = z.object({ serviceReady: z.boolean(), acceptingApplications: z.boolean(), privacyContact: z.string().nullable() }).parse(await statusResponse.json());
+      const status = z.object({ serviceReady: z.boolean(), acceptingApplications: z.boolean(), privacyContact: z.string().nullable(), accessMode: z.enum(["shared", "membership"]).optional() }).parse(await statusResponse.json());
       if (!active) return;
       setReady(status.serviceReady); setAccepting(status.acceptingApplications);
+      setShared(status.accessMode === "shared");
+      if (status.accessMode === "shared") {
+        const response = await fetch(`${apiBase}/api/gate`, { credentials: "include", signal: AbortSignal.timeout(20000) });
+        if (!active) return;
+        if (response.status === 401) setGate(null);
+        else if (!response.ok) { setGate(null); throw new Error("Lösenordsåtkomsten kunde inte kontrolleras. Försök igen senare."); }
+        else setGate(gateSchema.parse(await response.json()));
+      } else setGate(null);
       setCatalog(current => ({ ...current, privacyContact: status.privacyContact }));
       if (memberResponse.status === 401) {
-        setMember(null); setCatalog(current => ({ ...current, listings: [], sources, serviceReady: false })); return;
+        setMember(null);
+        if (status.accessMode !== "shared") setCatalog(current => ({ ...current, listings: [], sources, serviceReady: false }));
+        return;
       }
       if (!memberResponse.ok) throw new Error("Kunde inte kontrollera medlemskapet. Logga in igen.");
       const account = memberSchema.parse(await memberResponse.json());
       if (active) setMember(account);
     }).catch(error => {
       if (active) {
-        setMember(null); setCatalog(current => ({ ...current, listings: [], sources, serviceReady: false }));
+        setMember(null); setGate(null); setCatalog(current => ({ ...current, listings: [], sources, serviceReady: false }));
         setAccountError(error instanceof Error ? error.message : "Medlemskontrollen misslyckades.");
       }
     }).finally(() => { if (active) setAccountLoading(false); });
@@ -285,14 +324,14 @@ function App() {
     return () => window.removeEventListener("focus", check);
   }, []);
   useEffect(() => {
-    if (demo || !apiBase || action || member?.state !== "approved") return;
+    if (demo || !apiBase || action || !canSearch) return;
     const controller = new AbortController();
     let active = true;
     setLoading(true); setError("");
     const timeout = setTimeout(() => controller.abort(), 20_000);
     fetch(`${apiBase}/api/catalog`, { credentials: "include", signal: controller.signal }).then(async response => {
       if (response.status === 401 || response.status === 403) {
-        setMember(null); setCatalog(current => ({ ...current, listings: [], sources, serviceReady: false }));
+        setMember(null); setGate(null); setCatalog(current => ({ ...current, listings: [], sources, serviceReady: false }));
         throw new Error("Medlemskapet behöver kontrolleras. Logga in igen.");
       }
       if (!response.ok) throw new Error("Bostäderna kunde inte hämtas. Försök igen om en stund.");
@@ -302,7 +341,7 @@ function App() {
     }).catch(error => { if (active) setError(error instanceof Error ? error.message : "Kunde inte hämta data."); })
       .finally(() => { clearTimeout(timeout); if (active) setLoading(false); });
     return () => { active = false; clearTimeout(timeout); controller.abort(); };
-  }, [reload, member]);
+  }, [reload, member, canSearch]);
   const profile = demo ? demoProfile : member?.profile ?? manualProfile();
   const filtered = useMemo(() => ranked(catalog.listings, profile).sort((a, b) => {
     if (sort === "price") return (a.price ?? Infinity) - (b.price ?? Infinity);
@@ -321,23 +360,28 @@ function App() {
     </div></header>
     {demo && <div className="demo-bar"><strong>Demonstrationsläge</strong><span>Alla bostäder är påhittade. Inga mejl skickas.</span></div>}
     <main id="main" className="container">
-      {action ? <ActionPage /> : <>
+      {action ? <ActionPage key={action[2]} shared={shared} action={action} /> : <>
         {!demo && <>
           {accountLoading && <p role="status" className="notice">Kontrollerar medlemskap…</p>}
           {accountError && <div className="notice" role="alert"><p>{accountError}</p><button onClick={refresh}>Försök igen</button></div>}
-          <Membership member={member} ready={ready} accepting={accepting} refresh={refresh} />
+          {shared ? !gate ? !accountLoading && <GatePanel apiBase={apiBase} refresh={refresh} inspiration={<Inspiration />} />
+            : <>{member && <Membership member={member} ready={ready} accepting={false} refresh={refresh} shared />}
+              <GateStatus gate={gate} apiBase={apiBase} refresh={refresh} /></>
+            : <Membership member={member} ready={ready} accepting={accepting} refresh={refresh} />}
         </>}
         {canSearch && <>
         <section className="search-heading"><Inspiration /><div className="search-heading-copy"><h1>Beskriv ditt nästa hem.</h1><p>Dina krav. Dina önskemål. Du godkänner innan något sparas.</p></div></section>
-        <PreferenceFlow apiBase={apiBase} demo={demo} member={member} ready={catalog.serviceReady && !error && !loading} refresh={refresh}
-          renderFilters={(filters, change) => <FilterPanel filters={filters} onChange={change} />} onDemoPreview={setDemoProfile} />
+        <PreferenceFlow apiBase={apiBase} demo={demo} member={guestFlow ? null : member} guest={guestFlow ? { aiReady: gate!.aiReady } : undefined} ready={catalog.serviceReady && !error && !loading} refresh={refresh}
+          renderFilters={(filters, change) => <FilterPanel filters={filters} onChange={change} />} onDemoPreview={setDemoProfile} onInference={shared ? refresh : undefined} />
+        {shared && !member && <details className="surface"><summary>Har du redan en sparad sökning? Logga in</summary>
+          <Membership member={null} ready={ready} accepting={false} refresh={refresh} shared /></details>}
         <div className="coverage-strip"><span className="status-dot" aria-hidden="true" /><span>{demo ? "6 exempelbostäder · 0 anslutna livekällor" : `${enabledSources} tillåtna källor · begränsad täckning`}</span><a href="#kallor">Se källstatus<Icon name="arrow" /></a></div>
         {!demo && !apiBase && <section className="notice config-state" role="status"><h2>Tjänsten är inte ansluten ännu</h2><p>Livekällor och bevakning är inte tillgängliga. Du kan prova sökningen med tydligt märkta exempelbostäder.</p><a className="button secondary" href="?demo=1">Prova med exempel</a></section>}
         <div className="personal-results">
           <section className="results" aria-label="Sökresultat">
             <div className="results-toolbar"><h2 aria-live="polite">{loading ? "Hämtar bostäder…" : `${filtered.length} ${demo ? "exempelbostäder" : "bostäder"}`}</h2>
               <label className="sort">Sortera<select value={sort} onChange={event => setSort(event.target.value)}><option value="personal">Dina önskemål först</option><option value="newest">Senast upptäckta</option><option value="price">Lägst pris</option><option value="size">Störst boarea</option></select></label></div>
-            {!demo && <p className="small muted">Resultat för din sparade sökning. Osparade utkast påverkar inte detta urval.</p>}
+            {!demo && <p className="small muted">{member ? "Resultat för din sparade sökning. Osparade utkast påverkar inte detta urval." : "Tillgängliga objekt. Du har ingen sparad sökning ännu."}</p>}
             {error && <div role="alert" className="notice"><h3>Det gick inte att uppdatera</h3><p>{error}</p><p>Eventuella tidigare resultat är inte uppdaterade.</p><button className="secondary" onClick={() => setReload(value => value + 1)}>Försök igen</button></div>}
             {!demo && catalog.listings.some(listing => stale(listing.lastSeen)) && <p className="notice">Vissa uppgifter är äldre än 48 timmar. De skickas inte i bevakningsmejl. Kontrollera status hos källan.</p>}
             {loading ? <div aria-busy="true" aria-label="Läser in bostäder" className="property-grid">{[1, 2, 3, 4].map(i => <div className="skeleton surface" key={i}><div/><div/><div/></div>)}</div> :
@@ -348,12 +392,14 @@ function App() {
           </section>
         </div>
         <Sources data={catalog.sources} />
-        {member?.owner && <OwnerPanel ownerId={member.id} />}
+        {member?.owner && <OwnerPanel ownerId={member.id} shared={shared} />}
         </>}
       </>}
       <section id="integritet" className="privacy">
         <h2>Din bevakning, dina uppgifter</h2>
-        <div className="privacy-columns"><div><h3>Det här sparas</h3><p>Din e-postadress, ansökan, medlemsbeslut, sökfilter, godkänd preferensprofil, samtyckesversion och vilka objekt som skickats. Uppgifterna används för medlemskapet och din valda bevakning. Inga reklamspårare eller analyskakor används. En nödvändig säker sessionskaka håller dig inloggad i högst 12 timmar.</p><p>Overifierade ansökningar raderas efter 48 timmar. Väntande, avslagna och återkallade medlemskap sparas högst 30 dagar, godkända högst 180 dagar. Mejllänkar gäller i 30 minuter.</p></div>
+        {shared && <p>Med det gemensamma lösenordet kan du prova utan e-post. En separat nödvändig säker gästkaka gäller i högst 12 timmar. Högst 200 gästsessioner och 40 konton ryms i piloten. Gästutkast och verifieringsavsikter gäller i 30 minuter. Först när du sparar frågar vi efter e-post. Ny verifiering ersätter ägarprövning; du granskar och bekräftar sökningen separat. Tidigare avslagna eller återkallade konton återaktiveras inte automatiskt.</p>}
+        <div className="privacy-columns"><div><h3>Det här sparas</h3><p>{shared ? "Gästens slumpmässiga sessionsidentifierare och tolkade utkast. När du vill spara lagras e-postadress, verifieringsavsikt, sökfilter, godkänd profil, samtyckesversion och vilka objekt som skickats. Befintliga medlemsbeslut bevaras; ingen ny ansökningstext behövs."
+          : "Din e-postadress, ansökan, medlemsbeslut, sökfilter, godkänd preferensprofil, samtyckesversion och vilka objekt som skickats."} Uppgifterna används för kontot och din valda bevakning. Inga reklamspårare eller analyskakor används. En nödvändig säker sessionskaka håller dig inloggad i högst 12 timmar.</p><p>Overifierade konton raderas efter 48 timmar. Väntande, avslagna och återkallade medlemskap sparas högst 30 dagar, godkända högst 180 dagar. Mejllänkar gäller i 30 minuter.</p></div>
           <div><h3>Avsluta och radera</h3><p>Logga in för att ändra dina filter eller pausa bostadsmejlen. Varje mejl innehåller även en länk som avslutar och raderar hela medlemskapet. Uppgifter om ägarens beslut sparas pseudonymiserat i högst 180 dagar för spårbarhet.</p><p>Cloudflare lagrar uppgifterna och Resend hanterar mejlen. Tillfälliga, pseudonymiserade identifierare begränsar missbruk. Driftmetadata sparas högst 35 dagar, utom aggregerade kvoter och osäkra leveranser som behöver utredas.</p></div></div>
         <p>Personuppgiftsansvarig: <strong>Marcus Bodin (privatperson)</strong>. Kontakt: <a href="mailto:kontakt@kommandekollen.se">kontakt@kommandekollen.se</a>. Rättslig grund: samtycke. Du kan återkalla samtycket när som helst och kontakta IMY med klagomål.</p>
         <p className="small muted">D1-databasen har EU-jurisdiktion. Resend lagrar kontouppgifter, mejlmetadata, loggar och API-poster i USA; sändningsregionen ändrar inte detta. Leverantörernas säkerhetskopior och mejlloggar kan ha separata lagringstider. Radering här innebär inte omedelbar radering ur alla leverantörsbackuper.</p>
@@ -361,7 +407,7 @@ function App() {
         <p>Vi sparar inte din råa prompt eller en chatthistorik. Utkast med tolkade önskemål och aktuell fråga gäller i 30 minuter och rensas vid underhåll; radering eller återkallat medlemskap tar bort dem direkt. Slutförda AI-kvotposter är pseudonymiserade och rensas efter två dagar, osäkra anrop behålls tills de utretts. En godkänd profil sparas med medlemskapet. AI kan feltolka: granska innan du sparar, eller använd vanliga filter utan AI.</p>
       </section>
     </main>
-    <footer className="site-footer"><span>kommandekollen.</span><a href="#integritet">Integritet & radering</a><a href={`${import.meta.env.BASE_URL}assets/ATTRIBUTION.md`}>Bild & licens</a>{canSearch && <a href="#kallor">Källstatus</a>}<span className="small">Privat tjänst · medlemskap efter godkännande</span></footer>
+    <footer className="site-footer"><span>kommandekollen.</span><a href="#integritet">Integritet & radering</a><a href={`${import.meta.env.BASE_URL}assets/ATTRIBUTION.md`}>Bild & licens</a>{canSearch && <a href="#kallor">Källstatus</a>}<span className="small">{shared ? "Delat lösenord · e-post när du sparar" : "Privat tjänst · medlemskap efter godkännande"}</span></footer>
   </>;
 }
 createRoot(document.getElementById("root")!).render(<StrictMode><App /></StrictMode>);

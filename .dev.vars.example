@@ -3,3 +3,7 @@ ADMIN_TOKEN=
 TOKEN_SECRET=
 RESEND_API_KEY=
 OWNER_EMAIL=
+# Leave membership until the operator explicitly activates shared access.
+ACCESS_MODE=membership
+# Shared mode requires a privately generated 64-character lowercase hex secret.
+SHARED_ACCESS_PASSWORD=

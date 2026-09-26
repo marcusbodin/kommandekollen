@@ -4,10 +4,11 @@ import { sources } from "../shared/sources";
 import { manualProfile } from "../shared/preferences";
 import { aiReady } from "./ai";
 import { preferenceRoute, savedProfile } from "./preferences";
+import { gateRoute, guestPreferenceRoute } from "./guest";
 import { approvalNotice, cleanup, dispatchOne, prepareDigest, queueVerification } from "./mail";
 import {
   ApiError, authenticate, authorizations, equalSecrets, hash, isOwner, json, keyed, randomToken,
-  rate, readJson, serviceReady, sessionCookie, type Env, type Member,
+  rate, readJson, serviceReady, sessionCookie, authenticateGuest, guestCookie, sharedAccess, type Env, type Member,
 } from "./support";
 
 const emailSchema = z.string().trim().toLowerCase().email().max(254);
@@ -37,9 +38,17 @@ async function route(request: Request, env: Env): Promise<Response> {
     const capacity = await env.DB.prepare("SELECT count(*) AS n FROM subscriptions WHERE email!=?")
       .bind((env.OWNER_EMAIL || "").trim().toLowerCase()).first<{ n: number }>();
     const ready = serviceReady(env);
-    return json({ serviceReady: ready, acceptingApplications: ready && !!capacity && capacity.n < 39, privacyContact: env.PRIVACY_CONTACT || null });
+    return json({ serviceReady: ready, acceptingApplications: !sharedAccess(env) && ready && !!capacity && capacity.n < 39,
+      accessMode: sharedAccess(env) ? "shared" : "membership", privacyContact: env.PRIVACY_CONTACT || null });
+  }
+  if (path === "/api/gate" || path === "/api/gate/logout") return gateRoute(request, env, ipHash);
+  const guest = path !== "/api/unsubscribe" && sharedAccess(env) ? await authenticateGuest(request, env) : null;
+  if (path.startsWith("/api/guest/preferences/")) {
+    if (!guest) throw new ApiError(404, "not_found", "Sidan finns inte.");
+    return guestPreferenceRoute(request, env, ipHash, guest);
   }
   if (request.method === "POST" && (path === "/api/apply" || path === "/api/login")) {
+    if (guest && path === "/api/apply") throw new ApiError(404, "applications_closed", "Ingen medlemsansökan behövs. Prova och verifiera e-post när du sparar.");
     if (!serviceReady(env)) throw new ApiError(503, "not_ready", "Medlemsansökan och inloggning är inte aktiverade ännu.");
     const input = await readJson(request);
     const data = path === "/api/apply" ? applySchema.parse(input) : z.object({ email: emailSchema, website: z.string().max(0) }).strict().parse(input);
@@ -57,7 +66,9 @@ async function route(request: Request, env: Env): Promise<Response> {
     if (!await rate(env, `login:${ipHash}`, 3, 3600) || !await rate(env, "login:all", 50, 86400)) {
       throw new ApiError(429, "rate", "För många försök. Vänta en timme och försök igen.");
     }
-    const response = () => json({ message: "Begäran har tagits emot. Om adressen kan användas köas en inloggningslänk. Kontrollera skräpposten. Nya medlemmar behöver också ägarens godkännande." }, 202);
+    const response = () => json({ message: guest
+      ? "Om adressen kan användas köas en inloggningslänk. Öppna den i samma webbläsare inom 30 minuter. Inga sökningar ändras."
+      : "Begäran har tagits emot. Om adressen kan användas köas en inloggningslänk. Kontrollera skräpposten. Nya medlemmar behöver också ägarens godkännande." }, 202);
     const emailHash = await keyed(env.TOKEN_SECRET, `email:${data.email}`);
     if (!await rate(env, `email:${emailHash}`, 1, 3600)) return response();
     const existing = await env.DB.prepare("SELECT id,email,state FROM subscriptions WHERE email_hash=?")
@@ -81,7 +92,8 @@ async function route(request: Request, env: Env): Promise<Response> {
         .bind(id, data.email, emailHash, JSON.stringify(defaultFilters), "application" in data ? data.application : "Configured owner", Number(owner),
           await hash(token), now + 30 * 60_000, now, now + 48 * 3600_000);
     try {
-      await env.DB.batch([update, await queueVerification(env, id, data.email, token, now)]);
+      await env.DB.batch([update, ...(guest ? [env.DB.prepare("INSERT INTO gate_logins(token_hash,guest_id,member_id,expires_at) VALUES(?,?,?,?)")
+        .bind(await hash(token), guest.id, id, now + 30 * 60_000)] : []), await queueVerification(env, id, data.email, token, now)]);
     } catch (error) {
       if (!(error instanceof Error) || !/capacity|UNIQUE constraint/.test(error.message)) throw error;
       console.warn(JSON.stringify({ event: "application_deferred", code: "capacity_or_duplicate" }));
@@ -91,6 +103,10 @@ async function route(request: Request, env: Env): Promise<Response> {
   if (request.method === "POST" && path === "/api/confirm") {
     const { token } = tokenSchema.parse(await readJson(request));
     const tokenHash = await hash(token);
+    if (guest && !await env.DB.prepare("SELECT token_hash FROM gate_logins WHERE token_hash=? AND guest_id=? AND expires_at>?")
+      .bind(tokenHash, guest.id, now).first()) {
+      throw new ApiError(410, "gate_link", "Öppna länken i samma webbläsare där du begärde den, med lösenordsåtkomsten kvar. Annars behöver du begära en ny länk.");
+    }
     const row = await env.DB.prepare("SELECT id,email,state,token_expires,token_used FROM subscriptions WHERE token_hash=?")
       .bind(tokenHash).first<Member & { token_expires: number; token_used: number }>();
     if (!row || row.token_expires < now || ["rejected", "revoked"].includes(row.state)) {
@@ -104,15 +120,17 @@ async function route(request: Request, env: Env): Promise<Response> {
         SELECT ?,id,? FROM subscriptions WHERE token_hash=? AND token_used=0 AND state NOT IN ('rejected','revoked')`)
         .bind(sessionHash, now + 12 * 3600_000, tokenHash),
       env.DB.prepare(`UPDATE subscriptions SET token_used=1,
-        state=CASE WHEN state='unverified' THEN ? ELSE state END,
-        expires_at=CASE WHEN state='unverified' THEN ? ELSE expires_at END
+        state=CASE WHEN state='unverified' OR (?=1 AND state='pending') THEN ? ELSE state END,
+        expires_at=CASE WHEN state='unverified' OR (?=1 AND state='pending') THEN ? ELSE expires_at END
         WHERE token_hash=? AND state NOT IN ('rejected','revoked')`)
-        .bind(isOwner(env, row) ? "approved" : "pending", now + (isOwner(env, row) ? 180 : 30) * 86400_000, tokenHash),
+        .bind(Number(!!guest), guest || isOwner(env, row) ? "approved" : "pending", Number(!!guest), now + (guest || isOwner(env, row) ? 180 : 30) * 86400_000, tokenHash),
+      ...(guest ? [env.DB.prepare("UPDATE guest_sessions SET member_id=? WHERE id=? AND EXISTS(SELECT 1 FROM sessions WHERE token_hash=?)")
+        .bind(row.id, guest.id, sessionHash)] : []),
     ]);
     if (!await env.DB.prepare("SELECT token_hash FROM sessions WHERE token_hash=? AND expires_at>?").bind(sessionHash, now).first()) {
       throw new ApiError(410, "used", "Länken är redan använd. Begär en ny inloggningslänk.");
     }
-    return new Response(JSON.stringify({ message: isOwner(env, row) || row.state === "approved" ? "Du är inloggad." : "E-postadressen är verifierad. Ansökan väntar på ägarens godkännande; inga bostäder eller bevakningar är tillgängliga ännu." }), {
+    return new Response(JSON.stringify({ message: guest || isOwner(env, row) || row.state === "approved" ? "Du är inloggad. Din sparade sökning är oförändrad." : "E-postadressen är verifierad. Ansökan väntar på ägarens godkännande; inga bostäder eller bevakningar är tillgängliga ännu." }), {
       headers: { "Content-Type": "application/json", "Set-Cookie": sessionCookie(request, session) },
     });
   }
@@ -128,16 +146,18 @@ async function route(request: Request, env: Env): Promise<Response> {
   if (request.method === "POST" && path === "/api/logout") {
     const member = await authenticate(request, env, false);
     await env.DB.prepare("DELETE FROM sessions WHERE member_id=?").bind(member.id).run();
-    return new Response(JSON.stringify({ message: "Du är utloggad på alla enheter." }), { headers: {
-      "Content-Type": "application/json", "Set-Cookie": sessionCookie(request, "", true),
-    } });
+    if (guest) await env.DB.prepare("DELETE FROM guest_sessions WHERE member_id=? OR id=?").bind(member.id, guest.id).run();
+    const headers = new Headers({ "Content-Type": "application/json", "Set-Cookie": sessionCookie(request, "", true) });
+    if (guest) headers.append("Set-Cookie", guestCookie(request, "", true));
+    return new Response(JSON.stringify({ message: "Du är utloggad på alla enheter." }), { headers });
   }
   if (request.method === "POST" && path === "/api/delete-account") {
     const member = await authenticate(request, env, false);
     await env.DB.prepare("DELETE FROM subscriptions WHERE id=?").bind(member.id).run();
-    return new Response(JSON.stringify({ message: "Medlemskapet och dess uppgifter har raderats." }), { headers: {
-      "Content-Type": "application/json", "Set-Cookie": sessionCookie(request, "", true),
-    } });
+    if (guest) await env.DB.prepare("DELETE FROM guest_sessions WHERE id=?").bind(guest.id).run();
+    const headers = new Headers({ "Content-Type": "application/json", "Set-Cookie": sessionCookie(request, "", true) });
+    if (guest) headers.append("Set-Cookie", guestCookie(request, "", true));
+    return new Response(JSON.stringify({ message: "Medlemskapet och dess uppgifter har raderats." }), { headers });
   }
   if (request.method === "GET" && path === "/api/me") {
     const member = await authenticate(request, env, false);
@@ -145,8 +165,8 @@ async function route(request: Request, env: Env): Promise<Response> {
       filters: filterSchema.parse(JSON.parse(member.filters)), alertsEnabled: !!member.alerts_enabled,
       profile: savedProfile(member), searchVersion: member.search_version, aiReady: aiReady(env) && serviceReady(env) });
   }
-  const member = await authenticate(request, env);
   if (path.startsWith("/api/preferences/")) return preferenceRoute(request, env, ipHash);
+  if (!guest) await authenticate(request, env);
   if (request.method === "GET" && path === "/api/catalog") {
     const ids = new Set(authorizations(env).map(source => source.id));
     const rows = await env.DB.prepare("SELECT id,data,first_seen,last_seen FROM listings WHERE active=1 ORDER BY first_seen DESC LIMIT 200")
@@ -160,6 +180,7 @@ async function route(request: Request, env: Env): Promise<Response> {
     });
   }
   if (request.method === "POST" && path === "/api/search") {
+    const member = await authenticate(request, env);
     const data = z.object({ filters: filterSchema, enabled: z.boolean(), consent: z.literal(true), expectedVersion: z.number().int().nonnegative() }).strict().parse(await readJson(request));
     if (data.enabled && (!serviceReady(env) || !authorizations(env).length)) throw new ApiError(503, "no_sources", "Ingen tillåten källa är ansluten. Bevakning kan inte aktiveras ännu.");
     const profile = JSON.stringify(data.filters) === JSON.stringify(filterSchema.parse(JSON.parse(member.filters)))
@@ -176,6 +197,7 @@ async function route(request: Request, env: Env): Promise<Response> {
     return json({ message: data.enabled ? "Sökningen är sparad och bevakningen aktiverad. Bara nya matchningar skickas." : "Sökningen är sparad. Bostadsmejlen är pausade." });
   }
   if (path.startsWith("/api/admin/")) {
+    const member = await authenticate(request, env);
     if (!isOwner(env, member)) throw new ApiError(403, "owner_required", "Endast ägaren kan hantera medlemskap.");
     if (request.method === "GET" && path === "/api/admin/members") {
       const rows = await env.DB.prepare("SELECT id,email,application,state,created_at,alerts_enabled FROM subscriptions ORDER BY created_at DESC LIMIT 40").all();
@@ -183,6 +205,7 @@ async function route(request: Request, env: Env): Promise<Response> {
     }
     if (request.method === "POST" && path === "/api/admin/review") {
       const data = z.object({ memberId: z.string().uuid(), decision: z.enum(["approve", "reject", "revoke"]) }).strict().parse(await readJson(request));
+      if (guest && data.decision !== "revoke") throw new ApiError(400, "manual_approval_disabled", "I lösenordsläget verifieras e-post utan manuella medlemsbeslut.");
       const target = await env.DB.prepare("SELECT id,email,state FROM subscriptions WHERE id=?").bind(data.memberId).first<Member>();
       if (!target || isOwner(env, target)) throw new ApiError(400, "invalid_member", "Medlemskapet kan inte ändras här.");
       if ((data.decision === "approve" || data.decision === "reject") && target.state !== "pending") {

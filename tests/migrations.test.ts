@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { DatabaseSync } from "node:sqlite";
-import { mkdtemp, readFile, rm, rmdir, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, readdir, rm, rmdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { applyMigrations, checkRemoteTarget, migrationBundle, readWranglerResult, type Execute } from "../scripts/migrate";
@@ -10,7 +10,7 @@ const directories: string[] = [];
 afterEach(async () => {
   for (const db of databases.splice(0)) db.close();
   for (const dir of directories.splice(0)) {
-    await rm(join(dir, "0001_test.sql"), { force: true });
+    for (const file of await readdir(dir)) await rm(join(dir, file));
     await rmdir(dir);
   }
 });
@@ -39,6 +39,14 @@ async function fixture(sql: string) {
   const dir = await mkdtemp(join(tmpdir(), "kommandekollen-migration-test-"));
   directories.push(dir);
   await writeFile(join(dir, "0001_test.sql"), sql);
+  return dir;
+}
+async function prefix(count: number) {
+  const dir = await mkdtemp(join(tmpdir(), "kommandekollen-migration-test-"));
+  directories.push(dir);
+  for (const file of (await readdir("worker/migrations")).filter(file => file.endsWith(".sql")).sort().slice(0, count)) {
+    await writeFile(join(dir, file), await readFile(join("worker/migrations", file), "utf8"));
+  }
   return dir;
 }
 
@@ -143,7 +151,7 @@ describe("atomic migration file transport", () => {
     const h = harness();
     await applyMigrations("worker/migrations", h.execute, () => {});
     expect(h.db.prepare("SELECT name FROM sqlite_schema WHERE type='trigger' ORDER BY name").all().map(row => row.name))
-      .toEqual(["ai_budget", "inventory_capacity", "reserve_quota", "revoke_search_drafts", "subscription_capacity"]);
+      .toEqual(["ai_budget", "delete_guest_access", "guest_capacity", "inventory_capacity", "reserve_quota", "revoke_guest_access", "revoke_search_drafts", "subscription_capacity"]);
     const sql = await readFile("worker/migrations/0001_initial.sql", "utf8");
     expect(h.files[0]).toContain(sql);
     h.db.exec("INSERT INTO quotas VALUES('day',79,0),('month',2399,0)");
@@ -151,9 +159,9 @@ describe("atomic migration file transport", () => {
     expect(() => h.db.exec("INSERT INTO send_attempts VALUES('two','outbox','day','month','digest',0)")).toThrow("mail_quota");
     expect(h.db.prepare("SELECT total FROM quotas ORDER BY period").all()).toEqual([{ total: 80 }, { total: 2400 }]);
     expect(h.db.prepare("SELECT count(*) AS count FROM send_attempts").get()).toMatchObject({ count: 1 });
-    expect(h.files).toHaveLength(3);
+    expect(h.files).toHaveLength(4);
     await applyMigrations("worker/migrations", h.execute, () => {});
-    expect(h.files).toHaveLength(3);
+    expect(h.files).toHaveLength(4);
   });
   it("upgrades existing 0001 members without rewriting filters, consent, seen history or initial SQL", async () => {
     const h = harness();
@@ -162,15 +170,16 @@ describe("atomic migration file transport", () => {
     h.db.prepare(`INSERT INTO subscriptions(id,email,email_hash,filters,state,application,token_hash,token_expires,created_at,expires_at,consent_version,last_digest_day)
       VALUES('member','member@example.com','hash','{\"maxPrice\":4250123}','approved','example','token',1,1,2,'old-consent','2026-09-25')`).run();
     await applyMigrations("worker/migrations", h.execute, () => {});
-    expect(h.files).toHaveLength(2);
+    expect(h.files).toHaveLength(3);
     expect(h.files[0]).toContain("0002_preferences.sql");
     expect(h.db.prepare("SELECT filters,consent_version,last_digest_day,search_version,preference_profile FROM subscriptions").get())
       .toEqual({ filters: '{"maxPrice":4250123}', consent_version: "old-consent", last_digest_day: "2026-09-25", search_version: 0, preference_profile: null });
     expect(await readFile("worker/migrations/0001_initial.sql", "utf8")).toBe(initial);
-    expect(h.db.prepare("SELECT name FROM d1_migrations ORDER BY id").all()).toEqual([{ name: "0001_initial.sql" }, { name: "0002_preferences.sql" }, { name: "0003_ai_daily_attempts.sql" }]);
+    expect(h.db.prepare("SELECT name FROM d1_migrations ORDER BY id").all()).toEqual([{ name: "0001_initial.sql" }, { name: "0002_preferences.sql" }, { name: "0003_ai_daily_attempts.sql" }, { name: "0004_shared_access.sql" }]);
   });
   it("upgrades 0002 with three completed attempts intact and preserves all other guards and data", async () => {
     const h = harness();
+    const directory = await prefix(3);
     const initial = await readFile("worker/migrations/0001_initial.sql", "utf8");
     const preferences = await readFile("worker/migrations/0002_preferences.sql", "utf8");
     h.db.exec(migrationBundle("0001_initial.sql", initial));
@@ -195,7 +204,7 @@ describe("atomic migration file transport", () => {
     const history = h.db.prepare("SELECT * FROM d1_migrations ORDER BY id").all();
     const unaffected = () => h.db.prepare("SELECT type,name,sql FROM sqlite_schema WHERE name!='ai_budget' ORDER BY type,name").all();
     const schema = unaffected();
-    await applyMigrations("worker/migrations", h.execute, () => {});
+    await applyMigrations(directory, h.execute, () => {});
     expect(h.files).toHaveLength(1);
     expect(h.files[0]).toContain(upgrade);
     expect(snapshot()).toEqual(before);
@@ -214,9 +223,28 @@ describe("atomic migration file transport", () => {
     expect(() => h.db.exec("INSERT INTO ai_attempts VALUES('invalid','new-member','new-ip','2099-01-03',8,999,'done')")).toThrow("CHECK constraint");
     expect(h.db.prepare("SELECT sum(reserved) AS total FROM ai_attempts WHERE day='2099-01-02'").get()).toEqual({ total: 6000 });
     expect(h.db.prepare("SELECT * FROM ai_attempts WHERE id LIKE 'existing-%' ORDER BY rowid").all()).toEqual(before[4]);
-    await applyMigrations("worker/migrations", h.execute, () => {});
+    await applyMigrations(directory, h.execute, () => {});
     expect(h.files).toHaveLength(1);
     expect(await readFile("worker/migrations/0001_initial.sql", "utf8")).toBe(initial);
     expect(await readFile("worker/migrations/0002_preferences.sql", "utf8")).toBe(preferences);
+  });
+  it("adds shared access without rewriting an existing saved owner profile, consent, history or AI reservations", async () => {
+    const h = harness();
+    await applyMigrations(await prefix(3), h.execute, () => {});
+    h.db.exec(`INSERT INTO subscriptions(id,email,email_hash,filters,state,application,owner_slot,token_hash,token_expires,created_at,expires_at,consent_version,search_version,preference_profile,last_digest_day)
+      VALUES('owner','owner@example.com','hash','{"maxPrice":4250123}','approved','existing owner',1,'token',1,1,2,'existing-consent',7,'{"version":1}','2026-09-26');
+      INSERT INTO ai_attempts VALUES('one','member','ip','2026-09-26',1,1000,'done');
+      INSERT INTO seen VALUES('owner','listing',1);`);
+    const snapshot = () => ["subscriptions", "ai_attempts", "seen"].map(table => h.db.prepare(`SELECT * FROM ${table}`).all());
+    const before = snapshot(), ledger = h.db.prepare("SELECT * FROM d1_migrations ORDER BY id").all();
+    const oldSchema = h.db.prepare("SELECT type,name,sql FROM sqlite_schema ORDER BY type,name").all();
+    await applyMigrations("worker/migrations", h.execute, () => {});
+    expect(h.files).toHaveLength(4);
+    expect(snapshot()).toEqual(before);
+    expect(h.db.prepare("SELECT * FROM d1_migrations WHERE id<=3 ORDER BY id").all()).toEqual(ledger);
+    const afterSchema = h.db.prepare("SELECT type,name,sql FROM sqlite_schema ORDER BY type,name").all();
+    for (const row of oldSchema) expect(afterSchema).toContainEqual(row);
+    await applyMigrations("worker/migrations", h.execute, () => {});
+    expect(h.files).toHaveLength(4);
   });
 });

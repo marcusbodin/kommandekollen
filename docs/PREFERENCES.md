@@ -12,6 +12,13 @@ not delivery of live agency collection or working property alerts.**
 
 ## Member experience and matching
 
+Optional shared-password mode adds guest drafting before email. Its gated
+guest endpoints, explicit email save intent and second confirmation are
+documented in [SHARED_ACCESS.md](SHARED_ACCESS.md). Existing member endpoints
+also require the shared gate when that mode is active; they are not a bypass.
+This is a separately activated 0004 rollout, not a change to the historical
+production evidence above.
+
 An approved member describes a home, optionally answers one material question,
 reviews an editable summary and explicitly confirms the exact draft. Membership
 approval and alert consent are separate. Generating, editing, cancelling,

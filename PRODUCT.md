@@ -9,12 +9,15 @@ web
 ## Users
 
 Swedish-speaking home seekers looking for upcoming homes in Stockholm.
-The owner changed the scope on 2026-09-25: this is a CLOSED membership service.
-People may apply; only the configured owner can approve verified applicants.
+The owner approved shared-password access on 2026-09-26. Visitors who have the
+shared password may try AI without email. Email is verified only when saving,
+followed by a second explicit review/confirmation. No manual application or
+owner approval is needed in this mode. The previous membership mode remains the
+configuration default until the operator explicitly rolls out shared access.
 
 ## Product Purpose
 
-Let approved members describe their next home, clarify material ambiguity,
+Let authorized visitors describe their next home, clarify material ambiguity,
 review hard requirements, soft preferences and unverified criteria, then
 explicitly save their personal selection. Manual filters remain a fallback.
 New matching objects may be emailed each morning only after separate consent
@@ -22,12 +25,12 @@ and source readiness; with no ready sources, save paused.
 
 ## Operating Context
 
-Public visitors see an application/login shell and explicitly synthetic demo.
-Application -> email verification -> pending manual approval -> approved,
-rejected or revoked. Verification alone never grants inventory access or alerts.
-Approved members configure familiar property-search preferences, review matching
-homes and explicitly activate morning alerts. Every email permits account deletion.
-Owner approval, rejection and revocation are authenticated server-side operations.
+Shared mode: password -> guest draft -> reviewed save intent -> email verification
+in the same browser -> second explicit confirmation. Verification alone never
+saves or activates alerts. Existing owners retain their saved searches and role.
+Rejected/revoked accounts remain blocked. Membership mode retains the former
+application -> verification -> manual approval process. Every email permits
+signed deletion. The public demo is synthetic and never calls AI.
 
 ## Capabilities and Constraints
 
@@ -37,8 +40,9 @@ Owner approval, rejection and revocation are authenticated server-side operation
 - Owner purchased kommandekollen.se.
 - Intended personal GitHub owner is marcusbodin.
 - Public source repository approved for free GitHub Pages.
-- Public code is not public inventory. Real listings, source-run results and
-  saved searches require an approved backend-validated membership session.
+- Public code is not public inventory. Shared mode requires a backend-validated
+  guest gate for inventory/AI and a verified own-account session for saved data.
+  Membership mode still requires approved membership.
 - The owner role is fixed by private server configuration, never first-signup
   or a client-selected role. Owner identity is configured privately in production.
 - Authorized public controller identity: Marcus Bodin (privatperson);
@@ -61,7 +65,7 @@ Owner approval, rejection and revocation are authenticated server-side operation
 - Subscriber information and secrets must not be public.
 - A domain purchase is the only cost explicitly accepted.
 - Initial implemented geographic scope: the 26 municipalities of Stockholms län.
-- Conservative pilot limits: 40 accounts, 200 stored listings, 80 attempted
+- Conservative pilot limits: 200 temporary guest sessions, 40 accounts, 200 stored listings, 80 attempted
   emails/day, 2400/month; at most 20 non-digest email attempts/day.
 - Updated owner decision, 2026-09-25: Inleed remains the registrar and domain
   billing provider; authoritative DNS may move to Cloudflare Free at deployment.
@@ -111,6 +115,6 @@ and optimized; its verified source/license is recorded in
 
 - Honest source coverage and freshness.
 - Useful filters before marketing content.
-- Email-verified, owner-approved membership with straightforward withdrawal.
+- Backend-enforced access and verified personal saving with straightforward withdrawal.
 - Explicit failures rather than fabricated listings or success messages.
 - Bounded operation within free service quotas.

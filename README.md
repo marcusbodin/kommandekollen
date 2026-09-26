@@ -12,6 +12,13 @@ Automatisk insamling från de efterfrågade
 mäklarsajterna är fortfarande en uttrycklig lanseringsblockerare, inte en färdig
 funktion som ersatts av en demo.
 
+**Nytt godkänt läge, ännu separat från ovanstående driftstatus:** ett gemensamt
+lösenord öppnar sökningen för gäster utan e-post. E-post verifieras först vid
+sparande, följt av en ny uttrycklig granskning/bekräftelse. Ingen medlemsansökan
+eller ägarprövning behövs i det läget. Aktivering kräver migration `0004`,
+privat serverhemlighet och `ACCESS_MODE=shared`; standardläget ändras inte av
+koden ensam. [Kontrakt, integritet och säker aktivering](docs/SHARED_ACCESS.md).
+
 ## Kör lokalt
 
 ```sh
@@ -46,8 +53,9 @@ aldrig hemma i `VITE_*`, JavaScript-paket, git eller Actions-loggar.
 - Personligt sökflöde: beskriv hemmet, besvara högst en fråga åt gången,
   granska **Måste ha / Gärna / Behöver kontrolleras av dig**, redigera och
   godkänn uttryckligen. Utan redo källor sparas sökningen **pausad**.
-  Cloudflare Workers AI är valfri och endast för godkända medlemmar efter
-  särskilt godkännande av texthjälpen. Migration `0002` och det matchande
+  Cloudflare Workers AI är valfri och kräver särskilt godkännande av texthjälpen.
+  I medlemsläget krävs godkänt konto; i det nya delade lösenordsläget räcker en
+  serververifierad gästsession. Migration `0002` och det matchande
   gränssnittet/backend är driftsatta. Lokal standardkonfiguration håller AI avstängd.
 - Mobilanpassad, ljus sökyta med Clawpilot-tema; mörkt läge väljs uttryckligen.
   Manuella filter är alternativet utan AI: kommun och bostadstyper,
@@ -56,9 +64,10 @@ aldrig hemma i `VITE_*`, JavaScript-paket, git eller Actions-loggar.
   val; befintliga exakta sökvärden avrundas inte. Saknade uppgifter är inte noll.
 - En licensverifierad, lokalt optimerad interiörbild, tydligt märkt som
   inspiration och aldrig kopplad till ett objekt. [Bildkälla och licens](public/assets/ATTRIBUTION.md).
-- Ansökan och lösenordsfri e-postverifiering. En verifierad ny användare stannar
+- I medlemsläget: ansökan och lösenordsfri e-postverifiering. En verifierad ny användare stannar
   i **väntar på godkännande**, utan objekttillgång eller mejlbevakning.
-- Ägarvy för granskning, godkännande, avslag och återkallelse. Ägarrollen kommer
+- Ägarvy för granskning, godkännande, avslag och återkallelse i medlemsläget;
+  lösenordsläget behåller återkallelse men ingen manuell antagning. Ägarrollen kommer
   endast från privat `OWNER_EMAIL`. Återkallelse stoppar API-åtkomst och köade mejl.
 - Backend-skyddad katalog, källstatus och separat sparad sökning per medlem.
   Ingen verklig inventering lagras i statiska filer eller publika byggartefakter.
@@ -85,6 +94,7 @@ Inga betalda uppgraderingar eller obegränsad gratiskapacitet förutsätts.
 - [Dataskydd, medlemskap och drift](docs/OPERATIONS.md)
 - [Visuellt system](DESIGN.md)
 - [Personliga sökprofiler, AI-kontrakt, gratisbudget och migration](docs/PREFERENCES.md)
+- [Delat lösenord, gästutkast och e-post vid sparande](docs/SHARED_ACCESS.md)
 
 AI-hjälpen reserverar konservativt 1 000 neuroner per försök, högst 6 000 per
 UTC-dygn för hela appen och sex försök per medlem/IP. Kontots Free-kvot delas med
@@ -92,8 +102,10 @@ annan användning. Inga betalda modeller eller automatiska kostnadsfallbacks anv
 **Built with Llama**; modellvillkor och begränsade verkliga utvärderingsresultat
 finns i dokumentationen ovan. Manuella sökningar kräver inte AI.
 
-Webbläsartesterna startar en separat frontend på port 5174 och simulerar API:t
-lokalt, utan att skicka mejl eller röra förhandsvisningen på 5173. De täcker
+Webbläsartesterna startar en separat frontend på port 5174. Förutom snabba
+API-simuleringar körs faktiska HTTP-anrop genom Worker och lokal D1, med enbart
+modell och mejlleverantör ersatta av testfixturer. Inga verkliga mejl skickas
+och förhandsvisningen på 5173 lämnas orörd. Testerna täcker
 320/360/390/430px, tangentbordsstyrda reglage, exakta sparade värden,
 medlemsgränser, lokal bildladdning och ljust standardtema även vid mörkt OS.
 

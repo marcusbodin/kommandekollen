@@ -15,6 +15,8 @@ export interface Env {
   AUTHORIZED_SOURCES: string;
   OWNER_EMAIL: string;
   AI_ENABLED?: string;
+  ACCESS_MODE?: string;
+  SHARED_ACCESS_PASSWORD?: string;
   AI?: HousingAI;
 }
 export class ApiError extends Error {
@@ -105,6 +107,35 @@ export function cookieName(request: Request) {
 }
 export function sessionCookie(request: Request, value: string, remove = false) {
   return `${cookieName(request)}=${value}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${remove ? 0 : 43200}${new URL(request.url).protocol === "https:" ? "; Secure" : ""}`;
+}
+export function sharedAccess(env: Env) {
+  if (env.ACCESS_MODE && !["membership", "shared"].includes(env.ACCESS_MODE)) {
+    throw new ApiError(503, "access_config", "Åtkomsten är inte korrekt konfigurerad.");
+  }
+  return env.ACCESS_MODE === "shared";
+}
+export function guestCookieName(request: Request) {
+  return new URL(request.url).protocol === "https:" ? "__Host-kk_guest" : "kk_guest";
+}
+export function guestCookie(request: Request, value: string, remove = false) {
+  return `${guestCookieName(request)}=${value}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${remove ? 0 : 43200}${new URL(request.url).protocol === "https:" ? "; Secure" : ""}`;
+}
+export async function gateVersion(env: Env) {
+  if (!sharedAccess(env) || !/^[a-f0-9]{64}$/.test(env.SHARED_ACCESS_PASSWORD || "") || !serviceReady(env)) {
+    throw new ApiError(503, "gate_unavailable", "Lösenordsåtkomsten är inte aktiverad. Försök senare.");
+  }
+  return hash(env.SHARED_ACCESS_PASSWORD!);
+}
+export type Guest = { id: string; credential_version: string; expires_at: number; member_id: string | null };
+export async function authenticateGuest(request: Request, env: Env): Promise<Guest> {
+  const version = await gateVersion(env);
+  const value = (request.headers.get("cookie") || "").split(";").map(part => part.trim())
+    .find(part => part.startsWith(`${guestCookieName(request)}=`))?.slice(guestCookieName(request).length + 1);
+  if (!value || !/^[a-f0-9]{64}$/.test(value)) throw new ApiError(401, "gate_required", "Ange det gemensamma lösenordet för att fortsätta.");
+  const guest = await env.DB.prepare("SELECT id,credential_version,expires_at,member_id FROM guest_sessions WHERE token_hash=? AND credential_version=? AND expires_at>?")
+    .bind(await hash(value), version, Date.now()).first<Guest>();
+  if (!guest) throw new ApiError(401, "gate_required", "Lösenordsåtkomsten har gått ut eller ändrats. Ange lösenordet igen.");
+  return guest;
 }
 export async function authenticate(request: Request, env: Env, approved = true): Promise<Member> {
   const value = (request.headers.get("cookie") || "").split(";").map(part => part.trim())
