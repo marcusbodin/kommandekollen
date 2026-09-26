@@ -81,6 +81,12 @@ browser automation. Actual production CPU time under the Free 10ms limit still
 needs measurement before widening the pilot; local tests cannot certify that
 Cloudflare production budget.
 
+The first active-owner sample reported p50 2.467 ms and p99 14.147 ms CPU,
+with no reported runtime errors. The p99 exceeds the nominal Free 10 ms limit.
+Keep the pilot bounded and investigate capacity before approving a wider group;
+do not interpret either startup time or successful requests as a guarantee
+that the configured maximum workload fits Free.
+
 D1 triggers transactionally reserve daily/monthly/non-digest quota before each
 provider attempt. Concurrent calls cannot overrun the cap. Reservations are not
 refunded on failure: conservative accounting is safer than assuming no delivery.

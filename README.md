@@ -4,9 +4,10 @@ Sluten bostadssökning och morgonbevakning för Stockholms län.
 **Den medlemslåsta piloten är publicerad på https://kommandekollen.se.
 Ansökningar, inloggning och valfri AI-texthjälp är aktiverade.
 Inga livekällor är anslutna; sökningar kan bara sparas pausade.**
-Schemalagd städning och hantering av inloggningsmejl är påslagna. Ett tekniskt
-Resend-utskick har nått den verifierade mottagaren; den kompletta kontrollen av
-verkliga medlems- och sökflöden pågår under utrullningen.
+Schemalagd städning och hantering av inloggningsmejl är påslagna. Ägaren har
+loggat in via ett riktigt mejl, använt AI-flödet och uttryckligen sparat en
+pausad sökning. Den sparade profilen och avstängda bostadsmejl är verifierade
+i produktionsdatabasen. Fleranvändarflöden och kapacitet återstår att följa upp.
 Automatisk insamling från de efterfrågade
 mäklarsajterna är fortfarande en uttrycklig lanseringsblockerare, inte en färdig
 funktion som ersatts av en demo.
@@ -106,8 +107,9 @@ hemlighetslagring, inte i repot.
 
 `wrangler.toml` har en separat produktionsmiljö med `SERVICE_ENABLED=true`,
 `AI_ENABLED=true`, tom källista och städning/mejlkö varje minut. Ägarens
-e-postverifiering, medlemsflödet och produktionsbudget följs upp under den första
-utrullningen; ett lyckat modellprov är inte bevis för hela flödet.
+e-postverifiering och första sparade AI-sökning har fungerat i produktion.
+Övriga medlemsflöden och produktionsbudget följs upp under piloten;
+ett lyckat ägarflöde är inte bevis för alla fleranvändarfall.
 Riktiga källor och produktionsbudget måste dessutom verifieras
 innan fungerande bostadsbevakning kan utlovas. Aktuell driftstatus och kvarstående
 kontroller finns i [driftsättningsguiden](docs/DEPLOYMENT.md).

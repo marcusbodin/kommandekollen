@@ -4,8 +4,11 @@ The owner authorized step-by-step deployment on 2026-09-25. The public repositor
 and GitHub Pages shell are published under **marcusbodin**. Cloudflare Free DNS
 is active while Inleed remains the registrar. The production Worker is deployed
 on `api.kommandekollen.se` with validated TLS; its EU-jurisdiction D1 database has
-both `0001_initial.sql` and additive `0002_preferences.sql` with verified
-migration history. On 2026-09-26 the owner requested the personal-search rollout.
+`0001_initial.sql`, additive `0002_preferences.sql` and
+`0003_ai_daily_attempts.sql` with verified migration history. The third migration
+raises member/IP daily attempts to six within the unchanged global budget and
+preserves all existing reservations. On 2026-09-26 the owner requested the
+personal-search rollout.
 
 The **private membership pilot is enabled**: `SERVICE_ENABLED=true`,
 `AI_ENABLED=true`, native Workers AI binding and an every-minute cleanup/mail
@@ -20,16 +23,26 @@ to the owner's inbox succeeded.
 Frontend HTTPS is valid and enforced; HTTP redirects to the canonical HTTPS URL.
 The public controller/contact and provider-location disclosures are published.
 The owner separately confirmed the account's **Workers Free** plan, not only
-the zone's Free DNS plan. The updated frontend is published by Pages run
-`36224249879`; initial active Worker version is
-`bb0a16fd-988b-4741-83f2-cef00900f201`.
+the zone's Free DNS plan. The repaired frontend is published by Pages run
+`36225760990` from feature commit `72cc615`; the matching Worker version is
+`82734ebc-89a3-414e-9a0e-b720a5b743e0`.
 
-Still required during the first rollout: complete real membership/session,
-saved-profile and withdrawal checks, continued provider/privacy review, and
+The owner completed actual queued email login, reached owner controls, used the
+AI flow and explicitly saved a paused search. Read-only aggregate D1 inspection
+confirmed a persisted versioned profile, no remaining draft and alerts disabled.
+The initial missing-feedback failure was repaired and this complete owner path
+then succeeded; no personal housing description or saved profile is published.
+
+Still required during the pilot: other-member approval/revocation and
+withdrawal scenarios, continued provider/privacy review, and
 production CPU/provider/D1 capacity evidence. Live listing sources and actual
 digest delivery are separate unresolved prerequisites for property alerts.
-The bounded real AI/provider checks do not prove the whole deployed member
-workflow. These instructions do not authorize paid upgrades or unrelated
+An initial active-pilot sample had CPU p50 2.467 ms and p99 14.147 ms with no
+reported runtime errors. Provider schema confirms the underlying units are
+microseconds. The p99 exceeds the nominal Free 10 ms budget: this is not
+capacity certification and needs attention before widening the pilot.
+The successful owner path does not prove every member workflow.
+These instructions do not authorize paid upgrades or unrelated
 account changes.
 
 ## Local components

@@ -3,7 +3,10 @@
 The prompt flow, additive migration and matching backend/frontend were deployed
 on 2026-09-26. The operator enabled private membership and optional AI after
 bounded real-provider/native-binding checks and confirmation of Workers Free.
-Complete real member-flow and production-capacity checks continue during rollout.
+After the visible-feedback/grounding fix and approved quota migration, the owner
+completed actual email login, AI interpretation, explicit confirmation and a
+paused save. Aggregate production D1 inspection confirmed the versioned profile
+and disabled alerts. Other-member flows and capacity still need follow-up.
 **No live property source is connected. Save paused is useful infrastructure,
 not delivery of live agency collection or working property alerts.**
 
