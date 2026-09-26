@@ -48,8 +48,10 @@ Owner approval, rejection and revocation are authenticated server-side operation
 - Cloudflare Workers AI Free is approved for draft interpretation only, with
   housing text/prior preference state but no account or email metadata added.
   Fixed Llama 3.3 70B JSON-mode model, strict untrusted-output validation,
-  conservative 6,000-neuron daily reservation cap; flag OFF until native
-  binding and quality checks. No paid fallbacks or AI per listing/day.
+  conservative 6,000-neuron daily reservation cap. Production AI was enabled
+  on 2026-09-26 after bounded real-model and native-binding checks; full
+  production member-flow/capacity checks continue. Local defaults stay OFF.
+  No paid fallbacks or AI per listing/day.
 - A bounded versioned profile preserves hard filters, alternatives, exclusions,
   supported soft ranking and visibly unverified criteria. Unsupported MUST
   criteria require explicit manual-check acceptance. The model never saves,
@@ -73,8 +75,10 @@ Owner approval, rejection and revocation are authenticated server-side operation
 - No paid DNS, hosting, email or SSL purchase is approved.
 - Source code and the public shell are published under marcusbodin.
   The production API and EU-jurisdiction D1 database are provisioned.
-  Frontend HTTPS, complete membership testing and production capacity checks
-  remain launch prerequisites; applications and scheduled jobs are disabled.
+  Frontend HTTPS is valid and enforced. Applications, optional AI and scheduled
+  cleanup/mail processing are enabled for the private pilot. Complete real
+  membership testing and production capacity checks continue; no source or
+  listing-alert delivery is enabled.
 - The Resend sending subdomain is verified. A real technical test message
   reached the private inbox via the approved public contact forwarding address.
   This is not evidence of a working listing digest or live property coverage.

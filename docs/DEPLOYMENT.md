@@ -4,21 +4,33 @@ The owner authorized step-by-step deployment on 2026-09-25. The public repositor
 and GitHub Pages shell are published under **marcusbodin**. Cloudflare Free DNS
 is active while Inleed remains the registrar. The production Worker is deployed
 on `api.kommandekollen.se` with validated TLS; its EU-jurisdiction D1 database has
-the complete initial schema and migration ledger.
+both `0001_initial.sql` and additive `0002_preferences.sql` with verified
+migration history. On 2026-09-26 the owner requested the personal-search rollout.
 
-The service is still **closed**: `SERVICE_ENABLED=false`, production cron `[]`,
-and no authorized live sources. Production owner, contact, sender and API
+The **private membership pilot is enabled**: `SERVICE_ENABLED=true`,
+`AI_ENABLED=true`, native Workers AI binding and an every-minute cleanup/mail
+cron. Real catalog and preference APIs still require approved membership.
+There are **zero authorized live sources**, so searches save paused and alert
+activation is denied server-side. Production owner, contact, sender and API
 credentials are stored as Worker secrets, never in this repository. The matching
 ingestion credential is a repository secret, but collection remains disabled.
 Resend domain verification and a real test through contact-address forwarding
 to the owner's inbox succeeded.
 
-Still required: GitHub's frontend HTTPS certificate and enforcement, finalized
-controller/privacy and provider arrangements, complete real membership/session
-and withdrawal tests, scheduled cleanup, validated usable listing sources, and
-measured production CPU/provider/D1 limits. The provider test does not prove the
-application's queued verification or digest workflow. These instructions do not
-authorize paid upgrades or unrelated account changes.
+Frontend HTTPS is valid and enforced; HTTP redirects to the canonical HTTPS URL.
+The public controller/contact and provider-location disclosures are published.
+The owner separately confirmed the account's **Workers Free** plan, not only
+the zone's Free DNS plan. The updated frontend is published by Pages run
+`36224249879`; initial active Worker version is
+`bb0a16fd-988b-4741-83f2-cef00900f201`.
+
+Still required during the first rollout: complete real membership/session,
+saved-profile and withdrawal checks, continued provider/privacy review, and
+production CPU/provider/D1 capacity evidence. Live listing sources and actual
+digest delivery are separate unresolved prerequisites for property alerts.
+The bounded real AI/provider checks do not prove the whole deployed member
+workflow. These instructions do not authorize paid upgrades or unrelated
+account changes.
 
 ## Local components
 
@@ -156,7 +168,7 @@ Worker-managed API hostname. Inspect any existing `api` DNS record before
 resolving a conflict; do not overwrite an unrelated service blindly.
 
 The zone and API custom domain are active with API TLS validated; GitHub's
-frontend certificate remains pending. Test login/explicit confirmation from an email link,
+frontend certificate is approved and HTTPS is enforced. Test login/explicit confirmation from an email link,
 credentialed API calls, logout and revocation on desktop and mobile after setup.
 The preliminary `github.io` shell is not a supported production login host.
 
@@ -185,7 +197,8 @@ Local migration scripts never use `--remote`.
 `wrangler.toml` keeps local defaults separate from `env.production`. The
 production environment already declares the exact API Custom Domain, disables
 `workers.dev` and preview URLs, sets the frontend root and exact origin, and
-leaves `SERVICE_ENABLED=false` and the source allowlist empty. Credentials are
+enables `SERVICE_ENABLED` and `AI_ENABLED` for the private pilot while keeping
+the source allowlist empty. Local defaults remain disabled. Credentials are
 provisioned separately as Worker secrets. `MAIL_FROM` and `PRIVACY_CONTACT`
 are also production secrets rather than tracked vars; the local empty defaults
 may cause an intentional Wrangler non-inherited-vars warning.
@@ -200,6 +213,8 @@ Server configuration:
 | --- | --- | --- |
 | `DB` | D1 binding | Private member/session/inventory store |
 | `SERVICE_ENABLED` | Worker var | Defaults `false`; opens applications/mail only after configuration |
+| `AI_ENABLED` | Worker var | Local default `false`; production `true`, approved members and explicit AI consent only |
+| `AI` | Native Workers AI binding | Fixed Free-eligible model; never a frontend API credential |
 | `PUBLIC_URL` | Worker var | Production: `https://kommandekollen.se/`; local configuration remains separate |
 | `ALLOWED_ORIGINS` | Worker var | Production: exactly `https://kommandekollen.se`; no `*`, paths or untrusted previews |
 | `MAIL_FROM` | Private Worker config | Resend-verified sender, not an invented mailbox |
@@ -224,10 +239,9 @@ The authorized-source JSON shape is:
 Examples are nonfunctional reserved domains. Never publish permission letters,
 personal contacts, private feed URLs or secrets when editing config.
 
-The handler supports a once-per-minute cron with Stockholm local-time gating and
-bounded per-invocation work. Production cron is deliberately empty during setup.
-Enable scheduled cleanup before accepting personal data, and enable dispatch
-only once the service is ready. Keep on the Free plan. Before launch measure CPU
+The handler uses a once-per-minute cron with Stockholm local-time gating and
+bounded per-invocation work. Production cleanup was enabled before applications.
+Keep on the Free plan. Before widening the pilot measure CPU
 and D1 use at configured caps in the actual Worker; tests validate logic, not
 production CPU allowance.
 

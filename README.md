@@ -1,10 +1,12 @@
 # Kommandekollen
 
 Sluten bostadssökning och morgonbevakning för Stockholms län.
-**Webbgränssnitt och avstängd backend är publicerade. Medlemsansökningar,
-inloggning och schemalagda utskick är ännu inte aktiverade. Inga livekällor är
-anslutna.** Ett tekniskt Resend-utskick till kontaktadressen har nått den
-verifierade mottagaren; appens kompletta medlems- och bevakningsflöde återstår.
+**Den medlemslåsta piloten är publicerad på https://kommandekollen.se.
+Ansökningar, inloggning och valfri AI-texthjälp är aktiverade.
+Inga livekällor är anslutna; sökningar kan bara sparas pausade.**
+Schemalagd städning och hantering av inloggningsmejl är påslagna. Ett tekniskt
+Resend-utskick har nått den verifierade mottagaren; den kompletta kontrollen av
+verkliga medlems- och sökflöden pågår under utrullningen.
 Automatisk insamling från de efterfrågade
 mäklarsajterna är fortfarande en uttrycklig lanseringsblockerare, inte en färdig
 funktion som ersatts av en demo.
@@ -43,9 +45,9 @@ aldrig hemma i `VITE_*`, JavaScript-paket, git eller Actions-loggar.
 - Personligt sökflöde: beskriv hemmet, besvara högst en fråga åt gången,
   granska **Måste ha / Gärna / Behöver kontrolleras av dig**, redigera och
   godkänn uttryckligen. Utan redo källor sparas sökningen **pausad**.
-  Cloudflare Workers AI är valfri, endast för godkända medlemmar och avstängd
-  som standard. Den nya funktionen behöver migration `0002` och samordnad
-  driftsättning; den aktiverar inte den publicerade tjänsten av sig själv.
+  Cloudflare Workers AI är valfri och endast för godkända medlemmar efter
+  särskilt godkännande av texthjälpen. Migration `0002` och det matchande
+  gränssnittet/backend är driftsatta. Lokal standardkonfiguration håller AI avstängd.
 - Mobilanpassad, ljus sökyta med Clawpilot-tema; mörkt läge väljs uttryckligen.
   Manuella filter är alternativet utan AI: kommun och bostadstyper,
   reglage för pris/rum/boarea/avgift, valfri
@@ -96,15 +98,16 @@ medlemsgränser, lokal bildladdning och ljust standardtema även vid mörkt OS.
 
 Koden finns i [marcusbodin/kommandekollen](https://github.com/marcusbodin/kommandekollen).
 Domänen registreras och betalas fortsatt hos Inleed; auktoritativ DNS är flyttad
-till **Cloudflare Free**. GitHub Pages är kopplat till `kommandekollen.se`;
-dess HTTPS-certifikat inväntas fortfarande. API:t är driftsatt med TLS på
+till **Cloudflare Free**. GitHub Pages är kopplat till `kommandekollen.se`
+med giltigt HTTPS-certifikat och tvingad HTTPS-omdirigering. API:t är driftsatt med TLS på
 `https://api.kommandekollen.se` och D1-databasen är migrerad med EU-jurisdiktion.
 Privata nycklar och administratörsuppgifter finns endast i tjänsternas
 hemlighetslagring, inte i repot.
 
-`wrangler.toml` har en separat produktionsmiljö med `SERVICE_ENABLED=false`,
-tom källista och tomt cron-schema. Aktivera inte medlemsdelen innan frontendens
-HTTPS, dataskyddsinformation, schemalagd städning och hela medlemsflödet är
-kontrollerade. Riktiga källor och produktionsbudget måste dessutom verifieras
+`wrangler.toml` har en separat produktionsmiljö med `SERVICE_ENABLED=true`,
+`AI_ENABLED=true`, tom källista och städning/mejlkö varje minut. Ägarens
+e-postverifiering, medlemsflödet och produktionsbudget följs upp under den första
+utrullningen; ett lyckat modellprov är inte bevis för hela flödet.
+Riktiga källor och produktionsbudget måste dessutom verifieras
 innan fungerande bostadsbevakning kan utlovas. Aktuell driftstatus och kvarstående
 kontroller finns i [driftsättningsguiden](docs/DEPLOYMENT.md).

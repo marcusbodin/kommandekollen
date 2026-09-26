@@ -49,7 +49,7 @@ Frontend fetches still require `credentials: "include"` and the API allows only
 the exact `https://kommandekollen.se` origin with credentialed CORS. SameSite
 does not replace these Origin checks. No bearer-token redesign is needed.
 Cloudflare DNS and the API custom domain are active with API TLS verified.
-GitHub's frontend HTTPS certificate is still pending. See
+GitHub's frontend HTTPS certificate is approved and HTTP redirects to HTTPS. See
 DEPLOYMENT.md for migration safeguards. The initial `github.io` shell is not a
 supported login origin; do not weaken cookies to support cross-site login.
 
@@ -71,14 +71,14 @@ capped at 10,000/day, with 180/IP/hour. Saturated buckets stop generating new
 writes. Cloudflare's own network/abuse limits remain necessary; application
 limits are not a substitute for DDoS protection.
 
-Production cron is currently disabled during setup. When enabled, it runs every
-minute. Each invocation does bounded cleanup, prepares at most
+Production cron is enabled and runs every minute. Cleanup was enabled before
+membership applications. Each invocation does bounded cleanup, prepares at most
 one member's digest during **07:00–09:59 Europe/Stockholm**, and dispatches at
 most one queued mail. DST uses Intl's IANA zone, not a fixed UTC offset. This
 is a dispatch window, not a promise of delivery precisely at 07:00. The complete
 inventory is at most 200 small factual records, with no Worker HTML parsing or
 browser automation. Actual production CPU time under the Free 10ms limit still
-needs measurement before opening the pilot; local tests cannot certify that
+needs measurement before widening the pilot; local tests cannot certify that
 Cloudflare production budget.
 
 D1 triggers transactionally reserve daily/monthly/non-digest quota before each
@@ -153,9 +153,10 @@ Provider backups/PITR, Resend delivery logs, data-processing agreements and any
 international transfer terms need owner review and accurate published retention
 before launch. Do not promise instantaneous erasure from providers' backups.
 
-Set a real privacy contact/controller identity before enabling service. Privacy
-copy in the shell is a functional draft, not a substitute for a controller's
-completed GDPR assessment. No advertising/analytics trackers are included.
+The owner approved the published controller identity Marcus Bodin (privatperson)
+and public contact kontakt@kommandekollen.se. This does not disclose the private
+owner-login email. The disclosure is not a substitute for the controller's
+provider/retention assessment. No advertising/analytics trackers are included.
 
 The production D1 database was created with EU jurisdiction. Selecting Ireland
 for Resend controls the sending region, not account-data residency: Resend states
@@ -166,7 +167,12 @@ inside the EU. See [Resend region documentation](https://resend.com/docs/dashboa
 
 ## Safe maintenance
 
-Keep `SERVICE_ENABLED=false` until prerequisites are met. Do not change
+To pause new applications and delivery during an incident, set
+`SERVICE_ENABLED=false` and `AI_ENABLED=false` and redeploy the production
+environment. Keep cleanup scheduled for retained personal data. Do not roll
+back applied migrations or replace the source allowlist with unverified feeds.
+Existing approved sessions remain subject to the server's authorization and
+expiry checks. Do not change
 `TOKEN_SECRET` casually: it protects encrypted queued payloads, HMAC pseudonyms,
 unsubscribe signatures and session derivation. For rotation, first stop sends,
 resolve/delete queued secrets, invalidate all sessions/tokens and coordinate

@@ -1,7 +1,9 @@
 # Personal search: drafts, consent and Workers AI
 
-The prompt flow is implemented locally. Deployment and native-binding checks
-belong to the operator; adding this code does not enable production AI.
+The prompt flow, additive migration and matching backend/frontend were deployed
+on 2026-09-26. The operator enabled private membership and optional AI after
+bounded real-provider/native-binding checks and confirmation of Workers Free.
+Complete real member-flow and production-capacity checks continue during rollout.
 **No live property source is connected. Save paused is useful infrastructure,
 not delivery of live agency collection or working property alerts.**
 
@@ -176,11 +178,10 @@ and the real remote AI binding, including native AbortSignal/returnRawResponse.
 Full production membership/draft behavior, Swedish quality beyond the bounded
 sample and Free CPU time still require rollout checks before general use.
 
-The deployed parent configuration deliberately remains untouched by this
-feature commit. `SERVICE_ENABLED=true` can enable membership/manual paused
-searches even while AI is OFF and sources are zero. Scheduled cleanup must run
-before collecting personal data; the existing scheduled handler cleans before
-checking `SERVICE_ENABLED`. An every-minute cron also dispatches at most one
+The production configuration now enables `SERVICE_ENABLED=true` and
+`AI_ENABLED=true`, with sources still zero. Manual paused searches work without
+AI. Scheduled cleanup was enabled before applications; the scheduled handler
+cleans before checking `SERVICE_ENABLED`. An every-minute cron also dispatches at most one
 login/notice/digest per tick, with morning digest preparation restricted to
 07:00–09:59 Europe/Stockholm. The operator owns cron activation, domain HTTPS,
 provider privacy agreements, session/mail validation and account capacity.
@@ -226,7 +227,8 @@ raw response shape worked. Total provider-reported usage across these nine calls
 was about 681.285 neurons outside the production D1 application budget.
 This remains a small evaluation, not broad Swedish-language quality proof or
 proof that the deployed membership/draft flow meets the Free CPU budget.
-The code defaults OFF; production activation belongs to the operator.
+Local/missing-flag defaults remain OFF. The operator enabled production AI after
+these bounded checks; this is not a broad reliability or capacity certification.
 
 Sources: [model and context](https://developers.cloudflare.com/workers-ai/models/llama-3.3-70b-instruct-fp8-fast/),
 [JSON mode](https://developers.cloudflare.com/workers-ai/features/json-mode/),

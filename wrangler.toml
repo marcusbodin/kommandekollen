@@ -5,6 +5,7 @@ workers_dev = true
 
 [vars]
 SERVICE_ENABLED = "false"
+AI_ENABLED = "false"
 PUBLIC_URL = "http://localhost:5173/"
 ALLOWED_ORIGINS = "http://localhost:5173,http://127.0.0.1:5173"
 MAIL_FROM = ""
@@ -23,7 +24,7 @@ crons = ["* * * * *"]
 [observability]
 enabled = false
 
-# Production remains closed until account, mail and launch checks are complete.
+# Private membership pilot; listing sources and alerts remain unavailable.
 [env.production]
 name = "kommandekollen-api"
 account_id = "1dce26e13a92cf0d959f0b9a9581d217"
@@ -32,11 +33,15 @@ preview_urls = false
 routes = [{ pattern = "api.kommandekollen.se", custom_domain = true }]
 
 [env.production.vars]
-SERVICE_ENABLED = "false"
+SERVICE_ENABLED = "true"
+AI_ENABLED = "true"
 PUBLIC_URL = "https://kommandekollen.se/"
 ALLOWED_ORIGINS = "https://kommandekollen.se"
 # MAIL_FROM and PRIVACY_CONTACT are production secrets, not public vars.
 AUTHORIZED_SOURCES = "[]"
+
+[env.production.ai]
+binding = "AI"
 
 [[env.production.d1_databases]]
 binding = "DB"
@@ -45,4 +50,4 @@ database_id = "d46b497d-c4b5-47cb-8282-95317886a88e"
 migrations_dir = "worker/migrations"
 
 [env.production.triggers]
-crons = []
+crons = ["* * * * *"]
