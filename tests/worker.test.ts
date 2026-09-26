@@ -171,16 +171,41 @@ describe("personal-search drafts, consent and inference quotas", () => {
     expect(run).not.toHaveBeenCalled();
     expect(await env.DB.prepare("SELECT count(*) AS n FROM ai_attempts").first()).toEqual({ n: 0 });
   });
-  it("enforces three calls/member/IP, no refund on provider failure, manual workflow remains available", async () => {
+  it("allows six calls/member/IP within the shared global cap, without refunds, and retains manual saving", async () => {
     const user = await seed("quota@example.com");
-    env.AI_ENABLED = "true"; env.AI = { run: async () => Response.json({ error: "failure" }, { status: 503 }) };
+    const run = vi.fn(async () => Response.json({ error: "failure" }, { status: 503 }));
+    env.AI_ENABLED = "true"; env.AI = { run };
     const body = () => ({ id: crypto.randomUUID(), expectedVersion: 0, previousId: null, text: "Villa i Nacka", aiConsent: true });
-    for (let i = 0; i < 3; i++) expect((await preferenceRequest("/api/preferences/interpret", body(), user.cookie)).status).toBe(502);
+    for (let i = 0; i < 6; i++) expect((await preferenceRequest("/api/preferences/interpret", body(), user.cookie)).status).toBe(502);
     expect((await preferenceRequest("/api/preferences/interpret", body(), user.cookie)).status).toBe(429);
     const another = await seed("shared-ip@example.com");
     expect((await preferenceRequest("/api/preferences/interpret", body(), another.cookie)).status).toBe(429);
+    expect((await preferenceRequest("/api/preferences/interpret", body(), another.cookie, "192.0.2.2")).status).toBe(429);
+    expect(run).toHaveBeenCalledTimes(6);
     await manualDraft(user.cookie);
+    expect(await env.DB.prepare("SELECT sum(reserved) AS n FROM ai_attempts").first()).toEqual({ n: 6000 });
+  });
+  it("still limits one draft to three interpretations without consuming a fourth reservation", async () => {
+    const user = await seed("turns@example.com");
+    const run = model({ profile: manualProfile({ ...defaultFilters, municipality: "Solna" }), question: null, conflicts: [] });
+    let previousId: string | null = null;
+    for (let i = 1; i <= 3; i++) {
+      const response = await preferenceRequest("/api/preferences/interpret", { id: crypto.randomUUID(), expectedVersion: 0, previousId,
+        text: "En lägenhet i Solna", aiConsent: true }, user.cookie);
+      expect(response.status).toBe(200);
+      const draft = draftSchema.parse((await response.json() as { draft: unknown }).draft);
+      expect(draft.turns).toBe(i);
+      previousId = draft.id;
+    }
+    const response = await preferenceRequest("/api/preferences/interpret", { id: crypto.randomUUID(), expectedVersion: 0, previousId,
+      text: "Gärna större kök", aiConsent: true }, user.cookie);
+    expect(response.status).toBe(429);
+    expect(await response.json()).toMatchObject({ code: "turns" });
+    expect(run).toHaveBeenCalledTimes(3);
     expect(await env.DB.prepare("SELECT sum(reserved) AS n FROM ai_attempts").first()).toEqual({ n: 3000 });
+    expect(await env.DB.prepare("SELECT id,turns FROM search_drafts").first()).toEqual({ id: previousId, turns: 3 });
+    expect(await env.DB.prepare("SELECT search_version,alerts_enabled FROM subscriptions WHERE id=?").bind(user.id).first())
+      .toEqual({ search_version: 0, alerts_enabled: 0 });
   });
   it("reserves global budget and concurrency transactionally across competing requests", async () => {
     const insert = (id: string, state = "done", day = "2099-01-01") => env.DB.prepare("INSERT INTO ai_attempts VALUES(?,?,?,?,?,1000,?)").bind(id, `m:${id}`, `ip:${id}`, day, 0, state).run();
@@ -188,6 +213,7 @@ describe("personal-search drafts, consent and inference quotas", () => {
     const results = await Promise.allSettled([insert("six"), insert("seven"), insert("eight")]);
     expect(results.filter(r => r.status === "fulfilled")).toHaveLength(1);
     await insert("running-one", "running", "2099-01-02");
+    await expect(env.DB.prepare("INSERT INTO ai_attempts VALUES('same-member','m:running-one','another-ip','2099-01-03',0,1000,'running')").run()).rejects.toThrow("ai_budget");
     await insert("running-two", "uncertain", "2099-01-02");
     await expect(insert("running-three", "running", "2099-01-03")).rejects.toThrow("ai_budget");
   });

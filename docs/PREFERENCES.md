@@ -135,8 +135,12 @@ assumption is used to reduce this bound.
 D1's `ai_budget` trigger enforces, before inference:
 
 - 6,000 reserved neurons globally per UTC day (six attempts).
-- Three attempts per member and per IP per UTC day.
+- Six attempts per member and per IP per UTC day, within the shared six-attempt
+  global limit, not six guaranteed attempts for each member.
 - Two unresolved calls globally and one per member, including previous days.
+
+The separate three-interpretation limit per draft is unchanged. Start a new
+draft only through an explicit user action; there are no automatic retries.
 
 Every attempt, even failed, consumes its full reservation. No refunds or
 automatic retries. If an outcome is unknown, the concurrency slot stays held
@@ -155,6 +159,14 @@ per-listing inference. Mail reservations remain independent.
 `0002_preferences.sql` adds profile/search/draft-version columns, digest search
 versions, one TTL draft per member, pseudonymous AI attempts and two triggers.
 The original three capacity/mail-quota triggers remain intact.
+
+The approved additive `0003_ai_daily_attempts.sql` replaces only `ai_budget`,
+raising member/IP daily caps from three to six. It does not edit `0001`/`0002`,
+change the 1,000-neuron reservation, 6,000-neuron global cap or concurrency
+guards, or update/delete any existing attempts. Three previously completed
+attempts therefore leave room for a fourth only if the shared global and
+concurrency limits allow it. Apply `0003` before publishing the updated daily
+limit copy; its presence in source does not mean it is deployed.
 
 Use the existing [atomic file migration runner](../worker/migrations/README.md),
 not remote `wrangler d1 migrations apply`. The authorized operator, not a local

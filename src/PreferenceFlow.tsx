@@ -226,7 +226,7 @@ export function PreferenceFlow({ apiBase, demo, member, ready, refresh, renderFi
           <button type="button" onClick={() => { setSavedOpen(true); refresh(); }}>Kontrollera sparad sökning</button>
         </div>}
       </div>}
-      {!demo && <p className="small muted">Built with Llama · <a href="https://github.com/meta-llama/llama-models/blob/main/models/llama3_3/LICENSE" target="_blank" rel="noopener noreferrer">Modellvillkor</a>. Högst tre försök per medlem/dygn och sex totalt i piloten. Granska alltid tolkningen.</p>}
+      {!demo && <p className="small muted">Built with Llama · <a href="https://github.com/meta-llama/llama-models/blob/main/models/llama3_3/LICENSE" target="_blank" rel="noopener noreferrer">Modellvillkor</a>. Högst sex försök per medlem/IP och sex totalt i piloten per dygn (UTC). Granska alltid tolkningen.</p>}
     </form>
     {receipt && <section className="save-receipt">
       <h2 ref={savedHeading} tabIndex={-1}>{receipt.alertsEnabled ? "Sökningen är sparad och bevakningen startad" : "Sökningen är sparad pausad"}</h2>

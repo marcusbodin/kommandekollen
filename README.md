@@ -86,7 +86,7 @@ Inga betalda uppgraderingar eller obegränsad gratiskapacitet förutsätts.
 - [Personliga sökprofiler, AI-kontrakt, gratisbudget och migration](docs/PREFERENCES.md)
 
 AI-hjälpen reserverar konservativt 1 000 neuroner per försök, högst 6 000 per
-UTC-dygn för hela appen och tre försök per medlem/IP. Kontots Free-kvot delas med
+UTC-dygn för hela appen och sex försök per medlem/IP. Kontots Free-kvot delas med
 annan användning. Inga betalda modeller eller automatiska kostnadsfallbacks används.
 **Built with Llama**; modellvillkor och begränsade verkliga utvärderingsresultat
 finns i dokumentationen ovan. Manuella sökningar kräver inte AI.

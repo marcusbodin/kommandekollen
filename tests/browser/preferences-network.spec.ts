@@ -72,10 +72,17 @@ test.afterEach(async () => {
 async function enterPrompt(page: Page) {
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Inga liveobjekt att visa ännu" })).toBeVisible();
+  await expect(page.locator(".preference-flow")).toContainText("Högst sex försök per medlem/IP och sex totalt i piloten per dygn (UTC)");
   await page.getByRole("textbox", { name: "Beskriv ditt nästa hem", exact: true }).fill("Lägenhet i Solna, högst 4 miljoner.");
   await page.getByLabel("Jag vill använda AI-texthjälpen").check();
 }
-test("real Worker HTTP/D1 draft and explicit save leave a visible persisted receipt", async ({ page }) => {
+async function seedCompletedAttempts(count: number) {
+  const now = Date.now(), day = new Date(now).toISOString().slice(0, 10);
+  for (let i = 0; i < count; i++) await env.DB.prepare("INSERT INTO ai_attempts VALUES(?,?,?,?,?,1000,'done')")
+    .bind(crypto.randomUUID(), await keyed(env.TOKEN_SECRET, `ai:${memberId}`), await keyed(env.TOKEN_SECRET, "ip:local"), day, now).run();
+}
+test("real Worker HTTP/D1 allows a fourth attempt and explicit save leaves a persisted receipt", async ({ page }) => {
+  await seedCompletedAttempts(3);
   await enterPrompt(page);
   await page.getByRole("button", { name: "Hjälp mig att precisera" }).click();
   await expect(page.getByRole("heading", { name: "Stämmer det här?" })).toBeFocused();
@@ -90,6 +97,7 @@ test("real Worker HTTP/D1 draft and explicit save leave a visible persisted rece
   await page.locator(".preference-flow").screenshot({ path: test.info().outputPath("saved-receipt.png") });
   expect(await env.DB.prepare("SELECT search_version,alerts_enabled FROM subscriptions").first()).toEqual({ search_version: 1, alerts_enabled: 0 });
   expect(calls).toBe(1);
+  expect(await env.DB.prepare("SELECT count(*) AS n,sum(reserved) AS total FROM ai_attempts").first()).toEqual({ n: 4, total: 4000 });
   await page.reload();
   await page.locator(".saved-profile > summary").click();
   await expect(page.locator(".saved-profile")).toContainText("Solna");
@@ -140,10 +148,8 @@ test("a late initial draft GET cannot overwrite manual changes already in progre
   await expect(price).toHaveAttribute("aria-valuetext", "100 000 kr");
 });
 
-test("exhausted member budget explains the failure and manual saving remains available", async ({ page }) => {
-  const now = Date.now(), day = new Date(now).toISOString().slice(0, 10);
-  for (let i = 0; i < 3; i++) await env.DB.prepare("INSERT INTO ai_attempts VALUES(?,?,?,?,?,1000,'done')")
-    .bind(crypto.randomUUID(), await keyed(env.TOKEN_SECRET, `ai:${memberId}`), await keyed(env.TOKEN_SECRET, "ip:local"), day, now).run();
+test("six exhausted attempts explain the shared budget and manual saving remains available", async ({ page }) => {
+  await seedCompletedAttempts(6);
   await enterPrompt(page);
   await page.getByRole("button", { name: "Hjälp mig att precisera" }).click();
   const error = page.locator(".preference-flow [role=alert]");
@@ -158,7 +164,7 @@ test("exhausted member budget explains the failure and manual saving remains ava
   await page.getByRole("button", { name: "Spara pausad sökning" }).click();
   await expect(page.getByRole("heading", { name: "Sökningen är sparad pausad", exact: true })).toBeVisible();
   expect(calls).toBe(0);
-  expect(await env.DB.prepare("SELECT count(*) AS n FROM ai_attempts").first()).toEqual({ n: 3 });
+  expect(await env.DB.prepare("SELECT count(*) AS n FROM ai_attempts").first()).toEqual({ n: 6 });
 });
 
 test("a non-JSON gateway response is actionable instead of exposing a parser exception", async ({ page }) => {
