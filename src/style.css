@@ -114,6 +114,10 @@ nav a { min-height: 44px; color: var(--cp-text); text-decoration: none; font-wei
 .example-chips button { font-size: .875rem; text-align: left; }
 .preference-flow > .notice, .preference-flow > .error { margin-top: 20px; }
 .draft-review { margin: 28px 0; padding-top: 24px; border-top: 1px solid var(--cp-border); }
+.save-receipt { margin: 28px 0; padding-top: 24px; border-top: 1px solid var(--cp-border); }
+.flow-feedback { overflow-wrap: anywhere; }
+.flow-feedback .flow-actions { margin-top: 12px; }
+.flow-feedback:focus, .save-receipt h2:focus, .draft-review h2:focus { outline: 3px solid var(--cp-accent); outline-offset: 4px; }
 .draft-review > .check { margin: 16px 0; }
 .preference-summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 24px; margin-bottom: 20px; }
 .preference-summary ul { padding-left: 22px; margin: 0 0 12px; overflow-wrap: anywhere; }

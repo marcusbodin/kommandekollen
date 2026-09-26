@@ -14,19 +14,24 @@ const array = (items: unknown, maxItems: number) => ({ type: "array", items, max
 const nullable = (schema: unknown) => ({ anyOf: [schema, { type: "null" }] });
 const numeric = (maximum: number) => nullable({ type: "number", minimum: 0, maximum });
 const filters = object({
-  municipality: { ...nullable({ type: "string", enum: municipalities }), description: "EXAKT uttryckligen önskad kommun. Nacka/Solna/Sundbyberg är kommuner, inte areas. Flera kommuner -> alternatives.municipalities." },
-  area: { ...text(60), description: "Endast uttrycklig gata/stadsdel, aldrig en kommun eller påhittad geografisk gräns." },
+  municipality: { ...nullable({ type: "string", enum: municipalities }), description: "En uttrycklig kommun -> detta fält och alternatives.municipalities=[]. Flera uttryckliga kommunalternativ -> detta fält=null. ALDRIG samma kommun på båda ställen. Gissa inte kommun från stadsdel." },
+  area: { ...text(60), description: "Uttrycklig gata/stadsdel som textsökning. 'Nära/i närheten av' är INTE samma som 'i': närhetskrav hör till unverified utan påhittad radie. Aldrig kommun eller tomtstorlek." },
   type: { ...nullable({ type: "string", enum: types }), description: "Spara uttalad bostadstyp. Lägenhet, villa, radhus, fritidshus eller tomt. Oangivet=null; fråga inte bara för att det saknas." },
-  minPrice: numeric(100000000), maxPrice: numeric(100000000), minRooms: numeric(30), maxRooms: numeric(30),
-  minSize: numeric(10000), maxSize: numeric(10000), maxFee: numeric(100000), includeUnknown: { type: "boolean" },
+  minPrice: numeric(100000000),
+  maxPrice: { ...numeric(100000000), description: "I profile.filters bara uttryckligt hårt pristak. 'Helst under X', 'gärna högst X' -> maxPrice=X i en wishes-post, profile.filters.maxPrice=null." },
+  minRooms: { ...numeric(30), description: "TOTALT antal rum, aldrig antal SOVRUM. 5 sovrum ger INTE minRooms=5 eller 6: lämna null och behåll exakt sovrumsönskemål i unverified." },
+  maxRooms: { ...numeric(30), description: "TOTALT antal rum, aldrig sovrum. Vi saknar sovrumsantal. Sovrumsgränser hör till unverified." },
+  minSize: { ...numeric(10000), description: "Endast uttrycklig BOAREA i m². TOMTAREA är en annan uppgift som saknas: behåll hela tomtkravet i unverified, aldrig som minSize. 'Stort hus' utan tal -> unverified." },
+  maxSize: { ...numeric(10000), description: "Endast BOAREA i m², aldrig tomtarea. Tomtstorlek måste behållas i unverified." },
+  maxFee: numeric(100000), includeUnknown: { type: "boolean" },
 });
 const scope = object({ municipalities: array({ type: "string", enum: municipalities }, 5), types: array({ type: "string", enum: types }, 5), areas: array(text(60), 5) });
 export const AI_JSON_SCHEMA = object({
   profile: object({ version: { const: 1, type: "integer" },
     filters: { ...filters, description: "Bara hårda, uttryckliga krav. ALDRIG gärna/helst/inget krav. Motsägande intervall: BÅDA ändpunkter=null och be om lösning i conflicts/question." },
-    alternatives: { ...scope, description: "OR mellan uttryckliga alternativ. Kommunnamn här i municipalities, aldrig areas; typer i types." }, excluded: scope,
+    alternatives: { ...scope, description: "Bara FLERA uttryckliga OR-alternativ. En kommun/typ/stadsdel hör till motsvarande filters-fält och listan här är tom. ALDRIG både enkelt filter och alternativ för samma kategori. Inga härledda kommuner." }, excluded: scope,
     wishes: { ...array(filters, 4), description: "Gärna/helst/inget krav för fakta: ett filterobjekt per önskemålsgrupp. Alla andra fält grundvärden. Aldrig konvertera till hårt filter." },
-    unverified: { ...array(object({ text: { ...text(160), minLength: 1 }, must: { type: "boolean" } }), 6), description: "Bara fakta som vi inte har: pendling, lugnt, balkong etc. Rum och boarea är kända filter, inte unverified. Tom lista om inget; aldrig tom text." } }),
+    unverified: { ...array(object({ text: { ...text(160), minLength: 1 }, must: { type: "boolean" } }), 6), description: "BEHÅLL ALLA kriterier vi saknar data för: SOVRUM (exakt antal), TOMTAREA (exakt m² och min/max), närhet till vatten/område, stort/litet utan tal, pendling, lugnt, balkong. En tydlig punkt per önskemål, inga tappade mått. must=false för gärna/helst, true för måste/minst-krav. Totalrum/boarea är andra kända fakta; omvandla ALDRIG sovrum/tomt till dem." } }),
   question: { ...nullable(object({ text: text(200), choices: array(text(100), 3), required: { type: "boolean" } })),
     description: "null om tydligt. EN nödvändig fråga vid verklig motsägelse/tvetydighet. Fråga inte om redan angivet eller obestämd budget/typ. choices är möjliga SVAR, inte nya frågor." },
   conflicts: { ...array(text(180), 4), description: "Tom om inget motsägande. Annars svensk text med BÅDA oförenliga kraven och deras värden; inga ensamma fältnamn." },
@@ -38,6 +43,7 @@ Fakta vi har: kommun (exakt enum), bostadstyp, områdes-/gatunamn som text, pris
 Restid, pendling, ljus, tystnad, trygghet, skick, balkong, hiss och läge nära något kan INTE bedömas. Behåll sådana önskemål i unverified med must=true för krav, false för önskemål. Gör aldrig match-/restids-/trygghetslöften. Inga procentbetyg.
 Vid motstridiga krav: välj INTE en sida. Lämna det omtvistade fältet tomt, lägg båda värden i conflicts och ställ EN required-fråga om lösningen. Behåll andra kända krav.
 Ställ högst EN materiell följdfråga. Fråga inte om något redan klart; inga obligatoriska budgetar eller standardfrågor. Optional fråga får hoppas över. När inget viktigt är oklart: question=null. Vid svar på tidigare fråga, ändra bara det svaret berör och behåll övriga önskemål. När användaren korrigerar, uppdatera utkastet utan att påstå att det sparats.
+Kontrollera före svaret att varje önskemål är bevarat, särskilt SOVRUM och TOMTAREA med exakta tal. Sovrum är inte totalrum; tomt är inte boarea. Båda hör till unverified. Tappa inte ett krav för att uppgiften saknas. En kommun ska inte upprepas i alternatives. Behåll gärna/helst som önskemål även när de innehåller ett maxbelopp.
 Använd endast schemafält. Inga fria URL:er, inga SQL-uttryck, inga extra åtgärder.`;
 const examples = [
   { text: "Lägenhet i Täby eller Nacka, max 6 miljoner. Helst minst 70 kvadrat, inget krav.",
@@ -53,6 +59,13 @@ const examples = [
     output: { profile: { version: 1, filters: { ...defaultFilters, municipality: "Solna" },
       alternatives: { municipalities: [], types: [], areas: [] }, excluded: { municipalities: [], types: [], areas: [] }, wishes: [],
       unverified: [{ text: "Lugnt hem", must: false }, { text: "Max 20 minuter till jobbet", must: true }] }, question: null, conflicts: [] } },
+  { text: "Radhus i Sollentuna. Gärna fem sovrum och ett stort hus. Tomten måste vara minst 120 m². Helst nära en park och helst under 9 miljoner.",
+    output: { profile: { version: 1, filters: { ...defaultFilters, municipality: "Sollentuna", type: "Radhus" },
+      alternatives: { municipalities: [], types: [], areas: [] }, excluded: { municipalities: [], types: [], areas: [] },
+      wishes: [{ ...defaultFilters, maxPrice: 9000000 }], unverified: [
+        { text: "Fem sovrum", must: false }, { text: "Stort hus", must: false },
+        { text: "Tomt minst 120 m²", must: true }, { text: "Nära en park", must: false },
+      ] }, question: null, conflicts: [] } },
 ];
 export function parseAIResponse(body: unknown): Interpretation {
   const envelope = z.object({ response: z.unknown(), tool_calls: z.array(z.unknown()).max(0).optional() }).parse(body);

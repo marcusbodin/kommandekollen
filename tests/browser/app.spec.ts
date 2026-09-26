@@ -39,7 +39,7 @@ async function mockApi(page: Page, options: MockOptions = {}) {
       if (path === "/api/preferences/confirm") {
         if (!draft || body.id !== draft.id || body.revision !== draft.revision || !body.consent) { await route.fulfill({ status: 409, json: { message: "Utkastet ändrades." } }); return; }
         profile = draft.profile; filters = profile.filters; alertsEnabled = body.enabled; version++; draft = null;
-        await route.fulfill({ json: { message: alertsEnabled ? "Sökningen är sparad. Daglig bevakning är startad." : "Sökningen är sparad pausad. Inga bostadsmejl aktiverades.", searchVersion: version } }); return;
+        await route.fulfill({ json: { message: alertsEnabled ? "Sökningen är sparad. Daglig bevakning är startad." : "Sökningen är sparad pausad. Inga bostadsmejl aktiverades.", searchVersion: version, profile, alertsEnabled } }); return;
       }
       if (path === "/api/preferences/cancel") draft = null;
       await route.fulfill({ json: { message: "Testsvaret har tagits emot." } });

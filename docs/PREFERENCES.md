@@ -85,6 +85,15 @@ Errors include `ai_disabled` (503), `ai_budget` / `turns` (429),
 `clarify` (409), `unverified` (400) and `no_sources` (503). No provider failure
 is converted into a fake interpretation. The manual path remains available.
 
+The interface distinguishes interpreting, reviewing and saving. Completed
+errors are focused/scrolled into view next to the primary action and preserve
+typed text. A successful confirmation retains a visible receipt containing the
+server-returned saved profile/version/status. Read-only draft recovery does not
+spend another AI attempt. Late initial draft reads cannot replace edits already
+in progress; an external saved-version change invalidates consent but retains
+local text/filters with an explicit conflict notice. Failed inference attempts
+still consume their reservation; no UI recovery refunds or retries them.
+
 ## Fixed provider contract and Free budget
 
 `worker/ai.ts` exports the actual `aiCall(text, previous)`, `AI_SYSTEM`,
@@ -229,6 +238,23 @@ This remains a small evaluation, not broad Swedish-language quality proof or
 proof that the deployed membership/draft flow meets the Free CPU budget.
 Local/missing-flag defaults remain OFF. The operator enabled production AI after
 these bounded checks; this is not a broad reliability or capacity certification.
+
+A subsequent production report exposed a model output containing both a single
+municipality and its alternative, which the strict validator correctly refused.
+No draft or saved search remained after that rejection, but the previous UI
+made the failure easy to miss. The fix preserves that validation and makes its
+error visible. Additional synthetic grounding distinguishes bedrooms from total
+rooms, plot area from living area, and preferred budgets from hard ceilings.
+One bounded in-memory provider check accepted the revised structure while still
+requiring location/type review; it is not evidence that all semantics are right.
+No real user's housing text or raw output is committed or logged.
+
+`tests/browser/preferences-network.spec.ts` exercises browser requests over a
+loopback HTTP server through the actual Worker routes, strict provider parser
+and real local D1. Only the external model is substituted. This complements
+the faster browser API simulations and covers actual draft/confirmation
+response shapes, persisted read-back, rejected/limited AI, visible error
+recovery and state races. Production quotas are never reset by these tests.
 
 Sources: [model and context](https://developers.cloudflare.com/workers-ai/models/llama-3.3-70b-instruct-fp8-fast/),
 [JSON mode](https://developers.cloudflare.com/workers-ai/features/json-mode/),
