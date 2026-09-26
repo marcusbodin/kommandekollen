@@ -1,8 +1,11 @@
 # Kommandekollen
 
-Sluten bostadssökning och morgonbevakning för Stockholms län.
-**Den medlemslåsta piloten är publicerad på https://kommandekollen.se.
-Ansökningar, inloggning och valfri AI-texthjälp är aktiverade.
+Bostadssökning och morgonbevakning för Stockholms län.
+**Piloten på https://kommandekollen.se öppnas med ett gemensamt lösenord.
+Besökare kan prova AI eller manuella filter utan e-post. E-post verifieras
+först vid sparande, följt av en ny uttrycklig granskning/bekräftelse.
+Ingen medlemsansökan eller manuell ägarprövning behövs.**
+**AI-budgeten är högst sex anrop per dygn för hela tjänsten, inte per besökare.
 Inga livekällor är anslutna; sökningar kan bara sparas pausade.**
 Schemalagd städning och hantering av inloggningsmejl är påslagna. Ägaren har
 loggat in via ett riktigt mejl, använt AI-flödet och uttryckligen sparat en
@@ -12,12 +15,10 @@ Automatisk insamling från de efterfrågade
 mäklarsajterna är fortfarande en uttrycklig lanseringsblockerare, inte en färdig
 funktion som ersatts av en demo.
 
-**Nytt godkänt läge, ännu separat från ovanstående driftstatus:** ett gemensamt
-lösenord öppnar sökningen för gäster utan e-post. E-post verifieras först vid
-sparande, följt av en ny uttrycklig granskning/bekräftelse. Ingen medlemsansökan
-eller ägarprövning behövs i det läget. Aktivering kräver migration `0004`,
-privat serverhemlighet och `ACCESS_MODE=shared`; standardläget ändras inte av
-koden ensam. [Kontrakt, integritet och säker aktivering](docs/SHARED_ACCESS.md).
+Migration `0004`, det matchande gränssnittet/backend och `ACCESS_MODE=shared`
+är driftsatta. Lösenordet finns bara som privat serverhemlighet och hos ägaren.
+Den tidigare sparade ägarsökningen och AI-förbrukningen är bevarade.
+[Kontrakt, integritet och säker aktivering](docs/SHARED_ACCESS.md).
 
 ## Kör lokalt
 

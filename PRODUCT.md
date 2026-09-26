@@ -12,8 +12,8 @@ Swedish-speaking home seekers looking for upcoming homes in Stockholm.
 The owner approved shared-password access on 2026-09-26. Visitors who have the
 shared password may try AI without email. Email is verified only when saving,
 followed by a second explicit review/confirmation. No manual application or
-owner approval is needed in this mode. The previous membership mode remains the
-configuration default until the operator explicitly rolls out shared access.
+owner approval is needed in this mode. Shared access is active in production;
+the previous membership mode remains the local/missing-setting default.
 
 ## Product Purpose
 
@@ -79,9 +79,10 @@ signed deletion. The public demo is synthetic and never calls AI.
 - No paid DNS, hosting, email or SSL purchase is approved.
 - Source code and the public shell are published under marcusbodin.
   The production API and EU-jurisdiction D1 database are provisioned.
-  Frontend HTTPS is valid and enforced. Applications, optional AI and scheduled
-  cleanup/mail processing are enabled for the private pilot. Complete real
-  membership testing and production capacity checks continue; no source or
+  Frontend HTTPS is valid and enforced. Shared-password access, optional AI and
+  scheduled cleanup/mail processing are enabled; applications/manual approvals
+  are replaced by email verification at saving. Complete real
+  guest/account testing and production capacity checks continue; no source or
   listing-alert delivery is enabled.
 - The Resend sending subdomain is verified. A real technical test message
   reached the private inbox via the approved public contact forwarding address.

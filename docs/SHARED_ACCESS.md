@@ -1,7 +1,9 @@
 # Shared password and email-at-save mode
 
-Approved product change, implemented behind `ACCESS_MODE=shared`. Its presence
-in source is not a production rollout claim. Missing `ACCESS_MODE` or the value
+The operator activated `ACCESS_MODE=shared` on 2026-09-26 after applying additive
+0004 and deploying the matching backend/frontend. Incorrect-password and
+unauthenticated API guards were checked in production; the correct-password
+guest email-save path still needs user confirmation. Missing `ACCESS_MODE` or the value
 `membership` retains the previous owner-approved membership mode. Other values
 fail closed. Existing accounts, saved profiles, consent, seen IDs, sessions and
 all prior AI reservations are preserved by migration `0004_shared_access.sql`.

@@ -4,15 +4,19 @@ The owner authorized step-by-step deployment on 2026-09-25. The public repositor
 and GitHub Pages shell are published under **marcusbodin**. Cloudflare Free DNS
 is active while Inleed remains the registrar. The production Worker is deployed
 on `api.kommandekollen.se` with validated TLS; its EU-jurisdiction D1 database has
-`0001_initial.sql`, additive `0002_preferences.sql` and
-`0003_ai_daily_attempts.sql` with verified migration history. The third migration
+`0001_initial.sql`, `0002_preferences.sql`, `0003_ai_daily_attempts.sql` and
+`0004_shared_access.sql` with verified migration history. The third migration
 raises member/IP daily attempts to six within the unchanged global budget and
 preserves all existing reservations. On 2026-09-26 the owner requested the
-personal-search rollout.
+personal-search rollout, followed by shared-password access with email at saving.
+The fourth migration adds isolated guest sessions/drafts/save challenges without
+rewriting the existing owner profile or AI reservations.
 
-The **private membership pilot is enabled**: `SERVICE_ENABLED=true`,
-`AI_ENABLED=true`, native Workers AI binding and an every-minute cleanup/mail
-cron. Real catalog and preference APIs still require approved membership.
+The **shared-password pilot is enabled**: `SERVICE_ENABLED=true`,
+`AI_ENABLED=true`, `ACCESS_MODE=shared`, native Workers AI binding and an
+every-minute cleanup/mail cron. Catalog and guest draft APIs require the gate;
+saved accounts/profiles require their verified own-account session as well.
+Manual applications/approval are disabled in this mode.
 There are **zero authorized live sources**, so searches save paused and alert
 activation is denied server-side. Production owner, contact, sender and API
 credentials are stored as Worker secrets, never in this repository. The matching
@@ -23,9 +27,11 @@ to the owner's inbox succeeded.
 Frontend HTTPS is valid and enforced; HTTP redirects to the canonical HTTPS URL.
 The public controller/contact and provider-location disclosures are published.
 The owner separately confirmed the account's **Workers Free** plan, not only
-the zone's Free DNS plan. The repaired frontend is published by Pages run
-`36225760990` from feature commit `72cc615`; the matching Worker version is
-`82734ebc-89a3-414e-9a0e-b720a5b743e0`.
+the zone's Free DNS plan. The shared-access frontend is published by Pages run
+`36231732768` from feature commit `2795532`; the matching active Worker version is
+`b4da83e5-c887-49cb-a194-d2b292160f67`. `SHARED_ACCESS_PASSWORD` was generated in a
+private local terminal and stored as a Worker secret; its value is not in the
+repository, chat or deployment output. The owner saved their copy.
 
 The owner completed actual queued email login, reached owner controls, used the
 AI flow and explicitly saved a paused search. Read-only aggregate D1 inspection
@@ -33,7 +39,12 @@ confirmed a persisted versioned profile, no remaining draft and alerts disabled.
 The initial missing-feedback failure was repaired and this complete owner path
 then succeeded; no personal housing description or saved profile is published.
 
-Still required during the pilot: other-member approval/revocation and
+Shared-mode rollout checks verified the mobile/desktop password form, a visible
+401 for an incorrect password and gate-required denial of old and guest AI paths.
+The existing owner profile/version and all four prior AI reservations survived.
+Correct-password and guest email-save checks still need user confirmation.
+
+Still required during the pilot: broader guest/account revocation and
 withdrawal scenarios, continued provider/privacy review, and
 production CPU/provider/D1 capacity evidence. Live listing sources and actual
 digest delivery are separate unresolved prerequisites for property alerts.

@@ -6,6 +6,7 @@ workers_dev = true
 [vars]
 SERVICE_ENABLED = "false"
 AI_ENABLED = "false"
+ACCESS_MODE = "membership"
 PUBLIC_URL = "http://localhost:5173/"
 ALLOWED_ORIGINS = "http://localhost:5173,http://127.0.0.1:5173"
 MAIL_FROM = ""
@@ -24,7 +25,7 @@ crons = ["* * * * *"]
 [observability]
 enabled = false
 
-# Private membership pilot; listing sources and alerts remain unavailable.
+# Shared-password pilot; email verification is required when saving.
 [env.production]
 name = "kommandekollen-api"
 account_id = "1dce26e13a92cf0d959f0b9a9581d217"
@@ -35,6 +36,7 @@ routes = [{ pattern = "api.kommandekollen.se", custom_domain = true }]
 [env.production.vars]
 SERVICE_ENABLED = "true"
 AI_ENABLED = "true"
+ACCESS_MODE = "shared"
 PUBLIC_URL = "https://kommandekollen.se/"
 ALLOWED_ORIGINS = "https://kommandekollen.se"
 # MAIL_FROM and PRIVACY_CONTACT are production secrets, not public vars.

@@ -2,13 +2,18 @@
 
 ## Access model
 
-The following describes the default `membership` mode. The approved optional
-`ACCESS_MODE=shared` mode replaces applications/owner approval with a shared
+Production now uses `ACCESS_MODE=shared`, replacing applications/owner approval with a shared
 server password and anonymous guest drafts, asking for email only at saving.
 It preserves existing account data and all budgets. Its full API, 0004
 migration, same-browser verification, second-confirmation rules, guest retention
 and operator-only secret/rotation steps are in [SHARED_ACCESS.md](SHARED_ACCESS.md).
-Do not assume this optional mode is deployed merely because its code exists.
+The operator deployed this mode on 2026-09-26 after the additive migration.
+The previous owner search and historical reservations were preserved.
+
+### Legacy membership mode
+
+The following application/approval behavior applies when `ACCESS_MODE=membership`,
+which remains the local default, not the active production mode.
 
 The public Pages site contains code, a membership form and synthetic demo only.
 `GET /api/status` exposes configuration readiness and capacity, never owner
