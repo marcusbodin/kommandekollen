@@ -3,8 +3,8 @@
 **Målet är att upptäcka kommande bostäder tidigt direkt hos mäklaren**, innan
 de dyker upp på större bostadssajter, så att bostadssökaren kan kontakta mäklaren.
 Ingen fullständig mäklartäckning, tidsvinst eller möjlighet att köpa före andra
-garanteras. **Den nya objektlistan är offentlig; AI och sparade sökningar
-behåller lösenordsskyddet.** Texthjälpen är valfri, inte tjänstens kärnvärde.
+garanteras. **Bostadslistan är privat, för ägaren och inbjudna bakom det
+gemensamma lösenordet.** Texthjälpen är valfri, inte tjänstens kärnvärde.
 Besökare med lösenord kan prova AI eller egna sökfilter utan e-post. E-post verifieras
 först vid sparande, följt av en ny uttrycklig granskning/bekräftelse.
 Ingen medlemsansökan eller manuell ägarprövning behövs i delat lösenordsläge.
@@ -21,6 +21,9 @@ funktion som ersatts av en demo.
 Migration `0004`, det matchande gränssnittet/backend och `ACCESS_MODE=shared`
 är driftsatta. Lösenordet finns bara som privat serverhemlighet och hos ägaren.
 Den tidigare sparade ägarsökningen och AI-förbrukningen är bevarade.
+Den nya privata observationsvägen kräver dessutom migration `0005` och matchande
+Worker/Pages. [Aktuell driftsättningsstatus](docs/DEPLOYMENT.md) skiljer
+implementerad funktion från vad som är publicerat.
 [Kontrakt, integritet och säker aktivering](docs/SHARED_ACCESS.md).
 
 ## Kör lokalt
@@ -54,16 +57,25 @@ aldrig hemma i `VITE_*`, JavaScript-paket, git eller Actions-loggar.
 
 ## Det som finns
 
-- Offentlig, separat objektlista via `GET /api/listings`: 12 kommande objekt
+- Privat, separat objektlista via `GET /api/listings`: 12 kommande objekt
   åt gången, **Ladda fler**, senast upptäckta först och **Filtrera objekt** över
   hela det tillgängliga urvalet. Filtren ändrar ingen personlig sökning och
   använder ingen AI. Bara aktiva objekt i Stockholms län från aktuellt tillåtna
   källor får visas. Tom källista, tomt utbud, inga filterträffar och tjänstefel
   har skilda lägen; ingen demo ersätter riktiga data.
   Först upptäckt är tjänstens observation, inte mäklarens publiceringsdatum.
-  [Publikt API, sidmarkörer och begränsningar](docs/OPERATIONS.md#public-listings).
-  Denna ändring behöver matchande Worker och Pages, men inga migrationer,
-  nya inställningar, hemligheter eller aktiverade källor.
+  Lösenordet räcker för bläddring; inget e-postkonto eller AI-godkännande krävs.
+  Utloggning, utgången session och upptäckt återkallad åtkomst tömmer privata data
+  även när ett äldre svar är på väg tillbaka.
+  [Privat API, sidmarkörer och begränsningar](docs/OPERATIONS.md#public-listings).
+- Separat, administratörsskyddad import av partiella observationer med ursprunglig
+  observationstid och identitet. Återförsök är idempotenta; en partiell eller
+  tom observation raderar inte objekt som saknas i urvalet. Ny import kräver
+  högst en timme gammal fångst och en separat, tidsbegränsad
+  `PRIVATE_OBSERVATION_SOURCES`-konfiguration med sanningsenligt granskad grund.
+  Standardvärdet är tomt. `PROPERTY_EMAILS_ENABLED` är separat och avstängt;
+  privata observationsdata går inte till den licensierade mejlvägen.
+  [Kontrakt och explicit lokal förberedelse/import](docs/OPERATIONS.md).
 - Personligt sökflöde: beskriv hemmet, besvara högst en fråga åt gången,
   granska **Måste ha / Gärna / Behöver kontrolleras av dig**, redigera och
   godkänn uttryckligen. Utan redo källor sparas sökningen **pausad**.
@@ -109,7 +121,7 @@ aldrig hemma i `VITE_*`, JavaScript-paket, git eller Actions-loggar.
   från fotografiernas licenser.
 - I medlemsläget: ansökan och lösenordsfri e-postverifiering. En verifierad ny användare stannar
   i **väntar på godkännande**, utan personliga sökningar eller mejlbevakning.
-  Den offentliga objektlistan kräver inte godkännande.
+  Även bostadslistan kräver ett godkänt medlemskap i detta äldre läge.
 - Ägarvy för granskning, godkännande, avslag och återkallelse i medlemsläget;
   lösenordsläget behåller återkallelse men ingen manuell antagning. Ägarrollen kommer
   endast från privat `OWNER_EMAIL`. Återkallelse stoppar API-åtkomst och köade mejl.
@@ -139,8 +151,9 @@ aldrig hemma i `VITE_*`, JavaScript-paket, git eller Actions-loggar.
 
 ## Begränsningar och dokumentation
 
-Pilot: 40 konton inklusive ansökningar, 200 objekt, högst 50 objekt per komplett
-källsnapshot och 4 källor per insamlingsjobb. Appen reserverar högst 80
+Pilot: 40 konton inklusive ansökningar, 200 objekt, högst 50 objekt per
+snapshot eller observationsbatch och högst 4 konfigurerade källor sammanlagt.
+Appen reserverar högst 80
 mejlförsök/dygn, 2400/månad och 20 icke-bostadsmejl/dygn. Det inkluderar inloggning,
 verifiering, godkännande och återförsök. Resend Free har 100 mejl/dygn och
 3000/månad; kontot måste reserveras för appen eller annan användning räknas av.
@@ -164,7 +177,7 @@ API-simuleringar körs faktiska HTTP-anrop genom Worker och lokal D1, med enbart
 modell och mejlleverantör ersatta av testfixturer. Inga verkliga mejl skickas
 och förhandsvisningen på 5173 lämnas orörd. Testerna täcker
 320/360/390/430px, tangentbordsstyrda reglage, exakta sparade värden,
-medlemsgränser, offentlig sidindelning/filter/återförsök, lokal logga/favicon,
+medlemsgränser, privat sidindelning/filter/återförsök, lokal logga/favicon,
 hero-geometri och bildbortfall, frånvaro av det gamla inspirationskortet,
 samt ljust standardtema även vid mörkt OS.
 
