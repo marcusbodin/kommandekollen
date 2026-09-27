@@ -8,6 +8,7 @@ import { dispatchOne } from "../../worker/mail";
 import { defaultFilters } from "../../shared/model";
 import { manualProfile, type Interpretation } from "../../shared/preferences";
 import { readableContrast } from "./contrast";
+import { brandAssets } from "./brand";
 
 const frontend = "http://127.0.0.1:5174";
 const api = "http://127.0.0.1:8787";
@@ -615,7 +616,6 @@ test("pinned mint presentation uses borderless depth, filled states and accessib
   await expect(heading).toHaveCSS("font-family", /Georgia/);
   await expect(heading).toHaveCSS("font-weight", "400");
   await expect(page.getByRole("button", { name: "Meny", exact: true })).toHaveCSS("font-family", /Segoe UI/);
-  await expect(page.locator(".compact-header .brand-mark")).toHaveCSS("background-color", "rgb(92, 189, 185)");
   const image = page.locator(".home-photo img"), prompt = page.locator("#housing-prompt");
   await expect.poll(() => image.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
   expect(await image.evaluate((img: HTMLImageElement) => new URL(img.currentSrc).origin)).toBe(frontend);
@@ -625,7 +625,7 @@ test("pinned mint presentation uses borderless depth, filled states and accessib
   const creditResponse = await page.request.get(await credit.getAttribute("href") ?? "");
   expect(creditResponse.status()).toBe(200);
   expect(await creditResponse.text()).toContain("Francesca Tosolini");
-  const targets = ".home-intro h1,.home-intro p,.prompt-shell label,#housing-prompt,#prompt-helper,.prompt-shell .primary,.pilot-note,.home-photo figcaption,.home-photo a,.compact-header .brand,.compact-header .brand-mark,.compact-nav a,.nav-essential button,.site-menu-toggle,.compact-footer span,.compact-footer a";
+  const targets = ".home-intro h1,.home-intro p,.prompt-shell label,#housing-prompt,#prompt-helper,.prompt-shell .primary,.pilot-note,.home-photo figcaption,.home-photo a,.compact-header .brand,.compact-nav a,.nav-essential button,.site-menu-toggle,.compact-footer span,.compact-footer a";
   const reports = [];
   for (const theme of ["light", "dark"] as const) {
     if (theme === "dark") {
@@ -633,6 +633,7 @@ test("pinned mint presentation uses borderless depth, filled states and accessib
       await page.getByRole("button", { name: "Meny", exact: true }).click();
     }
     await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+    await brandAssets(page);
     const primary = page.getByRole("button", { name: "Förfina min sökning", exact: true });
     await prompt.fill("");
     await heading.click();

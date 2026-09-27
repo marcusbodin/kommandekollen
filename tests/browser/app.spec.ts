@@ -3,6 +3,7 @@ import { defaultFilters, type Filters } from "../../shared/model";
 import { sources } from "../../shared/sources";
 import { manualProfile, type Draft } from "../../shared/preferences";
 import { readableContrast } from "./contrast";
+import { brandAssets } from "./brand";
 
 const api = "http://127.0.0.1:8787";
 const ownerId = "00000000-0000-4000-8000-000000000001";
@@ -69,6 +70,7 @@ async function noOverflow(page: Page) {
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 }
 async function imageLoaded(page: Page) {
+  await brandAssets(page);
   const image = page.locator(".inspiration img");
   await expect(image).toHaveCount(1);
   await expect.poll(() => image.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
@@ -117,6 +119,7 @@ test("public shell stays private, light by default even on dark OS, with local i
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await page.goto("/?scoutTheme=dark");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await brandAssets(page);
 });
 
 test("native sliders filter synthetic results, distinguish finite endpoints and unset, and reset", async ({ page }) => {
@@ -257,6 +260,7 @@ test("320–430px layouts retain application, optional sliders and local images 
       expect(posts[0].path).toBe("/api/apply");
     }
     await page.goto("/?demo=1");
+    await brandAssets(page);
     await page.locator(".manual-search > summary").click();
     await page.getByRole("combobox", { name: "Kommun", exact: true }).selectOption("Stockholm");
     await page.locator(".more-filters > summary").click();

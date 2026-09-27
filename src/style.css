@@ -101,8 +101,7 @@ svg { flex-shrink: 0; }
 .site-header { background: var(--cp-surface); }
 .header-inner { max-width: 1280px; min-height: 72px; margin: auto; padding: 12px 32px; display: flex; align-items: center; gap: 24px; }
 .brand { min-height: 44px; display: inline-flex; align-items: center; color: var(--cp-accent); font-family: var(--cp-font-display); font-size: 1.5rem; font-weight: 600; text-decoration: none; letter-spacing: -.035em; }
-.brand-mark { color: var(--cp-accent); display: flex; margin-right: 12px; }
-.brand-mark svg { width: 28px; height: 28px; }
+.brand-mark { display: block; width: 40px; height: 40px; object-fit: contain; flex-shrink: 0; margin-right: 12px; border-radius: 4px; }
 .brand-dot { color: var(--cp-accent); }
 nav { margin-left: auto; display: flex; flex-wrap: wrap; gap: 8px 24px; }
 nav a { min-height: 44px; color: var(--cp-text); text-decoration: none; font-weight: 600; font-size: .875rem; padding: 10px 0; display: inline-flex; align-items: center; }
@@ -355,8 +354,6 @@ html[data-theme="dark"] .account-details summary span { color: var(--cp-text-sof
   .member-actions { gap: 8px; }
 }
 .compact-header .header-inner { max-width: 1120px; min-height: 80px; position: relative; flex-wrap: wrap; padding: 16px 20px; }
-.compact-header .brand-mark { width: 32px; height: 36px; padding: 4px; align-items: center; justify-content: center; border-radius: 8px; background: var(--cp-brand); color: var(--cp-accent-fg); }
-.compact-header .brand-mark svg { width: 24px; height: 24px; }
 .website-shell .primary, .compact-nav a, .nav-essential button, .site-menu-toggle { transition: background-color 140ms ease-out, color 140ms ease-out; }
 .compact-nav { order: 0; width: auto; margin-left: auto; }
 .nav-essential { display: flex; flex-wrap: wrap; gap: 8px 20px; }
@@ -395,6 +392,7 @@ html[data-theme="dark"] .account-details summary span { color: var(--cp-text-sof
 }
 @media (max-width: 360px) {
   .compact-header .brand { font-size: 1.125rem; }
+  .brand-mark { width: 36px; height: 36px; }
 }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }

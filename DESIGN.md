@@ -15,11 +15,24 @@ integrated with the intro/search, not a listing image or a giant photo hero.
 The user-pinned visual reference supersedes the former rose/cream palette:
 airy white, pale mint input regions, teal brand/details and pale-pink pill
 actions. It supplies a visual language, not finance content, copied artwork or
-a different product. Exact purpose copy, wordmark/home icon and navigation stay.
+a different product. Exact purpose copy, wordmark and navigation stay.
 Georgia gives the main heading and wordmark a readable native serif voice;
 forms, navigation and supporting headings retain the compact Segoe UI stack.
 The intro is on white rather than inside a tinted hero card. Mint groups the
 input, photo credit and footer; pink is reserved for primary actions.
+
+The user-supplied house/radar artwork is the pinned site mark, replacing the
+generic home-icon badge in both shared and legacy/demo headers. Its turquoise
+outline/chimney, pale-mint arc and pink wedge must not be redrawn, recolored,
+inverted or replaced with a generic icon. A lossless local 80px derivative
+renders at 40px, or 36px on narrow phones, beside the existing wordmark.
+Only the outer blank canvas is cropped; the small original light backing
+protects very pale details in dark mode. A matching 32px PNG is the favicon.
+Explicit dimensions prevent layout shifts; an empty image alt avoids repeating
+the accessible brand-link name. The full brand remains a 44px-high home link.
+The artwork's provenance is separate from the photo license, in
+`public/assets/BRAND.md`. Source artwork colors are preserved pixels, not theme
+tokens; the surrounding UI still uses the pinned `--cp-*` system.
 
 The `--cp-*` system has these stable roles:
 
@@ -31,7 +44,7 @@ The `--cp-*` system has these stable roles:
 | Primary action / hover | Pink `#fbe3e8` / derived `#f7d4de` | Same pinks |
 | Secondary button / hover | Teal `#5cbdb9` / derived `#7ccdc8` | Same teals |
 | Quiet choice / disabled ink | Mint `#ebf6f5` / `#526b69` | Same colors |
-| Action / brand-fill foreground | Deep ink `#203a39` | Same deep ink |
+| Action / secondary foreground | Deep ink `#203a39` | Same deep ink |
 | Text / muted | `#203a39` / `#526b69` | Mint `#ebf6f5` / `#b5ccc7` |
 | Heading / link / selected control | Derived deep teal `#246d69`; hover `#195653` | Pinned teal `#5cbdb9`; hover `#8ed5ce` |
 | Focus | Deep teal `#246d69` | Light teal `#8ed5ce` |

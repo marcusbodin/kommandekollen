@@ -84,6 +84,10 @@ aldrig hemma i `VITE_*`, JavaScript-paket, git eller Actions-loggar.
   kombinerar vit bakgrund och mintgrön sökruta med bilden; på mobil ligger en kort
   bildbeskärning efter sökrutan. Bildtexten länkar till
   [bildkälla och licens](public/assets/ATTRIBUTION.md).
+- Den tillhandahållna hus-/radarloggan används i sidhuvud och favicon.
+  Små lokala PNG-filer behåller originalets färger och ljusa detaljer.
+  [Loggans ursprung och bearbetning](public/assets/BRAND.md) redovisas separat
+  från interiörbildens licens.
 - I medlemsläget: ansökan och lösenordsfri e-postverifiering. En verifierad ny användare stannar
   i **väntar på godkännande**, utan objekttillgång eller mejlbevakning.
 - Ägarvy för granskning, godkännande, avslag och återkallelse i medlemsläget;

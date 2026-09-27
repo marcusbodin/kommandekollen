@@ -46,6 +46,10 @@ function Inspiration({ home = false }: { home?: boolean }) {
       <a href={`${import.meta.env.BASE_URL}assets/ATTRIBUTION.md`} target="_blank" rel="noopener noreferrer">Foto: Francesca Tosolini · bild & licens</a>}</figcaption>
   </figure>;
 }
+function BrandMark() {
+  return <img className="brand-mark" src={`${import.meta.env.BASE_URL}assets/brand-mark-80.png`}
+    width={40} height={40} alt="" decoding="async" />;
+}
 function Icon({ name }: { name: "home" | "bell" | "arrow" | "sun" | "moon" }) {
   const paths = {
     home: <><path d="m3 10 9-7 9 7M5 9v12h14V9M9 21v-8h6v8" /></>,
@@ -385,7 +389,7 @@ function App() {
     }} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setMenuOpen(false); }}>
       <div className="header-inner">
         <a className="brand" href="#main" onClick={event => { event.preventDefault(); showSearch(); }} aria-label="kommandekollen. – till sökningen">
-          <span className="brand-mark"><Icon name="home" /></span>kommandekollen<span className="brand-dot">.</span>
+          <BrandMark />kommandekollen<span className="brand-dot">.</span>
         </a>
         <nav id="site-navigation" className="compact-nav" data-expanded={menuOpen} aria-label="Huvudmeny">
           <div className="nav-essential">
@@ -408,7 +412,7 @@ function App() {
       </div>
     </header>}
     <header hidden={minimal} className="site-header"><div className="header-inner">
-      <a className="brand" href={location.pathname}><span className="brand-mark"><Icon name="home" /></span>kommandekollen<span className="brand-dot">.</span></a>
+      <a className="brand" href={location.pathname}><BrandMark />kommandekollen<span className="brand-dot">.</span></a>
       <nav aria-label="Huvudmeny"><a href="#main">{canSearch ? "Sök bostad" : "Medlemskap"}</a><a href={canSearch ? "#kallor" : "#integritet"}>{canSearch ? "Källstatus" : "Integritet"}</a>{member?.owner && <a href="#medlemmar">Medlemmar</a>}</nav>
       <button className="theme-button" aria-label={theme === "dark" ? "Byt till ljust tema" : "Byt till mörkt tema"} onClick={changeTheme}><Icon name={theme === "dark" ? "sun" : "moon"} /></button>
     </div></header>
