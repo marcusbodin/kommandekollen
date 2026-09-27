@@ -29,9 +29,10 @@ to the owner's inbox succeeded.
 Frontend HTTPS is valid and enforced; HTTP redirects to the canonical HTTPS URL.
 The public controller/contact and provider-location disclosures are published.
 The owner separately confirmed the account's **Workers Free** plan, not only
-the zone's Free DNS plan. The photographic-hero website is published by Pages run
-`36307458728` from feature commit `44dff88`, retaining the public-feed commit
-`b2dbb5f` and separate supplied-logo commit `ec1bf12`. This latest release changed
+the zone's Free DNS plan. The current homepage is published by Pages run
+`36309935479` from copy-removal commit `c9f6843`, retaining the photographic-hero
+commit `44dff88`, public-feed commit `b2dbb5f` and supplied-logo commit `ec1bf12`.
+This latest release changed
 Pages only. The Worker deployed for the preceding public-feed release remains
 `88c17650-e6e9-4b9c-8074-11972ba86570`. `SHARED_ACCESS_PASSWORD` was generated in a
 private local terminal and stored as a Worker secret; its value is not in the
@@ -67,6 +68,14 @@ the input. Opaque surfaces protect text readability in both themes. Expanded
 review/manual/save content spans below both columns without replacing the mounted
 preference flow; the public feed stays outside the hero on a plain surface.
 
+At the owner's explicit request, the latest copy-only release removes the
+"Målet: hitta ditt nästa hem innan annonsen når de stora bostadssajterna."
+sentence, the global paused-search note and the public-list subtitle.
+The remaining introduction is exactly "Vi bygger en samlad koll direkt från
+mäklarna." No replacement claims or empty paragraph elements were added.
+Paused-only review, confirmation and receipt copy remain truthful and unchanged;
+removing a homepage note does not enable alerts or connect a listing source.
+
 The background is Holger Ellgaard's photograph of Sodra Angby, served locally as
 `stockholm-hero-800.webp` (800 by 500 pixels, 104,498 bytes) on mobile and
 `stockholm-hero-1600.webp` (1600 by 1000 pixels, 295,120 bytes) on desktop.
@@ -91,7 +100,7 @@ Native control affordances and visible keyboard/feedback focus remain intact.
 The new public feed has separate request/filter state; existing private
 consent, draft revision and explicit-save guards remain in place.
 
-The published bundle is `index-CPamyJS0.js`, with `index-DKSx1UPc.css`.
+The published bundle is `index-BLOvpDD_.js`, with `index-Dn7utxJQ.css`.
 Anonymous production `GET /api/listings` returned HTTP 200 with exactly
 `{"availability":"no_sources","items":[],"total":0,"hasMore":false,"nextCursor":null}`.
 At the preceding Worker rollout, malformed cursors and unsupported limit
@@ -102,7 +111,8 @@ license references. Query work remains bounded by the existing 200-object cap;
 no source or capacity increase was enabled.
 
 Actual live browser checks at 320, 360, 390, 430 and 1440 pixels confirmed the
-unchanged logo/favicon, new question, full-width hero, public section below the
+absence of all three requested phrases, unchanged logo/favicon and question,
+full-width hero, public section below the
 hero, absent old inspiration images, single-row mobile header, 16-pixel fields,
 44-pixel buttons and no horizontal overflow. At 1440 pixels, the actual input
 and right-hand H1 overlap vertically by about 88 pixels. On mobile, the question
@@ -124,7 +134,7 @@ Browser checks attempted no POST, consumed no AI calls and reported no runtime
 errors or insecure subresource requests. Only normal traffic-rate counters are
 updated by anonymous browsing. No Worker deployment, API/configuration change,
 migration, secret, quota or source authorization changed during this Pages-only
-hero release.
+homepage-copy release.
 
 Still required during the pilot: broader guest/account revocation and
 withdrawal scenarios, continued provider/privacy review, and
