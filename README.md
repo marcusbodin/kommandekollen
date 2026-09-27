@@ -52,6 +52,11 @@ npm run test:browser     # desktop + mobil; installera Chromium om den saknas
 npm run ingest           # inget hämtas med tom konfiguration
 ```
 
+Både `npm test` och `npm run test:browser` behöver Playwrights Chromium
+(`npx playwright install chromium`). Skrapartesterna använder en riktig
+webbläsare men fångar alla nätverksanrop till syntetiska fixturer. CI installerar
+webbläsaren före båda testsviterna; inga mäklarsidor behöver hämtas för kontrollerna.
+
 Kopiera `.env.example` respektive `.dev.vars.example` vid behov. Hemligheter hör
 aldrig hemma i `VITE_*`, JavaScript-paket, git eller Actions-loggar.
 
