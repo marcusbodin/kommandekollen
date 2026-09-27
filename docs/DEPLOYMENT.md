@@ -1,5 +1,24 @@
 # Deployment and launch status
 
+## Neutral branding and liquid glass, 2026-09-27
+
+Pages run `36328796921` published commit `7f1371a`: the supplied blue/radar logo,
+blue/light-blue/coral buttons, neutral page colors, weight-700 headings and
+image-backed glass panels. Current bundles are `index-Dc6DEFWP.js` and
+`index-BeADpxR5.css`. The supplied interior image remains unchanged.
+
+Linux Check `36328387176` passed, including image-bounded contrast, neutral
+colors outside buttons, logo transparency and glass accessibility/failure
+fallbacks. Its desktop/mobile light/dark screenshots were reviewed. Ordinary
+HTTPS reads matched all nine checked HTML, bundle, image and provenance files
+byte-for-byte; apex still redirects to HTTPS www with HTTPS enforcement active.
+Local Chromium startup remains unavailable; the visual evidence is from Linux,
+not a claimed authenticated production-browser session.
+
+This is a frontend-only release. Worker, database, source grants and property
+mail settings are unchanged: no live housing sources or property alerts are
+enabled by the visual changes.
+
 ## Supplied homepage image, 2026-09-27
 
 Pages run `36327213219` published commit `132d4f9`, replacing the earlier house
