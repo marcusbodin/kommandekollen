@@ -48,8 +48,10 @@ configuration and verify HTTP/HTTPS redirects, path/query/fragment preservation
 and final email URLs. These redirect checks have **not** passed yet.
 The Worker temporarily accepts both exact origins and still generates apex
 email links. No wildcard origins or certificate-check bypasses are used.
-A bounded, read-only session-local certificate monitor is running; it is not
-a production collection job or a recurring automation.
+The bounded, read-only certificate monitor completed its one-hour window
+without issuance. A fresh provider check still reports `new`; the apex HTTPS
+site returns 200, but HTTPS enforcement remains off. No monitor or recurring
+certificate automation remains active, and no settings were changed by monitoring.
 
 The integrated build and 113 coupled local Worker/D1/migration/model tests
 passed. The current macOS host then failed bare Chromium startup outside Vitest,
