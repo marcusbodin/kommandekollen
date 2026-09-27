@@ -123,6 +123,13 @@ aldrig hemma i `VITE_*`, JavaScript-paket, git eller Actions-loggar.
   HTML/JSON-LD, med parserfixturer, robotskontroll, tids-/storleksgränser och
   autentiserad import. **Den är testad på syntetiska fixturer, inte på någon
   fungerande liveintegration med en mäklare.**
+- En separat, manuell [Notar-skrapare för lokal förhandsvisning](docs/SOURCES.md#named-notar-rendered-dom-preview)
+  läser den faktiskt renderade objektsidan med vanlig Chromium. Ett avgränsat
+  prov gav 24 kommande kort, varav 13 med kommun i Stockholms län.
+  Resultatet är privat, ofullständigt och kan **inte** användas som komplett
+  inläsningssnapshot. Okänd bostadstyp och okänt pris förblir `null`.
+  Inga av dessa objekt är publicerade eller importerade i tjänsten; källtillstånd,
+  produktionsinsamling och mejlbevakning har inte aktiverats.
 
 ## Begränsningar och dokumentation
 
