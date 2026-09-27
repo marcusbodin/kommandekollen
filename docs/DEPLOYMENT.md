@@ -14,6 +14,14 @@ definitions from the active branch. Existing workflow history is retained.
 No secret, grant, database, Pages or Worker deployment needs changing.
 The production-configured frontend bundles remain byte-identical to the
 published `index-BYkC9A39.js` and `index-LqHVXeMz.css`.
+Removal commit `6b1b349` is published on `main`; GitHub now contains only the
+Check and Pages workflow definitions. Linux Check `36337409890` passed build
+and all 128 unit cases, including the retained JSON import boundary. Its browser
+run passed 67/68 cases, including both changed private-import flows; the only
+failure was the previously recorded asynchronous `posts[0]` assertion at
+`tests/browser/app.spec.ts:310`. No unrelated test or application behavior was
+changed to obtain a green result, and this release does not claim a green full
+browser suite.
 The historical three HusmanHagberg observations retain their original
 time; reading still requires the existing private grant and shared gate.
 Property emails remain off. The release records below describe **historical
