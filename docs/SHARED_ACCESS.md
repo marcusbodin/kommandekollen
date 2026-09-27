@@ -13,8 +13,9 @@ Migrations 0001-0003 are immutable.
 ## Visitor flow
 
 The input-first frontend revision shows only the free-text input, integrated
-send and small "Mer" control at rest, including for returning owners. It needs
-only a Pages rollout, not a Worker, secret, configuration or migration change.
+send and small "Mer" control at rest, including for returning owners. It was
+published on 2026-09-27 through Pages run `36299417326`; no Worker, secret,
+configuration or migration was changed.
 
 Describe a home locally -> explicitly send -> enter the shared password if
 needed and explicitly consent to Cloudflare processing -> interpret -> review

@@ -27,8 +27,8 @@ to the owner's inbox succeeded.
 Frontend HTTPS is valid and enforced; HTTP redirects to the canonical HTTPS URL.
 The public controller/contact and provider-location disclosures are published.
 The owner separately confirmed the account's **Workers Free** plan, not only
-the zone's Free DNS plan. The shared-access frontend is published by Pages run
-`36231732768` from feature commit `2795532`; the matching active Worker version is
+the zone's Free DNS plan. The minimal input-first frontend is published by Pages run
+`36299417326` from feature commit `47b3c2a`; the unchanged active Worker version is
 `b4da83e5-c887-49cb-a194-d2b292160f67`. `SHARED_ACCESS_PASSWORD` was generated in a
 private local terminal and stored as a Worker secret; its value is not in the
 repository, chat or deployment output. The owner saved their copy.
@@ -42,7 +42,16 @@ then succeeded; no personal housing description or saved profile is published.
 Shared-mode rollout checks verified the mobile/desktop password form, a visible
 401 for an incorrect password and gate-required denial of old and guest AI paths.
 The existing owner profile/version and all four prior AI reservations survived.
-Correct-password and guest email-save checks still need user confirmation.
+The user subsequently confirmed correct-password access without email and the
+guest email-verification/save flow.
+
+On 2026-09-27, a frontend-only rollout removed the initial header, hero, photo,
+password form and secondary panels. The public first view is the textarea with
+integrated send and "Mer". Explicit send opens the password/unchecked AI-consent
+dialog; no AI request occurs before authorization. Actual desktop/mobile browser
+checks confirmed that typing, opening/cancelling the dialog and reading privacy
+made no POST requests. Cancellation retained the exact typed text. Backend,
+secrets, migrations, budgets and saved records were not changed by this release.
 
 Still required during the pilot: broader guest/account revocation and
 withdrawal scenarios, continued provider/privacy review, and
