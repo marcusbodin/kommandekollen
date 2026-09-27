@@ -472,9 +472,9 @@ function App() {
         {minimal && <>
           <div className="home-hero">
           <picture className="hero-picture" aria-hidden="true">
-            <source media="(max-width: 960px)" srcSet={`${import.meta.env.BASE_URL}assets/stockholm-hero-800.webp`} />
-            <img className="hero-backdrop" src={`${import.meta.env.BASE_URL}assets/stockholm-hero-1600.webp`}
-              width="1600" height="1000" alt="" fetchPriority="high" decoding="async"
+            <source media="(max-width: 960px)" srcSet={`${import.meta.env.BASE_URL}assets/autumn-home-800.webp`} />
+            <img className="hero-backdrop" src={`${import.meta.env.BASE_URL}assets/autumn-home-1374.webp`}
+              width="1374" height="1145" alt="" fetchPriority="high" decoding="async"
               onError={event => { event.currentTarget.hidden = true; }}
               onLoad={event => { event.currentTarget.hidden = false; }} />
           </picture>
@@ -568,7 +568,7 @@ function App() {
       <span>© {new Date().getFullYear()} kommandekollen.</span>
       <a href="?info=privacy" onClick={event => openInfo(event, "privacy")}>Integritet & radering</a>
       <a href="mailto:kontakt@kommandekollen.se">Kontakt</a>
-      <a href={`${import.meta.env.BASE_URL}assets/ATTRIBUTION.md`}>Bakgrundsfoto & licens</a>
+      <a href={`${import.meta.env.BASE_URL}assets/ATTRIBUTION.md`}>Bakgrundsbild & ursprung</a>
     </footer>}
     <footer hidden={minimal} className="site-footer"><span>kommandekollen.</span><a href="#integritet">Integritet & radering</a>{canSearch && <a href="#kallor">Källstatus</a>}<span className="small">{shared ? "Delat lösenord · e-post när du sparar" : "Privat tjänst · medlemskap efter godkännande"}</span></footer>
   </div>;

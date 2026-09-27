@@ -148,11 +148,13 @@ layouts remain removed, including legacy membership and demo. The newly requeste
 hero is the sole exception to the earlier no-photo direction. Its quiet footer
 credit and provenance are separate from the historical unused WebP files in
 `public/assets/ATTRIBUTION.md`.
-The current background is Holger Ellgaard's Stockholm house photograph,
-`stockholm-hero-800.webp` and `stockholm-hero-1600.webp`. Its CC BY-SA 3.0
-attribution, exact crop and adapted-image license are public in the same notice;
-the application and logo are not relicensed. Only local files load. The image is
-decorative (empty alt), has explicit 1600 x 1000 intrinsic dimensions, uses a
+The current background is the owner's supplied warm interior image with a
+balcony and tiled stove, `autumn-home-800.webp` and `autumn-home-1374.webp`.
+Its provenance and processing are public in the same notice; no photographer,
+real address or public reuse license is invented. The former house photograph
+and its CC BY-SA attribution remain historical, not the new image's license.
+Only local files load. The image is
+decorative (empty alt), has explicit 1374 x 1145 intrinsic dimensions, uses a
 bounded 800px mobile source and high fetch priority, and crops within a backdrop
 no taller than 680px. There are no runtime third-party image requests.
 The supplied logo is retained, not treated as inspiration. No agency branding,

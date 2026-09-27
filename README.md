@@ -107,14 +107,16 @@ aldrig hemma i `VITE_*`, JavaScript-paket, git eller Actions-loggar.
   reglage för pris/rum/boarea/avgift, valfri
   exakt inmatning och extra sökval under **Fler filter**. Ingen gräns är ett eget
   val; befintliga exakta sökvärden avrundas inte. Saknade uppgifter är inte noll.
-- Startsidan har ett lokalt bakgrundsfoto från Södra Ängby av Holger Ellgaard.
+- Startsidan har ägarens tillhandahållna interiörbild med balkong och kakelugn
+  som lokal bakgrund.
   På desktop ligger sökrutan till vänster och **Vad är viktigt i ditt nästa hem?**
   till höger över bilden; på mobil kommer texten före sökrutan. Ogenomskinliga
   läsytor fungerar även när bilden inte laddas. Utökad granskning och vanliga
   filter får hela bredden nedanför, utan att textrutan monteras om.
-  Två beskurna WebP-filer i 800/1600px används. Bildfilerna omfattas av
-  **CC BY-SA 3.0**, inte appens kod eller logga; fullständig
-  [fotokredit, bearbetning och licens](public/assets/ATTRIBUTION.md) nås från sidfoten.
+  Två WebP-filer i 800/1374px används med responsiv beskärning.
+  [Bildens ursprung och bearbetning](public/assets/ATTRIBUTION.md) nås från
+  sidfoten. Den tidigare husbildens **CC BY-SA 3.0** gäller bara dess historiska
+  bildfiler, inte den nya bakgrunden, appens kod eller logga.
   Bilden är en bakgrundsillustration, inte ett objekt till salu.
   Det tidigare inspirationskortet är fortsatt borttaget, även i demo och äldre
   medlemsläge. Objektlistan ligger på en vanlig läsyta och visar källänkar och

@@ -168,10 +168,13 @@ Svensk Fast's website terms explicitly prohibit scraping and automatic indexing
 without permission. Other assessed candidate sources remain unverified.
 Neither private membership nor the public-feed decision overrides source
 restrictions or creates a reuse license.
-The approved decorative hero photo is Holger Ellgaard's "Sodra angby 2008m.jpg",
-distributed as two locally cropped/resized WebP files under CC BY-SA 3.0.
-It illustrates the homepage, not an available listing or an endorsement.
-The license applies to those image adaptations, not the application or logo.
+The current decorative hero is the owner's supplied warm interior image,
+replacing the house photograph on 2026-09-27. Two local WebP versions preserve
+its composition and colors; it is not an available listing or proof of a real
+address. No public reuse license or photographer is asserted.
+The former hero, Holger Ellgaard's "Sodra angby 2008m.jpg", remains as historical
+local files under CC BY-SA 3.0. That license applies only to those adaptations,
+not the new image, application or logo.
 A regular free Unsplash interior photo by Francesca Tosolini was locally cropped
 and optimized; its verified source/license is recorded in
 `public/assets/ATTRIBUTION.md`. These historical files are retained but are no

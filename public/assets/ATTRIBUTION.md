@@ -1,6 +1,31 @@
-# Photographs / Bakgrundsfoto och licens
+# Images / Bakgrundsbild och ursprung
 
 ## Current hero background
+
+Projektägaren tillhandahöll bilden den **2026-09-27** och bad uttryckligen att
+den skulle ersätta startsidans bakgrund. Den föreställer ett varmt belyst
+vardagsrum med balkong, höstträd och kakelugn.
+
+- Source: user-attached RGB PNG, **1374 x 1145**, 2,344,670 bytes.
+- SHA-256: `03eec61f6795e1d077b36b77ed1afb64161e0990e01efb7155b47d8b69d8702b`.
+- Local files, WebP quality 76:
+  - `autumn-home-800.webp` — 800 x 667, 69,404 bytes.
+  - `autumn-home-1374.webp` — 1374 x 1145, 155,438 bytes.
+- Processing: preserve the full composition and colors; resize the smaller
+  version with Lanczos, encode both as WebP and remove embedded metadata.
+  CSS applies a responsive crop within the existing background area.
+
+**Bakgrundsillustration, inte ett bostadsobjekt till salu.** Ingen verklig
+adress, fotograf, äganderätt eller offentlig återanvändningslicens tillskrivs
+bilden. Den tidigare bakgrundens CC BY-SA-licens gäller inte den nya bilden.
+Endast de lokala WebP-filerna laddas; originalbilagan och externa bildtjänster
+används inte vid sidbesök.
+
+## Historical unused house photograph
+
+Replaced by the supplied interior image above on 2026-09-27. These historical
+files are retained but no longer rendered. Their original attribution and
+license remain below and apply only to the named `stockholm-hero-*` files.
 
 - Photographer / fotograf: **Holger Ellgaard** (Wikimedia username
   **Holger.Ellgaard**).
@@ -31,7 +56,7 @@ or its separately supplied logo.
 decorative; no listing, endorsement by the photographer or depicted property's
 owner, or property-release guarantee is implied. The application serves only
 these local derivatives, without hotlinks or runtime third-party image requests.
-The footer links here for the full attribution, source, changes and license.
+This notice retains the full attribution, source, changes and license.
 
 ## Historical unused inspiration image
 

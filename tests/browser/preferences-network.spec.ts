@@ -304,28 +304,30 @@ async function heroGeometry(page: Page) {
 async function heroAssets(page: Page) {
   const image = page.locator(".hero-backdrop");
   await expect(image).toHaveAttribute("alt", "");
-  await expect(image).toHaveAttribute("width", "1600");
-  await expect(image).toHaveAttribute("height", "1000");
+  await expect(image).toHaveAttribute("width", "1374");
+  await expect(image).toHaveAttribute("height", "1145");
   await expect(image).toHaveAttribute("fetchpriority", "high");
   await expect(page.locator(".hero-picture")).toHaveAttribute("aria-hidden", "true");
   await expect.poll(() => image.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0)).toBe(true);
-  const width = page.viewportSize()!.width <= 960 ? 800 : 1600;
+  const width = page.viewportSize()!.width <= 960 ? 800 : 1374;
   const asset = await image.evaluate((el: HTMLImageElement) => ({ width: el.naturalWidth, height: el.naturalHeight, src: el.currentSrc }));
-  expect(asset.width).toBe(width); expect(asset.height).toBe(width * .625);
+  expect(asset.width).toBe(width); expect(asset.height).toBe(width === 800 ? 667 : 1145);
   expect(new URL(asset.src).origin).toBe(new URL(page.url()).origin);
-  expect(new URL(asset.src).pathname).toBe(`/assets/stockholm-hero-${width}.webp`);
+  expect(new URL(asset.src).pathname).toBe(`/assets/autumn-home-${width}.webp`);
   const response = await page.request.get(asset.src);
   expect(response.status()).toBe(200);
   expect(response.headers()["content-type"]).toContain("image/webp");
   expect((await response.body()).length).toBeLessThan(width === 800 ? 150_000 : 300_000);
-  const credit = page.locator("footer:visible").getByRole("link", { name: "Bakgrundsfoto & licens" });
+  const credit = page.locator("footer:visible").getByRole("link", { name: "Bakgrundsbild & ursprung" });
   await expect(credit).toHaveAttribute("href", "/assets/ATTRIBUTION.md");
   const notice = await page.request.get((await credit.getAttribute("href"))!);
   expect(notice.status()).toBe(200);
   const text = await notice.text();
-  for (const value of ["Holger Ellgaard", "https://commons.wikimedia.org/wiki/File:Sodra_angby_2008m.jpg",
-    "https://creativecommons.org/licenses/by-sa/3.0/", "Both adapted image files", "crop", "resize", "WebP",
-    "stockholm-hero-800.webp", "stockholm-hero-1600.webp", "inte ett bostadsobjekt till salu"]) expect(text).toContain(value);
+  const current = text.split("## Historical unused house photograph")[0];
+  for (const value of ["tillhandahöll bilden", "1374 x 1145", "resize", "WebP",
+    "autumn-home-800.webp", "autumn-home-1374.webp", "inte ett bostadsobjekt till salu"]) expect(current).toContain(value);
+  expect(current).not.toContain("Holger Ellgaard");
+  expect(current).not.toContain("stockholm-hero-");
   await expect(page.locator(".public-listings img")).toHaveCount(0);
 }
 async function expandedHeroPanels(page: Page) {
@@ -837,7 +839,7 @@ test("pinned mint presentation uses borderless depth, filled states and accessib
 test("photo hero remains readable and usable without its image in light and dark themes", async ({ page }) => {
   env.ACCESS_MODE = "shared"; env.SHARED_ACCESS_PASSWORD = gatePassword;
   await page.context().clearCookies();
-  await page.route("**/assets/stockholm-hero-*.webp", route => route.fulfill({ status: 404, body: "" }));
+  await page.route("**/assets/autumn-home-*.webp", route => route.fulfill({ status: 404, body: "" }));
   await page.goto("/");
   await websiteSurface(page);
   await expect.poll(() => page.locator(".hero-backdrop").evaluate((el: HTMLImageElement) => el.complete)).toBe(true);
@@ -864,7 +866,7 @@ test("photo hero remains readable and usable without its image in light and dark
       await page.screenshot({ path: test.info().outputPath(`photo-hero-missing-${theme}.png`), fullPage: true, animations: "disabled" });
   }
   await test.info().attach("missing-image-contrast", { body: JSON.stringify(reports, null, 2), contentType: "application/json" });
-  await page.unroute("**/assets/stockholm-hero-*.webp");
+  await page.unroute("**/assets/autumn-home-*.webp");
   await page.setViewportSize({ width: page.viewportSize()!.width <= 960 ? 1440 : 390, height: 1000 });
   await heroAssets(page);
   await expect(page.locator(".hero-backdrop")).toBeVisible();
