@@ -91,14 +91,22 @@ aldrig hemma i `VITE_*`, JavaScript-paket, git eller Actions-loggar.
   reglage för pris/rum/boarea/avgift, valfri
   exakt inmatning och extra sökval under **Fler filter**. Ingen gräns är ett eget
   val; befintliga exakta sökvärden avrundas inte. Saknade uppgifter är inte noll.
-- Inspirationsfotografiet är borttaget från alla vyer, även demo och äldre
-  medlemsläge. Objektkorten visar källänkar och faktauppgifter, inga påhittade
-  objektbilder. De oanvända lokala fotofilerna och deras
-  [licenshistorik](public/assets/ATTRIBUTION.md) behålls.
+- Startsidan har ett lokalt bakgrundsfoto från Södra Ängby av Holger Ellgaard.
+  På desktop ligger sökrutan till vänster och **Vad är viktigt i ditt nästa hem?**
+  till höger över bilden; på mobil kommer texten före sökrutan. Ogenomskinliga
+  läsytor fungerar även när bilden inte laddas. Utökad granskning och vanliga
+  filter får hela bredden nedanför, utan att textrutan monteras om.
+  Två beskurna WebP-filer i 800/1600px används. Bildfilerna omfattas av
+  **CC BY-SA 3.0**, inte appens kod eller logga; fullständig
+  [fotokredit, bearbetning och licens](public/assets/ATTRIBUTION.md) nås från sidfoten.
+  Bilden är en bakgrundsillustration, inte ett objekt till salu.
+  Det tidigare inspirationskortet är fortsatt borttaget, även i demo och äldre
+  medlemsläge. Objektlistan ligger på en vanlig läsyta och visar källänkar och
+  faktauppgifter, inga påhittade objektbilder. Historiska oanvända fotofiler behålls.
 - Den tillhandahållna hus-/radarloggan används i sidhuvud och favicon.
   Små lokala PNG-filer behåller originalets färger och ljusa detaljer.
   [Loggans ursprung och bearbetning](public/assets/BRAND.md) redovisas separat
-  från interiörbildens licens.
+  från fotografiernas licenser.
 - I medlemsläget: ansökan och lösenordsfri e-postverifiering. En verifierad ny användare stannar
   i **väntar på godkännande**, utan personliga sökningar eller mejlbevakning.
   Den offentliga objektlistan kräver inte godkännande.
@@ -144,7 +152,8 @@ modell och mejlleverantör ersatta av testfixturer. Inga verkliga mejl skickas
 och förhandsvisningen på 5173 lämnas orörd. Testerna täcker
 320/360/390/430px, tangentbordsstyrda reglage, exakta sparade värden,
 medlemsgränser, offentlig sidindelning/filter/återförsök, lokal logga/favicon,
-frånvaro av inspirationsfoto och ljust standardtema även vid mörkt OS.
+hero-geometri och bildbortfall, frånvaro av det gamla inspirationskortet,
+samt ljust standardtema även vid mörkt OS.
 
 Koden finns i [marcusbodin/kommandekollen](https://github.com/marcusbodin/kommandekollen).
 Domänen registreras och betalas fortsatt hos Inleed; auktoritativ DNS är flyttad

@@ -54,8 +54,9 @@ own search/draft, account/login/logout/owner tools and source/result information
 An already-open gate skips password entry, not AI consent. In-memory consent
 covers followups in the current draft only; no inference is triggered on load,
 restore, typing or email verification. Existing searches are never silently
-replaced. There is no large hero photo, always-open account/source panel or
-marketing claim competing with the input. Information and home navigation keep
+replaced. The new user-requested hero uses a decorative photo behind the prompt
+and question, not an image-only screen or a property listing. There is no
+always-open account/source panel. Information and home navigation keep
 unsent text in place.
 
 ## Capabilities and Constraints
@@ -129,10 +130,13 @@ on a dark-preferring OS, larger touch targets and numeric sliders with optional
 precise entry. Existing ranges and saved-search semantics remain available.
 The pinned supplied house/radar logo and local favicon stay unchanged.
 The user's white/mint/teal/pink palette, Georgia display, Segoe controls,
-borderless surfaces and filled buttons remain binding. Remove all inspiration
-photography from rendered views; listings have no image field.
-The user's exact homepage headline is "Hitta kommande bostäder före andra" and
-the initial primary CTA is "Hitta bostad". These supersede earlier wording.
+borderless surfaces and filled buttons remain binding. The latest reference
+authorizes a full-width decorative background hero, with the search card left
+and "Vad är viktigt i ditt nästa hem?" right on desktop; mobile reads question
+then input. It does not authorize reference-site branding, ads or photos.
+The earlier inspiration card remains removed; listings have no image field.
+"Hitta kommande bostäder före andra." stays as supporting value copy and the
+initial primary CTA remains exactly "Hitta bostad".
 Its introduction explicitly says "Vi bygger" and "Målet:", distinguishing the
 source-direct discovery goal from the zero-source pilot actually operating.
 The adjacent helper explains that the protected AI step makes a search proposal,
@@ -149,10 +153,15 @@ Svensk Fast's website terms explicitly prohibit scraping and automatic indexing
 without permission. Other assessed candidate sources remain unverified.
 Neither private membership nor the public-feed decision overrides source
 restrictions or creates a reuse license.
-A regular free Unsplash interior photo by Francesca Tosolini is locally cropped
+The approved decorative hero photo is Holger Ellgaard's "Sodra angby 2008m.jpg",
+distributed as two locally cropped/resized WebP files under CC BY-SA 3.0.
+It illustrates the homepage, not an available listing or an endorsement.
+The license applies to those image adaptations, not the application or logo.
+A regular free Unsplash interior photo by Francesca Tosolini was locally cropped
 and optimized; its verified source/license is recorded in
 `public/assets/ATTRIBUTION.md`. These historical files are retained but are no
-longer rendered. The supplied logo's provenance is separate in `public/assets/BRAND.md`.
+longer rendered. Both photos' provenance is recorded there; the supplied logo's
+provenance is separate in `public/assets/BRAND.md`.
 
 ## Product Principles
 

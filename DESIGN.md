@@ -4,10 +4,14 @@ The search surface is Operate mode: one housing task, not a marketing landing
 page. The user's correction replaces the isolated-input design with a compact,
 recognizable website shell: existing "kommandekollen." wordmark/home identity,
 real navigation, short purpose copy, dominant search and a tidy footer.
-The latest user-pinned H1 is exactly "Hitta kommande bostäder före andra" and
-the initial primary action is exactly "Hitta bostad". Supporting copy qualifies
-the aspiration: "Vi bygger en samlad koll på kommande bostäder direkt från
-mäklarna. Målet: hitta ditt nästa hem innan annonsen når de stora bostadssajterna."
+The latest composition reference puts the prompt on the left and the question
+"Vad är viktigt i ditt nästa hem?" on the right, over a full-width home photograph.
+It supplies composition only, not another site's branding, ads, tabs or copy.
+The initial primary action remains exactly "Hitta bostad".
+"Hitta kommande bostäder före andra." is a short secondary value statement below
+the main heading, not a competing headline. Supporting copy qualifies the
+aspiration: "Vi bygger en samlad koll direkt från mäklarna. Målet: hitta ditt
+nästa hem innan annonsen når de stora bostadssajterna."
 It does not claim connected sources, complete coverage, measured speed or buying
 priority. Early source-direct discovery is the core value; AI is optional help.
 The input label remains "Beskriv ditt nästa hem". Its helper says the AI creates
@@ -15,7 +19,8 @@ a proposal, needs a password and asks for email only at saving. Followups use
 "Uppdatera sökförslaget". The public feed follows the prompt/review immediately.
 A calm pilot note says searches currently save paused without housing emails.
 Password, email, private source panels, saved profiles and full legal text stay
-progressively disclosed. No inspiration photograph is rendered in any mode.
+progressively disclosed. The new background is decorative, not a property listing
+or a photo card. No inspiration image is rendered inside the public feed.
 
 The user-pinned visual reference supersedes the former rose/cream palette:
 airy white, pale mint input regions, teal brand/details and pale-pink pill
@@ -23,8 +28,10 @@ actions. It supplies a visual language, not finance content, copied artwork or
 a different product. The pinned wordmark and navigation stay.
 Georgia gives the main heading and wordmark a readable native serif voice;
 forms, navigation and supporting headings retain the compact Segoe UI stack.
-The intro is on white rather than inside a tinted hero card. Mint groups the
-input, empty state and footer; pink is reserved for primary actions.
+Opaque form and text surfaces protect readability above the photograph in both
+themes and when the image is missing. The picture remains visible around those
+localized surfaces, with no full-photo wash, glass or text-shadow workaround.
+Mint groups the input, empty state and footer; pink is for primary actions.
 
 The user-supplied house/radar artwork is the pinned site mark, replacing the
 generic home-icon badge in both shared and legacy/demo headers. Its turquoise
@@ -120,9 +127,18 @@ This is different from no current inventory, no filter matches and fetch/service
 failures. No count is invented, no synthetic fallback is substituted, and the
 12-card initial page does not remove the 200-record inventory cap.
 
-All inspiration components, visible photo captions/credit links and photo-led
-layouts are removed, including legacy membership and demo. Historical unused
-WebP files and their provenance remain in `public/assets/ATTRIBUTION.md`.
+The old inspiration card, its visible caption/credit and the former photo-led
+layouts remain removed, including legacy membership and demo. The newly requested
+hero is the sole exception to the earlier no-photo direction. Its quiet footer
+credit and provenance are separate from the historical unused WebP files in
+`public/assets/ATTRIBUTION.md`.
+The current background is Holger Ellgaard's Stockholm house photograph,
+`stockholm-hero-800.webp` and `stockholm-hero-1600.webp`. Its CC BY-SA 3.0
+attribution, exact crop and adapted-image license are public in the same notice;
+the application and logo are not relicensed. Only local files load. The image is
+decorative (empty alt), has explicit 1600 x 1000 intrinsic dimensions, uses a
+bounded 800px mobile source and high fetch priority, and crops within a backdrop
+no taller than 680px. There are no runtime third-party image requests.
 The supplied logo is retained, not treated as inspiration. No agency branding,
 fictional coverage claims, maps without data or decorative thumbnails are used.
 
@@ -131,7 +147,7 @@ Light is the default even when the OS prefers dark; dark remains an explicit
 theme-button/query choice. All component colors use those tokens; raw brand
 values occur only in token definitions. Body typography is Segoe UI, Aptos,
 Calibri, then platform fallbacks; `--cp-font-display` is Georgia with native
-serif fallbacks. Body is 16px, supporting copy 13–14px, headings 18–44px
+serif fallbacks. Body is 16px, supporting copy 13–14px, headings 18–48px
 (home display 32px on narrow phones). The wordmark reduces to 18px at 360px
 and below, keeping the logo and menu on one compact row. Inputs remain at least 16px to avoid iOS focus zoom. Primary
 targets and disclosure summaries are at least 44px high with visible keyboard
@@ -142,9 +158,20 @@ one material followup and an editable
 summary separating requirements, wishes and manual checks. One explicit
 confirmation saves the reviewed profile; with no ready sources it saves paused.
 No endless chat transcript or fake AI in the deterministic public demo.
-The compact homepage uses an 1120px shell, a centered 760px intro/prompt column
-and the public feed below. Factual cards use two columns on wider desktops
-and one below 1050px; filters disclose in one easy-to-scan column.
+The compact homepage has a full-width photo region below the header and a
+bounded 1120px inner composition. At desktop widths the opaque search card is
+left and the large question is right, sharing one grid row. The DOM retains
+heading-before-input context; no interactive controls are reordered.
+At 960px and below the heading precedes the search card in one natural-height
+column. There is no viewport-height hero, parallax or image-only mobile screen.
+Expanded review, manual filters and save receipts span the row below the top
+pair on opaque surfaces. A presentation slot keeps the same PreferenceFlow and
+textarea mounted; changing public filters, panels or theme cannot reset them.
+The background height is bounded instead of stretching a photo across a long
+expanded form. The public feed stays on a plain surface in a centered 1080px
+column, using a full-width page grid rather than overflowing 100vw offsets.
+Factual cards use two columns on wider desktops and one below 1050px;
+filters disclose in one easy-to-scan column.
 Natural spacing and a minimum-height page put
 the footer after the content, not over the keyboard. The public textarea has a
 persistent visible label, a factual example placeholder and a short next-step
@@ -153,8 +180,8 @@ helper. Native dialogs remain scrollable. At 320px, 16px side gutters preserve
 zoom. Private ranked results/source runs remain separately requested.
 Legacy/demo desktop uses an 880px input/review panel and flexible
 two-column factual property cards. Below 1050px,
-properties become one column. Below 700px, content stacks. There are no
-photo bands or reserved empty image regions.
+properties become one column. Below 700px, content stacks. These legacy/demo
+surfaces do not restore the removed inspiration photograph.
 Manual controls are secondary under "Använd vanliga filter" / "Ändra själv med
 filter". Municipality, touch-choice property types, maximum price and minimum
 rooms are immediately available there. "Fler filter" contains remaining criteria.

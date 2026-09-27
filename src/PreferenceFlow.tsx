@@ -12,6 +12,7 @@ type Props = {
   apiBase: string; demo: boolean; member: Account | null; ready: boolean; refresh: () => void;
   renderFilters: (filters: Filters, change: (filters: Filters) => void) => ReactNode;
   onDemoPreview: (profile: Profile) => void;
+  intro?: ReactNode;
   guest?: { aiReady: boolean };
   onInference?: () => void;
   minimal?: boolean; authorized?: boolean; authorize?: Authorize; controlsRef?: Ref<PreferenceControls>;
@@ -27,7 +28,7 @@ export function ProfileSummary({ profile }: { profile: Profile }) {
 }
 const examples = ["Lägenhet i Solna eller Sundbyberg, minst 3 rum. Gärna 80 m².", "Villa i Nacka, högst 7 miljoner. Lugn gata är viktigt."];
 export function PreferenceFlow({ apiBase, demo, member, ready, refresh, renderFilters, onDemoPreview, guest, onInference,
-  minimal = false, authorized = true, authorize, controlsRef }: Props) {
+  minimal = false, authorized = true, authorize, controlsRef, intro }: Props) {
   const [text, setText] = useState(""), [draft, setDraft] = useState<Draft | null>(null);
   const [profile, setProfile] = useState<Profile>(member?.profile ?? manualProfile());
   const [editing, setEditing] = useState(false), [dirty, setDirty] = useState(false);
@@ -290,6 +291,7 @@ export function PreferenceFlow({ apiBase, demo, member, ready, refresh, renderFi
   const valid = profileSchema.safeParse(profile).success;
   const blocking = !!draft?.question?.required || !!draft?.conflicts.length;
   return <section className={`preference-flow ${minimal ? "minimal-flow" : "surface"}`} id="bevakning" aria-label="Personlig sökning">
+    {intro}
     <form className={minimal ? "prompt-form" : undefined} onSubmit={event => { event.preventDefault(); void generate(); }}>
       <div className={minimal ? "prompt-shell" : undefined}>
       <label htmlFor="housing-prompt">{draft?.question && !dirty ? draft.question.text : draft ? "Vill du rätta eller lägga till något?" : "Beskriv ditt nästa hem"}</label>
@@ -321,8 +323,8 @@ export function PreferenceFlow({ apiBase, demo, member, ready, refresh, renderFi
         </div>}
       </div>}
       {!minimal && !demo && <p className="small muted">Built with Llama · <a href="https://github.com/meta-llama/llama-models/blob/main/models/llama3_3/LICENSE" target="_blank" rel="noopener noreferrer">Modellvillkor</a>. Högst sex försök per medlem/IP och sex totalt i piloten per dygn (UTC). Granska alltid tolkningen.</p>}
+      {minimal && !ready && !draft && !receipt && <p className="pilot-note">Just nu sparas sökningar pausade – inga bostadsmejl ännu.</p>}
     </form>
-    {minimal && !ready && !draft && !receipt && <p className="pilot-note">Just nu sparas sökningar pausade – inga bostadsmejl ännu.</p>}
     {receipt && <section className="save-receipt">
       <h2 ref={savedHeading} tabIndex={-1}>{receipt.alertsEnabled ? "Din sökning är sparad och bevakningen startad" : "Din sökning är sparad och pausad"}</h2>
       <p>{receipt.alertsEnabled ? "Bara nya objekt kan skickas i morgonbevakningen." : "Inga bostadsmejl har aktiverats."} Bekräftad version {receipt.searchVersion}.</p>

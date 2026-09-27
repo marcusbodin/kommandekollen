@@ -244,16 +244,94 @@ async function websiteSurface(page: Page) {
   await expect(page.locator("footer:visible")).toHaveCount(1);
   await expect(page.getByRole("link", { name: "kommandekollen. – till sökningen" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Meny", exact: true })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Hitta kommande bostäder före andra" })).toBeVisible();
-  await expect(page.locator(".home-intro p")).toHaveText("Vi bygger en samlad koll på kommande bostäder direkt från mäklarna. Målet: hitta ditt nästa hem innan annonsen når de stora bostadssajterna.");
+  await expect(page.getByRole("heading", { name: "Vad är viktigt i ditt nästa hem?" })).toBeVisible();
+  await expect(page.locator(".home-value")).toHaveText("Hitta kommande bostäder före andra.");
+  await expect(page.locator(".home-intro p:not(.home-value)")).toHaveText("Vi bygger en samlad koll direkt från mäklarna. Målet: hitta ditt nästa hem innan annonsen når de stora bostadssajterna.");
   await expect(page.locator(".pilot-note")).toHaveText("Just nu sparas sökningar pausade – inga bostadsmejl ännu.");
   await expect(page.locator("footer:visible").getByRole("link", { name: "Kontakt", exact: true })).toHaveAttribute("href", "mailto:kontakt@kommandekollen.se");
   await expect(page.locator("footer:visible")).toContainText("©");
   await expect(page.locator(".home-photo,.inspiration")).toHaveCount(0);
-  await expect(page.locator("img:visible:not(.brand-mark)")).toHaveCount(0);
+  await expect(page.locator(".hero-backdrop")).toHaveCount(1);
+  await expect(page.locator("img:visible:not(.brand-mark):not(.hero-backdrop)")).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Senaste kommande bostäder" })).toBeVisible();
   await expect(page.locator(".privacy:visible, .results:visible, .saved-profile:visible, .draft-review:visible")).toHaveCount(0);
   await expect(page.getByRole("dialog")).toHaveCount(0);
+}
+async function heroGeometry(page: Page) {
+  const heading = (await page.locator("#home-title").boundingBox())!;
+  const prompt = (await page.locator("#housing-prompt").boundingBox())!;
+  const intro = (await page.locator(".home-intro").boundingBox())!;
+  const form = (await page.locator(".prompt-form").boundingBox())!;
+  const hero = (await page.locator(".home-hero").boundingBox())!;
+  const feed = (await page.locator(".public-listings").boundingBox())!;
+  const photo = (await page.locator(".hero-picture").boundingBox())!;
+  expect(hero.x).toBeCloseTo(0);
+  expect(hero.width).toBeCloseTo(await page.evaluate(() => document.documentElement.clientWidth));
+  expect(photo.x).toBeCloseTo(hero.x);
+  expect(photo.y).toBeCloseTo(hero.y);
+  expect(photo.width).toBeCloseTo(hero.width);
+  expect(photo.height).toBeLessThanOrEqual(680);
+  expect(photo.height).toBeGreaterThan(300);
+  for (const box of [intro, form]) {
+    expect(box.x).toBeGreaterThan(photo.x);
+    expect(box.x + box.width).toBeLessThan(photo.x + photo.width);
+    expect(box.y).toBeGreaterThan(photo.y);
+  }
+  if (page.viewportSize()!.width > 960) {
+    expect(heading.x).toBeGreaterThan(prompt.x + prompt.width);
+    const overlap = Math.min(heading.y + heading.height, prompt.y + prompt.height) - Math.max(heading.y, prompt.y);
+    expect(overlap).toBeGreaterThan(Math.min(heading.height, prompt.height) * .4);
+  } else {
+    expect(form.y).toBeGreaterThanOrEqual(intro.y + intro.height);
+    expect(prompt.y).toBeGreaterThan(heading.y + heading.height);
+  }
+  expect(feed.y).toBeGreaterThanOrEqual(hero.y + hero.height);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await test.info().attach(`hero-geometry-${page.viewportSize()!.width}`, {
+    body: JSON.stringify({ viewport: page.viewportSize(), hero, photo, heading, intro, prompt, form, feed }),
+    contentType: "application/json",
+  });
+}
+async function heroAssets(page: Page) {
+  const image = page.locator(".hero-backdrop");
+  await expect(image).toHaveAttribute("alt", "");
+  await expect(image).toHaveAttribute("width", "1600");
+  await expect(image).toHaveAttribute("height", "1000");
+  await expect(image).toHaveAttribute("fetchpriority", "high");
+  await expect(page.locator(".hero-picture")).toHaveAttribute("aria-hidden", "true");
+  await expect.poll(() => image.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0)).toBe(true);
+  const width = page.viewportSize()!.width <= 960 ? 800 : 1600;
+  const asset = await image.evaluate((el: HTMLImageElement) => ({ width: el.naturalWidth, height: el.naturalHeight, src: el.currentSrc }));
+  expect(asset.width).toBe(width); expect(asset.height).toBe(width * .625);
+  expect(new URL(asset.src).origin).toBe(new URL(page.url()).origin);
+  expect(new URL(asset.src).pathname).toBe(`/assets/stockholm-hero-${width}.webp`);
+  const response = await page.request.get(asset.src);
+  expect(response.status()).toBe(200);
+  expect(response.headers()["content-type"]).toContain("image/webp");
+  expect((await response.body()).length).toBeLessThan(width === 800 ? 150_000 : 300_000);
+  const credit = page.locator("footer:visible").getByRole("link", { name: "Bakgrundsfoto & licens" });
+  await expect(credit).toHaveAttribute("href", "/assets/ATTRIBUTION.md");
+  const notice = await page.request.get((await credit.getAttribute("href"))!);
+  expect(notice.status()).toBe(200);
+  const text = await notice.text();
+  for (const value of ["Holger Ellgaard", "https://commons.wikimedia.org/wiki/File:Sodra_angby_2008m.jpg",
+    "https://creativecommons.org/licenses/by-sa/3.0/", "Both adapted image files", "crop", "resize", "WebP",
+    "stockholm-hero-800.webp", "stockholm-hero-1600.webp", "inte ett bostadsobjekt till salu"]) expect(text).toContain(value);
+  await expect(page.locator(".public-listings img")).toHaveCount(0);
+}
+async function expandedHeroPanels(page: Page) {
+  const flow = (await page.locator(".home-composition .preference-flow").boundingBox())!;
+  const intro = (await page.locator(".home-intro").boundingBox())!;
+  const form = (await page.locator(".prompt-form").boundingBox())!;
+  const panels = page.locator(".home-composition .draft-review:visible,.home-composition .manual-search[open],.home-composition .save-receipt:visible,.home-composition .saved-profile:visible");
+  expect(await panels.count()).toBeGreaterThan(0);
+  for (const panel of await panels.all()) {
+    const box = (await panel.boundingBox())!;
+    expect(box.y).toBeGreaterThanOrEqual(Math.max(intro.y + intro.height, form.y + form.height));
+    expect(box.x).toBeCloseTo(flow.x);
+    expect(box.width).toBeCloseTo(flow.width, 1);
+  }
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 }
 async function borderlessSurfaces(page: Page, selectors: string, elevated = false) {
   const surfaces = await page.locator(selectors).evaluateAll(elements => elements
@@ -299,11 +377,15 @@ test("shared password guest can try AI then verify email and explicitly confirm 
   await page.context().clearCookies();
   await page.goto("/");
   await websiteSurface(page);
+  await heroGeometry(page);
   await expect(page.getByRole("heading", { name: "Ansök om medlemskap" })).toHaveCount(0);
   expect(await env.DB.prepare("SELECT count(*) AS n FROM subscriptions").first()).toEqual({ n: 1 });
   await page.getByRole("textbox", { name: "Beskriv ditt nästa hem", exact: true }).fill("Lägenhet i Solna, högst 4 miljoner.");
   await consentToInterpret(page, true);
   await expect(page.getByRole("heading", { name: "Stämmer det här?" })).toBeFocused();
+  await expandedHeroPanels(page);
+  if (process.env.VISUAL_REVIEW === "1" && test.info().project.name === "desktop")
+    await page.locator(".home-hero").screenshot({ path: test.info().outputPath("photo-hero-review.png"), animations: "disabled" });
   await page.getByLabel("Jag godkänner den här sökningen").check();
   await page.getByRole("button", { name: "Fortsätt till e-post", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Verifiera e-post för att spara" })).toBeFocused();
@@ -447,6 +529,8 @@ test("compact website shell explains the service, fits small screens and defers 
   for (const width of widths) {
     await page.setViewportSize({ width, height: width === 1440 ? 1000 : 850 });
     await websiteSurface(page);
+    await heroGeometry(page);
+    await heroAssets(page);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     if (width <= 430) expect((await page.locator(".compact-header").boundingBox())!.height).toBeLessThanOrEqual(84);
     expect(await prompt.evaluate(input => parseFloat(getComputedStyle(input).fontSize))).toBeGreaterThanOrEqual(16);
@@ -616,7 +700,7 @@ test("pinned mint presentation uses borderless depth, filled states and accessib
     const style = getComputedStyle(document.documentElement);
     return ["--cp-pink", "--cp-brand", "--cp-mint"].map(token => style.getPropertyValue(token).trim());
   })).toEqual(["#fbe3e8", "#5cbdb9", "#ebf6f5"]);
-  const heading = page.getByRole("heading", { name: "Hitta kommande bostäder före andra" });
+  const heading = page.getByRole("heading", { name: "Vad är viktigt i ditt nästa hem?" });
   await expect(heading).toHaveCSS("font-family", /Georgia/);
   await expect(heading).toHaveCSS("font-weight", "400");
   await expect(page.getByRole("button", { name: "Meny", exact: true })).toHaveCSS("font-family", /Segoe UI/);
@@ -632,6 +716,10 @@ test("pinned mint presentation uses borderless depth, filled states and accessib
     }
     await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
     await brandAssets(page);
+    await heroAssets(page);
+    await heroGeometry(page);
+    for (const surface of [".home-intro", ".prompt-form"]) await expect(page.locator(surface))
+      .toHaveCSS("background-color", theme === "light" ? "rgb(255, 255, 255)" : "rgb(32, 53, 50)");
     const primary = page.getByRole("button", { name: "Hitta bostad", exact: true });
     await prompt.fill("");
     await heading.click();
@@ -658,8 +746,8 @@ test("pinned mint presentation uses borderless depth, filled states and accessib
     await expect(primary).toHaveCSS("background-color", "rgb(251, 227, 232)");
     await expect(primary).toHaveCSS("color", "rgb(32, 58, 57)");
     await expect(primary).toHaveCSS("border-radius", "999px");
-    await borderlessSurfaces(page, ".prompt-shell,.prompt-shell .primary,.site-menu-toggle,.public-filters > summary", true);
-    await borderlessSurfaces(page, "#housing-prompt,.compact-header,.compact-footer,.pilot-note");
+    await borderlessSurfaces(page, ".prompt-form,.home-intro,.prompt-shell .primary,.site-menu-toggle,.public-filters > summary", true);
+    await borderlessSurfaces(page, ".prompt-shell,#housing-prompt,.compact-header,.compact-footer,.pilot-note");
     await expect(page.locator(".site-menu-toggle")).toHaveCSS("background-color", "rgb(92, 189, 185)");
     await expect(page.locator(".site-menu-toggle")).toHaveCSS("color", "rgb(32, 58, 57)");
     const text = await readableContrast(page, targets);
@@ -705,6 +793,7 @@ test("pinned mint presentation uses borderless depth, filled states and accessib
     await expect(prompt).toHaveValue("Lägenhet i Solna, gärna balkong.");
     await more(page, "Använd vanliga filter");
     await expect(page.getByRole("combobox", { name: "Kommun", exact: true })).toBeVisible();
+    await expandedHeroPanels(page);
     await borderlessSurfaces(page, ".manual-controls select", true);
     await borderlessSurfaces(page, ".manual-search,.manual-controls button");
     const propertyType = page.locator(".manual-controls .type-buttons").getByRole("button", { pressed: true });
@@ -733,6 +822,50 @@ test("pinned mint presentation uses borderless depth, filled states and accessib
   await cdp.send("Emulation.setEmulatedVisionDeficiency", { type: "none" });
   await cdp.detach();
   expect(calls).toBe(0); expect(gatePosts).toBe(0);
+});
+
+test("photo hero remains readable and usable without its image in light and dark themes", async ({ page }) => {
+  env.ACCESS_MODE = "shared"; env.SHARED_ACCESS_PASSWORD = gatePassword;
+  await page.context().clearCookies();
+  await page.route("**/assets/stockholm-hero-*.webp", route => route.fulfill({ status: 404, body: "" }));
+  await page.goto("/");
+  await websiteSurface(page);
+  await expect.poll(() => page.locator(".hero-backdrop").evaluate((el: HTMLImageElement) => el.complete)).toBe(true);
+  expect(await page.locator(".hero-backdrop").evaluate((el: HTMLImageElement) => el.naturalWidth)).toBe(0);
+  await expect(page.locator(".hero-backdrop")).toBeHidden();
+  const original = "Villa i Nacka med en trädgård.";
+  const prompt = page.locator("#housing-prompt");
+  await prompt.fill(original);
+  const node = await prompt.elementHandle();
+  const reports = [];
+  for (const theme of ["light", "dark"] as const) {
+    if (theme === "dark") { await more(page, "Mörkt tema"); await page.keyboard.press("Escape"); }
+    await expect(page.locator(".home-hero")).toHaveCSS("background-color", theme === "light" ? "rgb(235, 246, 245)" : "rgb(41, 67, 63)");
+    for (const surface of [".home-intro", ".prompt-form"]) await expect(page.locator(surface))
+      .toHaveCSS("background-color", theme === "light" ? "rgb(255, 255, 255)" : "rgb(32, 53, 50)");
+    await heroGeometry(page);
+    reports.push(await readableContrast(page));
+    await prompt.focus();
+    await expect(prompt).toHaveCSS("outline-width", "3px");
+    reports.push(await readableContrast(page, "#housing-prompt", "focus"));
+    await expect(prompt).toHaveValue(original);
+    expect(await prompt.evaluate((el, prior) => el === prior, node)).toBe(true);
+    if (process.env.VISUAL_REVIEW === "1" && test.info().project.name === "desktop")
+      await page.screenshot({ path: test.info().outputPath(`photo-hero-missing-${theme}.png`), fullPage: true, animations: "disabled" });
+  }
+  await test.info().attach("missing-image-contrast", { body: JSON.stringify(reports, null, 2), contentType: "application/json" });
+  await page.unroute("**/assets/stockholm-hero-*.webp");
+  await page.setViewportSize({ width: page.viewportSize()!.width <= 960 ? 1440 : 390, height: 1000 });
+  await heroAssets(page);
+  await expect(page.locator(".hero-backdrop")).toBeVisible();
+  await expect(prompt).toHaveValue(original);
+  await page.getByRole("button", { name: "Hitta bostad", exact: true }).click();
+  await expect(page.getByLabel("Jag vill använda AI-texthjälpen")).not.toBeChecked();
+  await expect(page.getByRole("button", { name: "Skapa med AI", exact: true })).toBeDisabled();
+  await page.keyboard.press("Escape");
+  await expect(prompt).toHaveValue(original);
+  expect(calls).toBe(0); expect(gatePosts).toBe(0);
+  expect(await env.DB.prepare("SELECT count(*) AS n FROM ai_attempts").first()).toEqual({ n: 0 });
 });
 
 async function seedPublicInventory() {

@@ -416,16 +416,26 @@ function App() {
     <main id="main" className={`container${minimal ? " compact-home" : ""}`}>
       {action ? <ActionPage key={action[2]} shared={!!shared} action={action} /> : <>
         {minimal && <>
+          <div className="home-hero">
+          <picture className="hero-picture" aria-hidden="true">
+            <source media="(max-width: 960px)" srcSet={`${import.meta.env.BASE_URL}assets/stockholm-hero-800.webp`} />
+            <img className="hero-backdrop" src={`${import.meta.env.BASE_URL}assets/stockholm-hero-1600.webp`}
+              width="1600" height="1000" alt="" fetchPriority="high" decoding="async"
+              onError={event => { event.currentTarget.hidden = true; }}
+              onLoad={event => { event.currentTarget.hidden = false; }} />
+          </picture>
           <div className="home-composition">
-          <section className="home-intro" aria-labelledby="home-title">
-            <h1 id="home-title">Hitta kommande bostäder före andra</h1>
-            <p>Vi bygger en samlad koll på kommande bostäder direkt från mäklarna. Målet: hitta ditt nästa hem innan annonsen når de stora bostadssajterna.</p>
-          </section>
           <PreferenceFlow apiBase={apiBase} demo={false} minimal authorized={!!gate} authorize={authorize}
+            intro={<section className="home-intro" aria-labelledby="home-title">
+              <h1 id="home-title">Vad är viktigt i ditt nästa hem?</h1>
+              <p className="home-value">Hitta kommande bostäder före andra.</p>
+              <p>Vi bygger en samlad koll direkt från mäklarna. Målet: hitta ditt nästa hem innan annonsen når de stora bostadssajterna.</p>
+            </section>}
             controlsRef={preferenceControls}
             member={guestFlow || !gate ? null : member} guest={guestFlow || !gate ? { aiReady: gate?.aiReady ?? false } : undefined}
             ready={catalog.serviceReady && !error && !loading} refresh={refresh} onInference={refresh}
             renderFilters={(filters, change) => <FilterPanel filters={filters} onChange={change} />} onDemoPreview={setDemoProfile} />
+          </div>
           </div>
           {publicFeed}
           {accountError && <div className="notice" role="alert"><p>{accountError} Din text finns kvar.</p><button onClick={refresh}>Kontrollera åtkomst igen</button></div>}
@@ -504,6 +514,7 @@ function App() {
       <span>© {new Date().getFullYear()} kommandekollen.</span>
       <a href="?info=privacy" onClick={event => openInfo(event, "privacy")}>Integritet & radering</a>
       <a href="mailto:kontakt@kommandekollen.se">Kontakt</a>
+      <a href={`${import.meta.env.BASE_URL}assets/ATTRIBUTION.md`}>Bakgrundsfoto & licens</a>
     </footer>}
     <footer hidden={minimal} className="site-footer"><span>kommandekollen.</span><a href="#integritet">Integritet & radering</a>{canSearch && <a href="#kallor">Källstatus</a>}<span className="small">{shared ? "Delat lösenord · e-post när du sparar" : "Privat tjänst · medlemskap efter godkännande"}</span></footer>
   </div>;

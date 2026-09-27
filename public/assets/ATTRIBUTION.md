@@ -1,4 +1,39 @@
-# Inspiration image
+# Photographs / Bakgrundsfoto och licens
+
+## Current hero background
+
+- Photographer / fotograf: **Holger Ellgaard** (Wikimedia username
+  **Holger.Ellgaard**).
+- Original title: **Sodra angby 2008m.jpg**, a house and trees in Sodra Angby,
+  Stockholm.
+- Source: https://commons.wikimedia.org/wiki/File:Sodra_angby_2008m.jpg
+- Original download: https://upload.wikimedia.org/wikipedia/commons/c/c2/Sodra_angby_2008m.jpg
+- Original license: **Creative Commons Attribution-ShareAlike 3.0 Unported
+  (CC BY-SA 3.0)**, https://creativecommons.org/licenses/by-sa/3.0/
+- Source metadata and download checked: **2026-09-27**. The source was selected
+  and supplied through the project owner's coordinating session.
+- Local adapted files:
+  - `stockholm-hero-800.webp` — 800 x 500, WebP quality 76.
+  - `stockholm-hero-1600.webp` — 1600 x 1000, WebP quality 64.
+
+**Changes / bearbetning:** crop the 2559 x 1878 original to x=0, y=0,
+width=2559, height=1600, removing part of the lower street/lawn; resize with
+Lanczos and encode as WebP without embedded metadata. CSS responsively crops
+the displayed background. No recoloring or generated image content is added.
+
+**Both adapted image files are distributed under the same CC BY-SA 3.0 license**:
+https://creativecommons.org/licenses/by-sa/3.0/ . Retain attribution, identify
+changes and share further adaptations of these images under that license.
+This photo license applies to the image files, not the entire application
+or its separately supplied logo.
+
+**Bakgrundsillustration, inte ett bostadsobjekt till salu.** The photograph is
+decorative; no listing, endorsement by the photographer or depicted property's
+owner, or property-release guarantee is implied. The application serves only
+these local derivatives, without hotlinks or runtime third-party image requests.
+The footer links here for the full attribution, source, changes and license.
+
+## Historical unused inspiration image
 
 - Local files: `home-light-480.webp` (480 x 320), `home-light-960.webp`
   (960 x 640).

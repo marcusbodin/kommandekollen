@@ -24,7 +24,7 @@ configuration, secret or migration.
 The product goal is early discovery directly at brokers, before larger portals,
 not an all-source or first-buyer guarantee. Optional AI clarifies wishes; public
 reading/filtering uses none. The homepage explicitly frames that discovery goal
-as "Vi bygger"/"Målet:". The user-pinned headline "Hitta kommande bostäder före andra"
+as "Vi bygger"/"Målet:". The supporting statement "Hitta kommande bostäder före andra"
 and initial "Hitta bostad" action do not change that goal into proven coverage.
 Zero connected sources remains an honest empty state; the prompt helper explains
 that the gated AI action creates a search proposal, not a saved profile.
@@ -44,8 +44,11 @@ saved drafts, account/login/logout/owner tools, quota and results/source status.
 The old input-level "Mer" is removed. Privacy/contact is also in the footer.
 Manual review and account login request the gate when needed but never AI
 consent or inference. The existing backend remains the authorization boundary.
-The supplied local house/radar logo stays; all inspiration photography is removed,
-including legacy/demo. The white/mint search composition precedes the public feed.
+The supplied local house/radar logo stays. The latest layout places the prompt
+left and "Vad är viktigt i ditt nästa hem?" right over a decorative home-photo
+background, with text-before-input on mobile. Expanded personal panels share the
+same mounted flow and use full-width opaque surfaces below the pair.
+The old inspiration card stays removed, including legacy/demo and the public feed.
 The pinned palette supplies teal details and pale-pink actions; a native serif
 display complements the unchanged sans-serif controls.
 Decorative borders are replaced by soft shadows and filled pink/teal/mint
