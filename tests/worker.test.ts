@@ -7,7 +7,7 @@ import { draftSchema, manualProfile, type Draft } from "../shared/preferences";
 import worker from "../worker/index";
 import { AI_MODEL } from "../worker/ai";
 import { prepareDigest } from "../worker/mail";
-import { hash, keyed, seal, unseal, type Env, type MemberState } from "../worker/support";
+import { actionUrl, hash, keyed, seal, unseal, type Env, type MemberState } from "../worker/support";
 import { parseJsonLd } from "../scripts/collector";
 
 const ORIGIN = "https://app.example.com", BASE = "https://api.example.com";
@@ -398,6 +398,20 @@ describe("membership authorization", () => {
     expect((await request("/api/apply", { email: "extra@example.com", application: "A new application", consent: true, website: "" })).status).toBe(503);
     expect((await request("/api/login", { email: "owner@example.com", website: "" })).status).toBe(202);
     expect((await env.DB.prepare("SELECT count(*) AS n FROM subscriptions").first<{ n: number }>())?.n).toBe(40);
+  });
+  it("uses the canonical www origin for email links and credentialed browser requests", async () => {
+    const canonical = "https://www.example.com";
+    env.PUBLIC_URL = `${canonical}/`;
+    env.ALLOWED_ORIGINS = canonical;
+    for (const action of ["confirm", "guest-confirm", "unsubscribe"]) {
+      expect(actionUrl(env, action, "synthetic-token")).toBe(`${canonical}/#${action}=synthetic-token`);
+    }
+    for (const origin of [canonical, "https://example.com", "http://www.example.com", "https://www.example.com.evil.example"]) {
+      const response = await worker.fetch(new Request(`${BASE}/api/status`, { headers: { Origin: origin } }), env);
+      expect(response.status).toBe(origin === canonical ? 200 : 403);
+      expect(response.headers.get("Access-Control-Allow-Origin")).toBe(origin === canonical ? canonical : null);
+      expect(response.headers.get("Cache-Control")).toBe("no-store");
+    }
   });
   it("enforces strict CORS, JSON, body limits, expiry and no unauthenticated infrastructure actions", async () => {
     const response = await mf.dispatchFetch(`${BASE}/api/apply`, { method: "POST", headers: { Origin: "https://evil.example", "Content-Type": "application/json" }, body: "{}" });

@@ -37,9 +37,8 @@ routes = [{ pattern = "api.kommandekollen.se", custom_domain = true }]
 SERVICE_ENABLED = "true"
 AI_ENABLED = "true"
 ACCESS_MODE = "shared"
-PUBLIC_URL = "https://kommandekollen.se/"
-# Exact origins during the approved apex-to-www transition.
-ALLOWED_ORIGINS = "https://kommandekollen.se,https://www.kommandekollen.se"
+PUBLIC_URL = "https://www.kommandekollen.se/"
+ALLOWED_ORIGINS = "https://www.kommandekollen.se"
 # MAIL_FROM and PRIVACY_CONTACT are production secrets, not public vars.
 AUTHORIZED_SOURCES = "[]"
 PRIVATE_OBSERVATION_SOURCES = "[]"
