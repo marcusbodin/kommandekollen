@@ -114,6 +114,9 @@ private listings and revalidate on return; visible sessions check at most once
 per minute, with local expiry enforcement. Remote rotation/revocation is
 detected on the next server check, not through an instantaneous push. A guest's
 expected account-only 401 does not invalidate an otherwise valid password gate.
+Access-loss errors remain distinct from connection failures throughout the
+password, preference and email-action flows, including links opened in another
+browser. They clear private state without falsely reporting a network outage.
 The housing-text node remains mounted and its unsent text survives access loss.
 
 | Route | Contract |

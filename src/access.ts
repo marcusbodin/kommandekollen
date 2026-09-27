@@ -3,6 +3,8 @@ let generation = 0;
 let pending = new AbortController();
 const channel = typeof BroadcastChannel === "undefined" ? null : new BroadcastChannel("kommandekollen-access");
 
+export class PrivateAccessError extends Error {}
+
 export const accessGeneration = () => generation;
 export function closePrivateAccess(broadcast = false) {
   generation++;
@@ -23,17 +25,17 @@ export async function privateFetch(url: string, init: RequestInit = {}, allowAno
     ...init, credentials: "include", cache: "no-store", redirect: "error",
     signal: AbortSignal.any([pending.signal, init.signal ?? AbortSignal.timeout(25_000)]),
   });
-  if (current !== generation) throw new Error("Åtkomsten har stängts. Öppna den igen för att fortsätta.");
+  if (current !== generation) throw new PrivateAccessError("Åtkomsten har stängts. Öppna den igen för att fortsätta.");
   if (response.status === 401 && !allowAnonymous) {
     closePrivateAccess();
-    throw new Error("Åtkomsten har gått ut eller återkallats. Öppna den igen för att fortsätta.");
+    throw new PrivateAccessError("Åtkomsten är stängd. Öppna den igen för att fortsätta.");
   }
   if (response.status === 503) {
     const failure: unknown = await response.clone().json().catch(() => null);
     if (failure && typeof failure === "object" && "code" in failure
       && (failure.code === "gate_unavailable" || failure.code === "access_config")) {
       closePrivateAccess();
-      throw new Error("Lösenordsåtkomsten är inte tillgänglig. Försök senare.");
+      throw new PrivateAccessError("Lösenordsåtkomsten är inte tillgänglig. Försök senare.");
     }
   }
   return response;

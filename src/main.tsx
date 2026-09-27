@@ -10,7 +10,7 @@ import { PreferenceFlow, type PreferenceControls } from "./PreferenceFlow";
 import { gateSchema, GateStatus, useSearchAccess, type Gate } from "./SharedAccess";
 import { PublicListings } from "./PublicListings";
 import type { PublicListing } from "../shared/public-listings";
-import { accessGeneration, closePrivateAccess, onAccessClosed, privateFetch } from "./access";
+import { accessGeneration, closePrivateAccess, onAccessClosed, privateFetch, PrivateAccessError } from "./access";
 import "./style.css";
 
 const apiBase = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
@@ -59,7 +59,10 @@ async function post(path: string, body: unknown): Promise<string> {
     response = await privateFetch(`${apiBase}${path}`, {
       method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), signal: AbortSignal.timeout(20_000),
     });
-  } catch { throw new Error("Kunde inte nå tjänsten. Kontrollera anslutningen och försök igen. Begäran kan ha nått servern."); }
+  } catch (error) {
+    if (error instanceof PrivateAccessError) throw error;
+    throw new Error("Kunde inte nå tjänsten. Kontrollera anslutningen och försök igen. Begäran kan ha nått servern.");
+  }
   let result: { message?: string };
   try { result = await response.json(); }
   catch { throw new Error("Tjänsten svarade oväntat. Försök igen senare."); }

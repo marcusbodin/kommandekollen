@@ -3,7 +3,7 @@ import { z } from "zod";
 import { defaultFilters, municipalities, types, type Filters } from "../shared/model";
 import { describeFilters, draftSchema, hardDescription, manualProfile, profileSchema, type Draft, type Profile } from "../shared/preferences";
 import type { Authorize, SearchAccess } from "./SharedAccess";
-import { privateFetch } from "./access";
+import { privateFetch, PrivateAccessError } from "./access";
 
 type Account = { profile: Profile; searchVersion: number; aiReady: boolean; alertsEnabled: boolean };
 const receiptSchema = z.object({ message: z.string(), searchVersion: z.number().int().nonnegative(), profile: profileSchema, alertsEnabled: z.boolean() });
@@ -60,7 +60,8 @@ export function PreferenceFlow({ apiBase, demo, member, ready, refresh, renderFi
       response = await privateFetch(`${apiBase}/api/${(access?.guest ?? !!guest) ? "guest/" : ""}preferences/${path}`, { method: body ? "POST" : "GET",
         credentials: "include", headers: body ? { "Content-Type": "application/json" } : undefined,
         body: body ? JSON.stringify(body) : undefined, signal: signal ?? AbortSignal.timeout(25000) });
-    } catch {
+    } catch (error) {
+      if (error instanceof PrivateAccessError) throw error;
       throw new Error("Kunde inte nå tjänsten eller begäran avbröts. Resultatet är inte bekräftat. Din text finns kvar; läs in utkastet innan du försöker igen.");
     }
     let result: unknown;

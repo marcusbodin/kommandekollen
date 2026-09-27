@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
-import { closePrivateAccess, privateFetch } from "./access";
+import { closePrivateAccess, privateFetch, PrivateAccessError } from "./access";
 
 export const quotaSchema = z.object({ remaining: z.number().int().min(0).max(6), limit: z.literal(6), day: z.string() });
 export const gateSchema = z.object({ open: z.literal(true), expiresAt: z.number().int().positive(), aiReady: z.boolean(), alertsReady: z.boolean(), pendingSave: z.boolean(), hasDraft: z.boolean(), quota: quotaSchema });
@@ -11,7 +11,10 @@ export async function accessRequest(apiBase: string, path: string, body?: unknow
     response = await privateFetch(`${apiBase}${path}`, { method: body ? "POST" : "GET",
       headers: body ? { "Content-Type": "application/json" } : undefined, body: body ? JSON.stringify(body) : undefined,
       signal: signal ?? AbortSignal.timeout(25000) }, path === "/api/gate" && !!body);
-  } catch { throw new Error("Kunde inte nå tjänsten. Resultatet är inte bekräftat. Kontrollera anslutningen innan du försöker igen."); }
+  } catch (error) {
+    if (error instanceof PrivateAccessError) throw error;
+    throw new Error("Kunde inte nå tjänsten. Resultatet är inte bekräftat. Kontrollera anslutningen innan du försöker igen.");
+  }
   let result: unknown;
   try { result = await response.json(); }
   catch { throw new Error(`Tjänsten gav ett oväntat svar (HTTP ${response.status}). Försök senare.`); }

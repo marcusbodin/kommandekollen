@@ -77,7 +77,11 @@ test.beforeEach(async ({ page }) => {
     await route.fulfill({ response });
   });
 });
-test.afterEach(async () => {
+test.afterEach(async ({ page }) => {
+  if (!page.isClosed()) {
+    await page.goto("about:blank");
+    await page.unrouteAll({ behavior: "wait" });
+  }
   if (server) await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
   await mf?.dispose();
 });
@@ -463,7 +467,8 @@ test("wrong-password errors are visible and a separate browser cannot claim the 
     });
     await second.goto(link);
     await second.getByRole("button", { name: "Bekräfta e-post", exact: true }).click();
-    await expect(second.locator(".action-page [role=alert]")).toContainText("gemensamma lösenordet");
+    await expect(second.locator(".action-page [role=alert]")).toContainText("Åtkomsten är stängd");
+    await expect(second.locator(".action-page [role=alert]")).not.toContainText("Kunde inte nå tjänsten");
     await expect(second.locator(".action-page [role=alert]")).toBeFocused();
     await expect(second.locator(".action-page [role=alert]")).toBeInViewport();
     await expect(second.getByText("Om länken öppnades på en annan enhet:", { exact: false })).toBeVisible();
