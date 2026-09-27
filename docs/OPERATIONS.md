@@ -199,6 +199,38 @@ responses, automatically enroll sources or retry with a new identity. stdout
 has counts only; failures are sanitized. Capture metadata is trusted
 operator-supplied evidence, not a cryptographic attestation of broker consent.
 
+### Manual private browser runner
+
+`private-observations.yml` is a separate **manual-only** workflow for one chosen
+Notar, HusmanHagberg or MOHV observation. Only the personal repository owner
+`marcusbodin` can run its collection job. There is no schedule or automatic retry,
+and it shares the `private-ingestion` concurrency lock with the legacy importer.
+
+Configure the same reviewed, expiring `PRIVATE_OBSERVATION_SOURCES` as a Worker
+production secret and a GitHub Actions repository secret. Do not restore a public
+empty variable of the same name: it would conflict with the private binding.
+Missing grants still default closed. `AUTHORIZED_SOURCES` remains `[]`.
+The collection step alone receives the existing `INGEST_TOKEN` and the
+`PUBLIC_API_URL` repository variable as `INGEST_API_URL`.
+
+```sh
+node --import tsx scripts/collect-private.ts --source notar
+```
+
+Preflight checks source/host/expiry, token and the exact production HTTPS API
+origin before starting any broker request. On Linux it uses the unchanged
+bounded renderers and robots rules, followed by the strict existing importer.
+No extra API replay, pagination, proxy, challenge bypass or capacity increase
+is introduced. Every invocation keeps its capture only in memory. A valid empty
+preview reports `no_items`, not a successful populated feed.
+
+Only aggregate partial receipts or fixed failure codes reach logs; real facts,
+DOM, raw exceptions and credentials are not published as logs or artifacts.
+Any access/robots/readiness failure stops that source. A failed import must not
+be retried with a fabricated fresh capture time. A successful manual observation
+does not establish complete broker coverage, permission for recurring database
+extraction, or eligibility for housing emails.
+
 ### Property emails remain paused
 
 `PROPERTY_EMAILS_ENABLED` is a separate default-off capability. Only exact

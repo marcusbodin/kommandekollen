@@ -41,7 +41,7 @@ PUBLIC_URL = "https://www.kommandekollen.se/"
 ALLOWED_ORIGINS = "https://www.kommandekollen.se"
 # MAIL_FROM and PRIVACY_CONTACT are production secrets, not public vars.
 AUTHORIZED_SOURCES = "[]"
-PRIVATE_OBSERVATION_SOURCES = "[]"
+# PRIVATE_OBSERVATION_SOURCES is a private, expiring production secret.
 PROPERTY_EMAILS_ENABLED = "false"
 
 [env.production.ai]
