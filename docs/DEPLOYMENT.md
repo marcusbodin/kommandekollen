@@ -1,6 +1,51 @@
 # Deployment and launch status
 
-## Neutral branding and liquid glass, 2026-09-27
+## Solid blue-white logo and first private objects, 2026-09-27
+
+Pages `36332659680` published `7b234d6`, including the logo/button change
+`83fbd65`. The latest supplied solid-blue house with white radar now appears
+in the header and favicon. Primary buttons remain blue with white text.
+Secondary buttons have transparent backgrounds and matching 1px blue borders
+and text (`#005ec7` in light mode, contrast-adapted `#4d9aff` in dark mode).
+The supplied interior image, liquid glass and bold headings are unchanged.
+
+Production-configured bundles are `index-BYkC9A39.js` and
+`index-LqHVXeMz.css`. All nine selected live HTML, bundle, logo, image and
+provenance files matched the production build byte-for-byte over HTTPS.
+Apex redirects to HTTPS www; the API remains www-origin-only and anonymous
+listings/catalog remain 401/no-store.
+
+Linux Check `36331825235` passed on attempt 2 with unchanged code. Attempt 1
+passed 67/68 browser cases, including the new exact asset, transparent-button,
+color, focus and contrast assertions; an existing immediate `posts[0]`
+assertion raced its asynchronous request in `app.spec.ts:310`.
+That intermittent test remains a separate follow-up. The four desktop/mobile
+light/dark screenshots were reviewed. No native local or authenticated live
+browser verification is claimed.
+
+The distinct owner-approved manual source pilot is now connected for
+**HusmanHagberg only**, not all three investigated sources:
+
+- Run `36332042322` imported three fresh partial observations. Remote D1
+  confirms three active rows, three private-provenance rows, one partial
+  receipt with its payload cleared and zero retirements.
+- Notar `36331879123` stopped with `access_denied`; MOHV `36332125202` stopped
+  with `not_ready`. No import, retry, access-control bypass or guessed facts.
+  Both grants were removed from private Worker and GitHub configuration.
+- The surviving private HusmanHagberg usage-basis grant expires at
+  `2026-10-04T18:00:00.000Z`. It is not a broker license. Complete licensed
+  source configuration remains empty. Collection is manual, not scheduled;
+  `PROPERTY_EMAILS_ENABLED=false`. One existing subscription remains paused,
+  and the four stored AI attempts are unchanged.
+
+Worker `65c61c74-d129-4bed-99f2-9097361daa69` removed the old public empty
+source variable before private secret provisioning. Final secret-change
+version `a425314d-a89b-41bc-ad71-2ac513141438` retains only the working source.
+All other secrets, www links/CORS, free-tier limits and technical-email/cleanup
+schedule are preserved. See [source outcomes](SOURCES.md#manual-private-production-pilot-2026-09-27)
+and the [manual runner](OPERATIONS.md#manual-private-browser-runner).
+
+## Earlier neutral branding and liquid glass, 2026-09-27
 
 Pages run `36328796921` published commit `7f1371a`: the supplied blue/radar logo,
 blue/light-blue/coral buttons, neutral page colors, weight-700 headings and

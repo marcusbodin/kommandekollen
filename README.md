@@ -9,7 +9,8 @@ Besökare med lösenord kan prova AI eller egna sökfilter utan e-post. E-post v
 först vid sparande, följt av en ny uttrycklig granskning/bekräftelse.
 Ingen medlemsansökan eller manuell ägarprövning behövs i delat lösenordsläge.
 **AI-budgeten är högst sex anrop per dygn för hela tjänsten, inte per besökare.
-Inga livekällor är anslutna; sökningar kan bara sparas pausade.**
+Den manuella privata piloten har tre färska objekt från HusmanHagberg
+(2026-09-27); sökningar kan fortfarande bara sparas pausade.**
 Schemalagd städning och hantering av inloggningsmejl är påslagna. Ägaren har
 loggat in via ett riktigt mejl, använt AI-flödet och uttryckligen sparat en
 pausad sökning. Den sparade profilen och avstängda bostadsmejl är verifierade
@@ -162,8 +163,14 @@ aldrig hemma i `VITE_*`, JavaScript-paket, git eller Actions-loggar.
   behåller ursprunglig observationstid och identitet vid lokal återläsning.
   SkandiaMäklarna och Länsförsäkringar är stoppade på uttryckliga villkor;
   privat användning ger inte automatiskt tillstånd till indexering.
-  Inga objekt har importerats eller publicerats av dessa verktyg; källtillstånd,
-  produktionsinsamling och mejlbevakning har inte aktiverats.
+  Förhandsvisningsverktygen importerar inte själva. Den separata manuella
+  [privata körningen](docs/OPERATIONS.md#manual-private-browser-runner)
+  importerade tre färska HusmanHagberg-objekt den 27 september.
+  Notar stoppades vid nekad åtkomst och MOHV vid ett resultat som inte kunde
+  verifieras; deras tidigare prov används inte som färska objekt.
+  Bara HusmanHagberg är nu aktiverad, med tidsbegränsad privat användningsgrund
+  till 4 oktober. Ingen allmän mäklarlicens, automatisk insamling eller
+  mejlbevakning har aktiverats.
 
 ## Begränsningar och dokumentation
 

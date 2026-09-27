@@ -24,7 +24,8 @@ the previous membership mode remains the local/missing-setting default.
 Help home seekers discover upcoming homes early, directly at the broker, with
 the objective of contacting that broker before the home reaches larger portals.
 This is the product's core value, not a verified coverage or latency claim:
-there are still zero connected sources. No all-brokers/all-listings, buying
+the manual private pilot has three verified HusmanHagberg observations as of
+2026-09-27, not scheduled or comprehensive coverage. No all-brokers/all-listings, buying
 priority or competitive head-start guarantee is justified.
 
 Show permitted upcoming facts to authorized visitors, newest observed first. Optional AI lets
@@ -162,7 +163,7 @@ The earlier inspiration card remains removed; listings have no image field.
 "Hitta kommande bostäder före andra." stays as supporting value copy and the
 initial primary CTA remains exactly "Hitta bostad".
 Its introduction explicitly says "Vi bygger", distinguishing the
-source-direct discovery goal from the zero-source pilot actually operating.
+source-direct discovery goal from the limited manual pilot actually operating.
 The user removed the goal sentence, global pause note and public-feed subtitle;
 paused-only review/save/receipt information and backend guards remain.
 The adjacent helper explains that the protected AI step makes a search proposal,
@@ -170,8 +171,13 @@ not a saved profile. Password-only browsing/filtering is separate and needs no A
 
 ## Evidence on Hand
 
-No real listing dataset, agency permissions, listing photographs, testimonials or
-coverage measurements have been supplied. No live agency integration is enabled.
+No agency license, listing photographs, testimonials or complete-coverage
+measurements have been supplied. After fresh policy review and explicit owner
+approval, one bounded private HusmanHagberg observation imported three real
+records on 2026-09-27. Its private usage-basis grant expires on 2026-10-04;
+this is not a broker license or recurring-collection authorization. The same
+manual pilot stopped Notar on access denial and MOHV on unverified readiness,
+with no retries or imports from either. Both grants were then removed.
 Demonstration data must be labeled and must never send email or create accounts.
 Fastighetsbyran explicitly disallows automated access without special permission
 in https://www.fastighetsbyran.com/robots.txt (checked 2026-09-25).

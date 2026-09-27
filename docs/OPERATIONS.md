@@ -86,10 +86,12 @@ catalog, filters, deterministic ranking, cards and mail share this model.
 
 ## Private observation imports
 
-This is a separate admin-only path, **not** an instruction to activate sources.
+This is a separate admin-only path, **not** automatic authority to activate sources.
 Password-only or noncommercial use is not a license. Parent/operator review of
 access, extraction and use conditions remains required; no real grant was
-created, source fetched or production record imported during implementation.
+created, source fetched or production record imported during its original implementation.
+The subsequent owner-approved manual pilot and actual source outcomes are recorded
+in [SOURCES.md](SOURCES.md#manual-private-production-pilot-2026-09-27).
 
 `PRIVATE_OBSERVATION_SOURCES` defaults to `[]`. Each configured entry has
 `id`, exact `hosts`, `expiresAt` and `basisReference`: a truthful private
@@ -209,6 +211,9 @@ and it shares the `private-ingestion` concurrency lock with the legacy importer.
 Configure the same reviewed, expiring `PRIVATE_OBSERVATION_SOURCES` as a Worker
 production secret and a GitHub Actions repository secret. Do not restore a public
 empty variable of the same name: it would conflict with the private binding.
+For the initial migration from a public `[]` variable, deploy its removal before
+creating the secret; Cloudflare rejects a secret with a name already used by a
+plain variable. Preserve all other bindings and do not rotate existing credentials.
 Missing grants still default closed. `AUTHORIZED_SOURCES` remains `[]`.
 The collection step alone receives the existing `INGEST_TOKEN` and the
 `PUBLIC_API_URL` repository variable as `INGEST_API_URL`.

@@ -1,17 +1,54 @@
 # Sources and collection status
 
+## Manual private production pilot, 2026-09-27
+
+After the owner's explicit approval, the complete linked Notar, HusmanHagberg
+and MOHV policy pages were freshly reviewed. Notar/MOHV's inspected documents
+are privacy policies, not extraction licenses; no explicit extraction ban was
+found in them. HusmanHagberg expressly permits attributed, non-distorting
+links and restricts copying protected texts/images. This supports the recorded
+limited private factual-link assessment, **not** a claim of broker permission,
+legal certainty or authority for repeated database extraction.
+
+One bounded manual Linux run was made per source, using unchanged normal-browser
+allowlists, robots checks and request/time/size limits. No detail pages, paging,
+API replay, challenge bypass, proxy, retry or stale-capture retimestamping was used.
+
+| Source | Fresh production result | Current activation |
+| --- | --- | --- |
+| HusmanHagberg | Run `36332042322`: 3 genuine upcoming Stockholm-county facts imported at `2026-09-27T16:07:54.625Z`; partial receipt 3 inserted, 0 updated/ignored/retired | Active private usage-basis grant, exact `www.husmanhagberg.se` host, expires `2026-10-04T18:00:00.000Z` |
+| Notar | Run `36331879123`: `access_denied`; stopped, no import | Grant removed; disabled |
+| MOHV | Run `36332125202`: `not_ready`; usable results could not be verified, no import | Grant removed; disabled; the code alone does not establish whether the cause was access, dependency or rendering readiness |
+
+Production D1 independently confirms three active HusmanHagberg rows, three
+private-provenance entries, one partial receipt with its payload cleared, and
+zero retirements. The existing one subscription remains paused and the four
+AI attempts are unchanged. Password protection remains required; these are not
+public/static listing data or complete source coverage. An authenticated live
+browser rendering is not claimed by the import/database verification.
+
+Only the working HusmanHagberg grant remains in private Worker/GitHub secrets.
+`AUTHORIZED_SOURCES=[]` and `PROPERTY_EMAILS_ENABLED=false` remain unchanged.
+There is **no scheduled collection**; these observations will age without another
+explicit operation. Source access, private facts and authorization basis are not
+published in workflow logs/artifacts. Only source IDs and aggregate outcomes are.
+
+## Historical preview and initial policy status
+
 Initial policy checks: 2026-09-25. Bounded Notar/Bjurfors public-HTML investigation:
 2026-09-27, detailed below. Static index HTML yielded no property records.
 A subsequently authorized normal-browser Notar investigation rendered 24 explicit
 upcoming cards; the named DOM parser extracted 13 Stockholm-county records into
 a private, incomplete preview. No individual detail page was fetched, and no
 login, CAPTCHA, private API or bot protection was bypassed. Production source
-activation remains empty; research did not ingest or publish inventory.
+activation was still empty at that stage; research did not ingest or publish inventory.
 The separately approved expansion on the same date added working local previews
 for HusmanHagberg and MOHV. SkandiaMäklarna and Länsförsäkringar were stopped at
 their explicit linked terms; MOHV was authorized as the replacement candidate.
 These are three technically demonstrated preview sources including Notar, not
 three licensed/activated production sources or complete Stockholm coverage.
+The table below records that earlier investigation; the fresh production
+pilot above supersedes its activation statuses.
 
 | Candidate | Evidence | Exact status |
 | --- | --- | --- |
