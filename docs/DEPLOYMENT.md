@@ -27,8 +27,8 @@ to the owner's inbox succeeded.
 Frontend HTTPS is valid and enforced; HTTP redirects to the canonical HTTPS URL.
 The public controller/contact and provider-location disclosures are published.
 The owner separately confirmed the account's **Workers Free** plan, not only
-the zone's Free DNS plan. The warmer compact website is published by Pages run
-`36301154382` from feature commit `1ef69f0`; the unchanged active Worker version is
+the zone's Free DNS plan. The reference-inspired website is published by Pages run
+`36302192410` from feature commit `2a4d605`; the unchanged active Worker version is
 `b4da83e5-c887-49cb-a194-d2b292160f67`. `SHARED_ACCESS_PASSWORD` was generated in a
 private local terminal and stored as a Worker secret; its value is not in the
 repository, chat or deployment output. The owner saved their copy.
@@ -52,24 +52,29 @@ footer. Secondary account, help, privacy and source panels remain on request.
 The public note explicitly says searches are paused and property listings and
 property emails are not yet available.
 
-The owner then requested more color and life. The presentation now uses
-rose-tinted search and footer surfaces and an existing locally hosted, licensed
-home photograph: beside the input on desktop and cropped below it on mobile.
+The owner's supplied visual reference now defines the palette: pink `#fbe3e8`,
+blue-green `#5cbdb9` and mint `#ebf6f5`. White open surfaces, Georgia display
+headings and pink pill actions replace the earlier rose enclosure. Deeper teal
+derivatives provide readable light-theme text and control edges; the optional
+dark theme uses complementary dark teal surfaces. An existing locally hosted,
+licensed home photograph sits beside the input on desktop and below it on mobile.
 Its caption explicitly identifies inspiration rather than a property listing;
 the photographer credit links to the existing attribution. No external image
 requests or new product claims were introduced.
 
-The published bundle is `index-BZDepHd5.js`, with `index-CJAswLsg.css`.
+The published bundle is `index-DsHR7tt6.js`, with `index-BhGsG_7t.css`.
 Actual live browser checks at
 320, 360, 390, 430 and 1440 pixels confirmed the website shell, light default,
 no horizontal overflow and button targets of at least 44 pixels. Menu, help,
 privacy and the home link retained the exact synthetic input. "Förfina min
 sökning" still opens the password/unchecked AI-consent dialog; cancellation
 retains the text. Direct `?info=help` and `?info=privacy` links also worked.
-The local photo and attribution loaded successfully; mobile image placement,
-both themes and reduced-motion behavior were checked. A bounded desktop/mobile
-visual batch was inspected, with a settled dark-theme capture confirming colors
-after the theme transition.
+The exact palette tokens, Georgia heading, mint input region and single-row
+mobile header were verified in the live page. Computed text contrast passed for
+the checked light/dark surfaces and enabled primary actions. The local photo
+and attribution loaded successfully; mobile image placement, both themes and
+reduced-motion behavior were checked. A bounded desktop/mobile visual batch was
+inspected with finite animations settled before capture.
 These checks attempted no POST or other mutation, consumed no AI calls and
 reported no browser runtime errors or insecure subresource requests. Backend,
 secrets, migrations, budgets and saved records were not changed by this release.
