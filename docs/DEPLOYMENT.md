@@ -14,7 +14,9 @@ rewriting the existing owner profile or AI reservations.
 
 The **shared-password pilot is enabled**: `SERVICE_ENABLED=true`,
 `AI_ENABLED=true`, `ACCESS_MODE=shared`, native Workers AI binding and an
-every-minute cleanup/mail cron. Catalog and guest draft APIs require the gate;
+every-minute cleanup/mail cron. The new read-only `GET /api/listings` is public
+and serves fixed pages of 12 approved-source objects, with independent browsing
+filters. The existing catalog and guest draft APIs still require the gate;
 saved accounts/profiles require their verified own-account session as well.
 Manual applications/approval are disabled in this mode.
 There are **zero authorized live sources**, so searches save paused and alert
@@ -27,9 +29,10 @@ to the owner's inbox succeeded.
 Frontend HTTPS is valid and enforced; HTTP redirects to the canonical HTTPS URL.
 The public controller/contact and provider-location disclosures are published.
 The owner separately confirmed the account's **Workers Free** plan, not only
-the zone's Free DNS plan. The reference-inspired website is published by Pages run
-`36303066140` from feature commit `6551720`; the unchanged active Worker version is
-`b4da83e5-c887-49cb-a194-d2b292160f67`. `SHARED_ACCESS_PASSWORD` was generated in a
+the zone's Free DNS plan. The logo/public-feed website is published by Pages run
+`36305751767` from feature commit `b2dbb5f`, including the separate supplied-logo
+commit `ec1bf12`. The matching Worker was deployed first; its active version is
+`88c17650-e6e9-4b9c-8074-11972ba86570`. `SHARED_ACCESS_PASSWORD` was generated in a
 private local terminal and stored as a Worker secret; its value is not in the
 repository, chat or deployment output. The owner saved their copy.
 
@@ -45,49 +48,59 @@ The existing owner profile/version and all four prior AI reservations survived.
 The user subsequently confirmed correct-password access without email and the
 guest email-verification/save flow.
 
-On 2026-09-27, an initial input-only release was replaced at the owner's request
-with a compact website: the existing wordmark, desktop navigation/mobile menu,
-purpose heading and introduction, prominent text input, and privacy/contact
-footer. Secondary account, help, privacy and source panels remain on request.
-The public note explicitly says searches are paused and property listings and
-property emails are not yet available.
+On 2026-09-27, the owner requested a public, filtered upcoming-object list below
+the housing prompt, with explicit "Ladda fler" pagination. Browsing does not
+require a password, email or AI. The supplied house/radar logo is now used in
+both headers and as a local favicon. All inspiration-photo components and their
+visible credits have been removed; the historical licensed files remain unused.
+The owner's exact headline is "Hitta kommande bostäder före andra" and the main
+button is "Hitta bostad". Supporting copy distinguishes the service's intended
+early-discovery value from actual source coverage; no coverage, latency or
+purchase guarantee is made. Searches still save paused and send no property mail.
 
 The owner's supplied visual reference now defines the palette: pink `#fbe3e8`,
 blue-green `#5cbdb9` and mint `#ebf6f5`. White open surfaces, Georgia display
 headings and pink pill actions replace the earlier rose enclosure. Deeper teal
 derivatives provide readable light-theme text and keyboard focus; the optional
-dark theme uses complementary dark teal surfaces. An existing locally hosted,
-licensed home photograph sits beside the input on desktop and below it on mobile.
-Its caption explicitly identifies inspiration rather than a property listing;
-the photographer credit links to the existing attribution. No external image
-requests or new product claims were introduced.
+dark theme uses complementary dark teal surfaces. The owner-provided logo is
+served as `brand-mark-80.png` (80 by 80 pixels, 5,622 bytes), displayed at
+36–40 pixels, with `favicon-32.png` (32 by 32 pixels, 1,609 bytes). Its original
+colors and light backing are retained; no external images or fonts are loaded.
 
 At the owner's request, decorative borders and separator lines were replaced
 with soft depth shadows and spacing. Primary buttons retain the reference pink,
 including their still-disabled empty state; secondary/menu buttons use teal.
 Native control affordances and visible keyboard/feedback focus remain intact.
-No React request, state, consent or save logic changed.
+The new public feed has separate request/filter state; existing private
+consent, draft revision and explicit-save guards remain in place.
 
-The published bundle is `index--_fZW4b0.js`, with `index-H8CbHssZ.css`.
-Actual live browser checks at
-320, 360, 390, 430 and 1440 pixels confirmed the website shell, light default,
-no horizontal overflow and button targets of at least 44 pixels. Menu, help,
-privacy and the home link retained the exact synthetic input. "Förfina min
-sökning" still opens the password/unchecked AI-consent dialog; cancellation
-retains the text. Direct `?info=help` and `?info=privacy` links also worked.
-The exact palette tokens, Georgia heading, mint input region and single-row
-mobile header were verified in the live page. Computed text contrast passed for
-the checked light/dark surfaces and enabled primary actions. Live checks also
-confirmed zero decorative border widths, positive-offset blurred shadows without
-inset/spread rings, filled pink/teal controls and retained keyboard focus. Soft
-shadows are not claimed as 3:1 control boundaries or full WCAG certification.
-The local photo
-and attribution loaded successfully; mobile image placement, both themes and
-reduced-motion behavior were checked. A bounded desktop/mobile visual batch was
-inspected with finite animations settled before capture.
-These checks attempted no POST or other mutation, consumed no AI calls and
-reported no browser runtime errors or insecure subresource requests. Backend,
-secrets, migrations, budgets and saved records were not changed by this release.
+The published bundle is `index-CIsGmyhL.js`, with `index-CQmU8vwY.css`.
+Anonymous production `GET /api/listings` returned HTTP 200 with exactly
+`{"availability":"no_sources","items":[],"total":0,"hasMore":false,"nextCursor":null}`.
+Malformed cursors and unsupported limit parameters returned 400. Existing
+`/api/me`, `/api/catalog` and guest draft routes returned 401 without the gate.
+The public response excludes accounts, drafts, private source metadata and
+license references. Query work remains bounded by the existing 200-object cap;
+no source or capacity increase was enabled.
+
+Actual live browser checks at 320, 360, 390, 430 and 1440 pixels confirmed the
+new logo/favicon, pinned copy, public section below the prompt, absent inspiration
+images, single-row mobile header, 16-pixel fields, 44-pixel buttons and no
+horizontal overflow. Anonymous filter application and refresh returned the
+truthful no-sources state without cookies and preserved the typed synthetic
+housing text. "Ladda fler" stays hidden for an empty feed. Populated pagination
+and filter races were exercised only with local synthetic Worker/D1 fixtures,
+never by importing synthetic objects into production.
+
+Menu, help, privacy and the logo retained the input. "Hitta bostad" opened the
+password/unchecked AI-consent dialog; "Skapa med AI" remained disabled, and
+cancellation retained the text. Computed text contrast passed for the checked
+light/dark surfaces. A bounded desktop/mobile visual batch was inspected.
+Soft shadows are not claimed as 3:1 boundaries or full WCAG certification.
+Browser checks attempted no POST, consumed no AI calls and reported no runtime
+errors or insecure subresource requests. Only normal traffic-rate counters are
+updated by anonymous browsing. No migrations, secrets, quotas or source
+authorizations changed during this Worker-and-Pages release.
 
 Still required during the pilot: broader guest/account revocation and
 withdrawal scenarios, continued provider/privacy review, and
