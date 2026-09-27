@@ -22,7 +22,7 @@ Migrationerna till och med `0005`, privat objektåtkomst och `ACCESS_MODE=shared
 är driftsatta. Lösenordet finns bara som privat serverhemlighet och hos ägaren.
 Den tidigare sparade ägarsökningen och AI-förbrukningen är bevarade.
 [Aktuell driftsättningsstatus](docs/DEPLOYMENT.md) skiljer tillgängliga verktyg
-från aktiverade källor och beskriver den pågående domänövergången.
+från aktiverade källor och beskriver den slutförda domänövergången till `www`.
 [Kontrakt, integritet och säker aktivering](docs/SHARED_ACCESS.md).
 
 ## Kör lokalt
@@ -187,9 +187,12 @@ samt ljust standardtema även vid mörkt OS.
 
 Koden finns i [marcusbodin/kommandekollen](https://github.com/marcusbodin/kommandekollen).
 Domänen registreras och betalas fortsatt hos Inleed; auktoritativ DNS är flyttad
-till **Cloudflare Free**. GitHub Pages svarar via HTTPS på `kommandekollen.se`.
-Bytet till `www` och återställd tvingad HTTPS väntar på GitHubs certifikatbehandling;
-använd tills vidare den uttryckliga HTTPS-adressen. API:t är driftsatt med TLS på
+till **Cloudflare Free**. GitHub Pages finns på **https://www.kommandekollen.se/**.
+Adressen utan `www` och båda HTTP-adresserna omdirigeras till HTTPS med `www`.
+Certifikatet täcker båda värdnamnen och tvingad HTTPS är påslagen.
+Mejllänkar och tillåtna webbläsaranrop använder endast den nya HTTPS-adressen.
+Ladda om en redan öppen flik på den gamla adressen innan du fortsätter.
+API:t är driftsatt med TLS på
 `https://api.kommandekollen.se` och D1-databasen är migrerad med EU-jurisdiktion.
 Privata nycklar och administratörsuppgifter finns endast i tjänsternas
 hemlighetslagring, inte i repot.

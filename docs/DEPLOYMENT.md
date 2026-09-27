@@ -12,11 +12,12 @@ atomic migration runner and verified against the expected schema and ledger.
 Private before/after fingerprints confirmed that the existing saved profile
 and all four AI reservations were unchanged. Inventory remains zero.
 
-Worker version `c693db09-982a-4363-9daa-5ec26e26fe56` enables the private API
+Initial rollout Worker version `c693db09-982a-4363-9daa-5ec26e26fe56` enabled the private API
 boundary and additive observation infrastructure. Both `/api/listings` and
 `/api/catalog` return 401 with no listing/count data and `Cache-Control: no-store`
 without the gate, including malformed listing parameters. These checks succeeded
-with both exact apex/www origins. `AUTHORIZED_SOURCES=[]`,
+with both exact apex/www origins at that stage; the final configuration below
+accepts only the canonical www origin. `AUTHORIZED_SOURCES=[]`,
 `PRIVATE_OBSERVATION_SOURCES=[]` and `PROPERTY_EMAILS_ENABLED=false` are explicit.
 Shared access, verification mail, AI budgets and the existing cleanup schedule
 remain unchanged. No broker facts were imported.
@@ -34,24 +35,32 @@ captures reproduced HusmanHagberg's 1/18 and MOHV's 27/50 sampled results from
 
 The owner authorized `www.kommandekollen.se` as the canonical hostname. Its
 DNS-only CNAME to `marcusbodin.github.io` is verified at two public resolvers.
-The initial canonical switch remained blocked by certificate provisioning.
-To restore availability, Pages was returned to `kommandekollen.se` and redeployed:
-**the apex HTTPS site now returns 200, but the www transition is not complete.**
-GitHub reset HTTPS enforcement during certificate replacement and currently
-rejects re-enabling it until issuance; HTTP currently also returns 200.
-Use the explicit HTTPS address during this interval. The two-host certificate
-request remains pending, and the www CNAME remains intact.
+The initial switch was delayed by certificate provisioning, during which the
+working apex HTTPS site was retained. **The transition is now complete.**
+GitHub reports an approved certificate for both apex and www, expiring
+2026-12-26, with `cname=www.kommandekollen.se` and `https_enforced=true`.
+Pages run `36325588188` republished commit `a4fa9d4` with the unchanged frontend
+bundles listed above.
 
-Before the final switch, require an approved certificate and successful ordinary
-TLS checks for both hosts. Restore HTTPS enforcement, complete the www canonical
-configuration and verify HTTP/HTTPS redirects, path/query/fragment preservation
-and final email URLs. These redirect checks have **not** passed yet.
-The Worker temporarily accepts both exact origins and still generates apex
-email links. No wildcard origins or certificate-check bypasses are used.
-The bounded, read-only certificate monitor completed its one-hour window
-without issuance. A fresh provider check still reports `new`; the apex HTTPS
-site returns 200, but HTTPS enforcement remains off. No monitor or recurring
-certificate automation remains active, and no settings were changed by monitoring.
+After the old apex CDN response expired, ordinary HTTPS requests to the apex
+root returned 301 to `https://www.kommandekollen.se/`. Final checks at
+2026-09-27 14:30 UTC verified that all four HTTP/HTTPS and apex/www combinations
+converge to HTTPS www for both the root and `/assets/ATTRIBUTION.md`, preserving
+the requested path and query. TLS verification succeeded without bypasses,
+and the final published JavaScript and CSS matched the local build byte-for-byte.
+Fragment inheritance has not been freshly browser-verified: fragments are not
+sent to the server, and curl does not retain them in its effective URL.
+No domain monitor or recurring certificate automation remains active.
+
+Current Worker version `d3e29d4f-2cca-4b66-8018-5445f83109ce` sets
+`PUBLIC_URL=https://www.kommandekollen.se/` and accepts only the exact
+`https://www.kommandekollen.se` browser origin. Targeted Worker checks cover
+canonical verification/unsubscribe links and rejection of apex, HTTP www and
+deceptive suffix origins. Read-only production checks confirmed status 200 and
+unauthenticated listing/catalog 401 for www, with 403 for the old apex and HTTP
+www origins; all used `Cache-Control: no-store`. Reload an already-open apex
+tab before continuing. No source grants, email activation, secrets or database
+contents changed in this domain-only deployment.
 
 The integrated build and 113 coupled local Worker/D1/migration/model tests
 passed. The current macOS host then failed bare Chromium startup outside Vitest,
@@ -260,20 +269,21 @@ the intended API; it is public configuration. The unconfigured shell and
 ## Approved domain architecture
 
 **Inleed remains the registrar and domain billing provider. Authoritative DNS
-may move to Cloudflare Free when deployment is separately authorized.** This
+is on Cloudflare Free following the authorized migration.** This
 explicit owner decision supersedes the earlier recommendation to keep Inleed
 DNS. No registrar transfer, paid DNS, hosting, mail hosting or SSL is required.
 
 | Host | Hosting and DNS |
 | --- | --- |
-| `https://kommandekollen.se` | GitHub Pages, DNS-only A records; temporary canonical host with working TLS during certificate replacement |
-| `https://www.kommandekollen.se` | Approved final canonical host; DNS-only CNAME to `marcusbodin.github.io`; certificate transition pending |
+| `https://kommandekollen.se` | GitHub Pages, DNS-only A records; redirects to HTTPS www |
+| `https://www.kommandekollen.se` | Canonical GitHub Pages host with enforced HTTPS; DNS-only CNAME to `marcusbodin.github.io` |
 | `https://api.kommandekollen.se` | Cloudflare Worker Custom Domain in the active Free DNS zone; routing/DNS/certificate managed by Workers |
 
-The owner explicitly selected `www`; both exact HTTPS website origins are
-temporarily configured in CORS. Email links remain on the working apex until
-the canonical transition is verified. Do not add `github.io`, preview deployments,
-wildcards or `workers.dev` to production CORS.
+The owner explicitly selected `www`; only `https://www.kommandekollen.se` is
+configured in production CORS, and generated email links use that address.
+HTTP requests to either website hostname redirect to HTTPS www. Do not add the
+old apex, `github.io`, preview deployments, wildcards or `workers.dev` to
+production CORS.
 
 ## Safe DNS migration procedure
 
