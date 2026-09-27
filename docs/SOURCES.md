@@ -1,18 +1,21 @@
 # Sources and collection status
 
-Checked 2026-09-25. No live listing page was scraped in this implementation.
-No live agency adapter has been validated. Robots files and the primary terms
-below were read; no login, CAPTCHA, hidden API or bot protection was bypassed.
+Initial policy checks: 2026-09-25. Bounded Notar/Bjurfors public-HTML investigation:
+2026-09-27, detailed below. Live navigation and listing-index pages were read,
+but yielded no extractable property records. No individual property detail page
+was fetched and no factual agency parser has been validated. No login, CAPTCHA,
+hidden API or bot protection was bypassed. Production source activation remains
+empty; these research reads did not ingest or publish inventory.
 
 | Candidate | Evidence | Exact status |
 | --- | --- | --- |
 | Fastighetsbyrån | [robots.txt](https://www.fastighetsbyran.com/robots.txt) explicitly prohibits automated access without special permission; object/API paths disallowed | Explicitly prohibited without permission; disabled |
 | Svensk Fastighetsförmedling | [Terms](https://www.svenskfast.se/om-oss/anvandarvillkor/) prohibit scraping, copying/indexing and automatically generated object links without permission. [Robots](https://www.svenskfast.se/robots.txt) also exclude search parameters `t`, `maxp`, `minp`, `maxr`, `minr`, `maxla`, `minla`, `sw`, `noprice` and several paths | Explicitly prohibited without permission; disabled |
-| Bjurfors | [Robots](https://www.bjurfors.se/robots.txt) allow `/` except specified Ragnar/PDF/undefined-office paths; sitemap advertised. [Boagent terms](https://www.bjurfors.se/sv/mitt-bjurfors/anvandarvillkor/) describe personal-data processing, not a syndication license | Reuse permission / suitable public license not established; disabled. Do **not** misquote Boagent terms as an explicit scraping ban |
+| Bjurfors | [Robots](https://www.bjurfors.se/robots.txt) allow `/` except specified Ragnar/PDF/undefined-office paths; rechecked 2026-09-27. [Boagent terms](https://www.bjurfors.se/sv/mitt-bjurfors/anvandarvillkor/) describe personal-data processing, not a syndication license | Bounded public-HTML requests returned empty HTTP 200 responses; see investigation below. Reuse permission / suitable public license not established; disabled. Do **not** misquote Boagent terms as an explicit scraping ban |
 | Länsförsäkringar Fastighetsförmedling | [Robots](https://www.lansfast.se/robots.txt) exclude error and internal application/config/data/Umbraco directories; advertise sitemap | Bounded robots assessment only. Terms/feed license unverified; disabled |
 | SkandiaMäklarna | [Robots](https://www.skandiamaklarna.se/robots.txt) exclude `/episerver/`; sitemap advertised | Terms/feed license unverified; disabled |
 | HusmanHagberg | [Robots](https://www.husmanhagberg.se/robots.txt) allow `/`; sitemap advertised | Terms/feed license unverified; disabled |
-| Notar | [Robots](https://www.notar.se/robots.txt) allow `/`; sitemap advertised | Terms/feed license unverified; disabled |
+| Notar | [Robots](https://www.notar.se/robots.txt) allow `/`; rechecked 2026-09-27. Linked [Sekretess & Villkor](https://www.notar.se/information/sekretess-villkor) describes personal-data processing | No listing cards in the fetched server HTML; see investigation below. Recurring extraction/republication permission not established; disabled |
 | Erik Olsson | [Robots](https://www.erikolsson.se/robots.txt) exclude `/api/*`, `/dashboard/*`, `/password`, `/beta`; sitemaps advertised | Terms/feed license unverified; disabled; API exclusions must be respected |
 | MOHV | [Robots](https://www.mohv.se/robots.txt) exclude `/wp-admin/`, allow its admin-ajax path; page/office/post sitemaps advertised | Terms/feed license unverified; disabled |
 | Authorized partner feed | Real validator/import pipeline and synthetic fixtures exist | No partner, feed credentials or suitable license supplied; zero live coverage |
@@ -25,6 +28,48 @@ and links differ from expressive descriptions/photographs, but repeated systemat
 database extraction can still require assessment. No photos or descriptions are
 copied. An explicitly licensed public feed can suffice; a separate written
 permission is not required if that license actually permits the intended use.
+
+## Bounded source-specific HTML investigation (2026-09-27)
+
+The requested first source was Notar, with Bjurfors as the single permitted
+fallback. Research used ordinary public GETs, fresh robots checks before each
+source, at least two seconds between broker requests, the existing 12-second
+timeout and 500,000-byte content / 64,000-byte robots limits. No sitemap was
+crawled. No JavaScript bundle, internal endpoint, browser session, redirect
+workaround, proxy or changed client identity was used to obtain listing data.
+
+| Source / public URL | Observed result |
+| --- | --- |
+| [Notar navigation](https://www.notar.se/) | 126,351 bytes. Public navigation links to the index and privacy/terms page. No property-detail links in the fetched HTML |
+| [Notar linked privacy/terms](https://www.notar.se/information/sekretess-villkor) | Personal-data processing policy read. No reuse license established; not treated as either permission or an explicit blanket scraping prohibition |
+| [Notar listing index](https://www.notar.se/kopa-bostad?rf=true) | 118,398 bytes. `Till salu` / `Kommande` tab labels and pagination controls, but no per-property cards, detail links or factual records. A tab label is not evidence that any particular home is upcoming |
+| [Bjurfors navigation](https://www.bjurfors.se/sv/) | Empty response body |
+| [Bjurfors Stockholm index](https://www.bjurfors.se/sv/tillsalu/stockholm/) | HTTP 200, `Content-Length: 0`, no `Content-Type`, zero body bytes and no links or structured data |
+
+Only one listing-index page per source was requested; no individual detail pages
+could be selected from these responses. HTML was retained privately for local
+inspection, outside the repository and public artifacts. No real property
+addresses, IDs, descriptions or photos were extracted into fixtures or logs.
+
+**Result: blocked before factual parsing, not a successful empty inventory.**
+Observed property count is zero, but available/upcoming inventory count is
+**unknown**. Status, municipality, county, stable ID and numerical facts could
+not be validated. There is no normalized source preview or complete snapshot to
+import. Adding a source-specific factual parser or structural property fixtures
+from this evidence would invent a contract, so neither was added.
+
+This does **not** establish that Notar or Bjurfors cannot be scraped. Notar may
+expose records after normal browser rendering; the cause of Bjurfors' empty
+response is unknown. The next technical decision is a separately bounded,
+authorized rendered-browser investigation or inspection of a compatible public
+HTML page, not hidden-API probing or bypassing protections. Browser traversal
+does not fit the existing robots-plus-one-content-request collector contract.
+Even if facts become readable, complete-source coverage and recurring
+republication rights still need assessment. Partial pages must never enter the
+complete-snapshot ingestion path, which retires absent listings.
+
+No collector format, allowlist, authorization, request limit, schema, database,
+quota or production configuration changed as a result of this investigation.
 
 ## Real pipeline, not a claimed live scraper
 
