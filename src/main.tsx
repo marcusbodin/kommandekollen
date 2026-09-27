@@ -39,7 +39,7 @@ const date = (value: string) => new Intl.DateTimeFormat("sv-SE", { day: "numeric
 const stale = (value: string) => Date.now() - Date.parse(value) > 48 * 3600_000;
 
 function BrandMark() {
-  return <img className="brand-mark" src={`${import.meta.env.BASE_URL}assets/brand-mark-80.png`}
+  return <img className="brand-mark" src={`${import.meta.env.BASE_URL}assets/brand-mark-blue-80.png`}
     width={40} height={40} alt="" decoding="async" />;
 }
 function Icon({ name }: { name: "home" | "bell" | "arrow" | "sun" | "moon" }) {
@@ -128,7 +128,7 @@ function OwnerPanel({ ownerId, shared = false }: { ownerId: string; shared?: boo
     {error && <p role="alert" className="error">{error}</p>}{message && <p role="status" className="notice">{message}</p>}
     {members.map(member => <div className="member-row" key={member.id}><div><strong>{member.email}</strong><p className="small">{member.application}</p><span className="small muted">{{ unverified: "Ej verifierad", pending: "Väntar på beslut", approved: "Godkänd", rejected: "Avslagen", revoked: "Återkallad" }[member.state]}</span></div>
       <div className="member-actions">{!shared && member.state === "pending" && <><button className="primary" disabled={busy} onClick={() => review(member.id, "approve")}>Godkänn</button><button disabled={busy} onClick={() => review(member.id, "reject")}>Avslå</button></>}
-        {member.state === "approved" && member.id !== ownerId && <button disabled={busy} onClick={() => review(member.id, "revoke")}>Återkalla</button>}</div></div>)}
+        {member.state === "approved" && member.id !== ownerId && <button className="danger-button" disabled={busy} onClick={() => review(member.id, "revoke")}>Återkalla</button>}</div></div>)}
   </section>;
 }
 function Membership({ member, ready, accepting, refresh, shared = false }: { member: Member | null; ready: boolean; accepting: boolean; refresh: () => void; shared?: boolean }) {
@@ -155,14 +155,14 @@ function Membership({ member, ready, accepting, refresh, shared = false }: { mem
       <div className="account-content">
       {member.state !== "approved" && <p className="notice">{shared ? "Verifiera din e-post på nytt via en inloggningslänk för att använda det befintliga kontot. Ett gammalt väntande medlemskap aktiveras inte automatiskt."
         : "Din e-postadress är verifierad. Ägaren behöver nu godkänna ansökan. Du har ännu ingen tillgång till bostäder, källresultat eller bevakning."}</p>}
-      <div className="member-actions"><button disabled={busy} onClick={() => accountAction("/api/logout")}>Logga ut</button><button className="text-button" onClick={() => setDeleteConfirm(value => !value)}>Radera medlemskapet</button></div>
+      <div className="member-actions"><button disabled={busy} onClick={() => accountAction("/api/logout")}>Logga ut</button><button className="text-button danger-button" onClick={() => setDeleteConfirm(value => !value)}>Radera medlemskapet</button></div>
       {shared && member.state !== "approved" && <button disabled={busy} onClick={async () => {
         setBusy(true); setError("");
         try { setMessage(await post("/api/login", { email: member.email, website: "" })); }
         catch (error) { setError(error instanceof Error ? error.message : "Mejlförfrågan misslyckades."); }
         finally { setBusy(false); }
       }}>Begär en ny mejllänk</button>}
-      {deleteConfirm && <div className="notice"><p>{shared ? "Detta raderar kontot, utkasten och bevakningen. Åtkomsten stängs. AI-kvoten återställs inte." : "Detta raderar ansökan, medlemskapet och bevakningen. Du behöver ansöka på nytt om du vill återvända."}</p><button disabled={busy} onClick={() => accountAction("/api/delete-account")}>Bekräfta radering</button></div>}
+      {deleteConfirm && <div className="notice"><p>{shared ? "Detta raderar kontot, utkasten och bevakningen. Åtkomsten stängs. AI-kvoten återställs inte." : "Detta raderar ansökan, medlemskapet och bevakningen. Du behöver ansöka på nytt om du vill återvända."}</p><button className="danger-button" disabled={busy} onClick={() => accountAction("/api/delete-account")}>Bekräfta radering</button></div>}
       </div></details>
     </> : <div className={shared ? "" : "membership-grid"}>{!shared && <div className="membership-welcome"><div className="welcome-copy"><h1>En privat väg till nästa hem.</h1><p>Beskriv ditt nästa hem, förtydliga vid behov och godkänn din sökning. Bara för godkända medlemmar.</p></div></div>}
       <form onSubmit={submit}><h2>{login ? "Logga in med mejllänk" : "Ansök om medlemskap"}</h2>

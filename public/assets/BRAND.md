@@ -1,5 +1,33 @@
 # Supplied brand artwork
 
+## Current blue house/radar logo
+
+The owner supplied this replacement on **2026-09-27** and explicitly requested
+its use with a neutral interface and color reserved for buttons. The supplied
+logo itself retains its blue house/center, light-blue arc and coral wedge.
+No authorship, ownership or public reuse license is asserted.
+
+- Source: user-attached **RGBA PNG**, 1314 x 1197 pixels, 565,770 bytes.
+- SHA-256: `9c66a29332e985c1132c233096ed03088f1bc7dd00ac3c6808ca4107db50f9d2`.
+- Representative opaque source pixels: blue `#0070ed`, light blue `#a3d9fc`,
+  coral `#fc6761`. These supply button tokens, not colored page backgrounds.
+- Local processing: crop to the nonzero-alpha bounds `(97, 49, 1244, 1169)`,
+  center the 1147 x 1120 result on a transparent 1195 x 1195 square, resize with
+  Lanczos, and save optimized RGBA PNG without embedded metadata.
+- `brand-mark-blue-80.png`: 80 x 80, 7,953 bytes.
+- `favicon-blue-32.png`: 32 x 32, 2,385 bytes.
+
+Original colors, partial transparency and artwork details are retained. No
+black/white background is flattened into the image; no recoloring, cleaning,
+thresholding or redrawing is performed. The 80px asset renders at 36–40px in
+all headers; the matching favicon is local. Visitors do not download the
+original attachment. The background image's provenance is separate in
+`ATTRIBUTION.md`.
+
+## Historical unused pale house/radar logo
+
+The following earlier files remain in the repository but are no longer rendered.
+
 The site operator supplied this artwork on 2026-09-27 and explicitly requested
 its use as the Kommandekollen logo. It depicts a turquoise house outline and
 chimney containing a pale-mint radar arc, turquoise center and pink wedge.

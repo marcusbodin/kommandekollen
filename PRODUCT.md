@@ -141,9 +141,13 @@ by the task flow on Hemnet, without copying its branding or content.
 Confirmed mobile preference: bright/lightweight, default-light interface even
 on a dark-preferring OS, larger touch targets and numeric sliders with optional
 precise entry. Existing ranges and saved-search semantics remain available.
-The pinned supplied house/radar logo and local favicon stay unchanged.
-The user's white/mint/teal/pink palette, Georgia display, Segoe controls,
-borderless controls and filled buttons remain binding. The explicit liquid-glass
+The latest supplied blue house/radar logo replaces the earlier pale mark in all
+headers and the local favicon; preserve its colors and transparency.
+The user's latest palette supersedes mint/teal/pink: blue, light blue and coral
+are reserved for buttons, while text, links, panels, inputs and page surfaces
+are neutral. The supplied logo and background image retain their own colors.
+Headings use weight 700; Georgia display, Segoe controls, borderless controls
+and filled buttons remain. The explicit liquid-glass
 request replaces only the introductory hero and search panels with translucent,
 lightly blurred surfaces so the supplied image remains visible underneath.
 Text contrast, native focus and opaque accessibility/image-failure fallbacks

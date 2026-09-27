@@ -368,14 +368,28 @@ async function borderlessSurfaces(page: Page, selectors: string, elevated = fals
 async function heroGlass(page: Page, theme: "light" | "dark") {
   for (const surface of [".home-intro", ".prompt-form"]) {
     await expect(page.locator(surface)).toHaveCSS("background-color",
-      theme === "light" ? "rgba(255, 255, 255, 0.66)" : "rgba(32, 53, 50, 0.72)");
+      theme === "light" ? "rgba(255, 255, 255, 0.66)" : "rgba(34, 34, 34, 0.72)");
     await expect(page.locator(surface)).toHaveCSS("backdrop-filter", "blur(10px) saturate(1.15)");
     await expect(page.locator(surface)).toHaveCSS("box-shadow", /inset/);
   }
   for (const surface of [".prompt-shell", "#housing-prompt"])
     await expect(page.locator(surface)).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
   await expect(page.locator("#prompt-helper")).toHaveCSS("color",
-    theme === "light" ? "rgb(32, 58, 57)" : "rgb(235, 246, 245)");
+    theme === "light" ? "rgb(32, 32, 32)" : "rgb(245, 245, 245)");
+}
+async function neutralOutsideButtons(page: Page) {
+  const colored = await page.locator(".website-shell *").evaluateAll(elements => elements.flatMap(el => {
+    if (!el.getClientRects().length || el.closest("button,.button") || el.tagName === "IMG") return [];
+    const style = getComputedStyle(el);
+    return ["color", "background-color", "border-top-color", "text-decoration-color"].flatMap(property => {
+      const color = style.getPropertyValue(property);
+      const channels = color.match(/[\d.]+/g)?.map(Number);
+      if (!channels || channels[3] === 0) return [];
+      return Math.max(...channels.slice(0, 3)) - Math.min(...channels.slice(0, 3)) > 1
+        ? [{ element: el.tagName, classes: el.className, property, color }] : [];
+    });
+  }));
+  expect(colored).toEqual([]);
 }
 async function consentToInterpret(page: Page, password = false) {
   await page.getByRole("button", { name: /^(Hitta bostad|Uppdatera sökförslaget)$/ }).click();
@@ -714,7 +728,7 @@ test("closing shared access removes disclosed owner data without erasing local t
   expect(calls).toBe(0);
 });
 
-test("pinned mint presentation uses borderless depth, filled states and accessible light and dark surfaces", async ({ page }) => {
+test("pinned logo palette stays on buttons with bold headings and neutral accessible surfaces", async ({ page }) => {
   env.ACCESS_MODE = "shared"; env.SHARED_ACCESS_PASSWORD = gatePassword;
   await page.context().clearCookies();
   await page.emulateMedia({ colorScheme: "dark" });
@@ -722,11 +736,11 @@ test("pinned mint presentation uses borderless depth, filled states and accessib
   await websiteSurface(page);
   expect(await page.evaluate(() => {
     const style = getComputedStyle(document.documentElement);
-    return ["--cp-pink", "--cp-brand", "--cp-mint"].map(token => style.getPropertyValue(token).trim());
-  })).toEqual(["#fbe3e8", "#5cbdb9", "#ebf6f5"]);
+    return ["--cp-blue", "--cp-ice", "--cp-coral"].map(token => style.getPropertyValue(token).trim());
+  })).toEqual(["#0070ed", "#a3d9fc", "#fc6761"]);
   const heading = page.getByRole("heading", { name: "Vad är viktigt i ditt nästa hem?" });
   await expect(heading).toHaveCSS("font-family", /Georgia/);
-  await expect(heading).toHaveCSS("font-weight", "400");
+  await expect(heading).toHaveCSS("font-weight", "700");
   await expect(page.getByRole("button", { name: "Meny", exact: true })).toHaveCSS("font-family", /Segoe UI/);
   const prompt = page.locator("#housing-prompt");
   await expect(page.locator(".home-photo,.inspiration")).toHaveCount(0);
@@ -743,6 +757,7 @@ test("pinned mint presentation uses borderless depth, filled states and accessib
     await heroAssets(page);
     await heroGeometry(page);
     await heroGlass(page, theme);
+    await neutralOutsideButtons(page);
     await page.evaluate(() => scrollTo(0, 0));
     await page.screenshot({ path: test.info().outputPath(`liquid-glass-${theme}.png`), animations: "disabled" });
     const primary = page.getByRole("button", { name: "Hitta bostad", exact: true });
@@ -750,12 +765,12 @@ test("pinned mint presentation uses borderless depth, filled states and accessib
     await heading.click();
     await expect(primary).toBeDisabled();
     await expect(primary).toHaveCSS("opacity", "1");
-    await expect(primary).toHaveCSS("background-color", "rgb(251, 227, 232)");
-    await expect(primary).toHaveCSS("color", "rgb(82, 107, 105)");
+    await expect(primary).toHaveCSS("background-color", "rgb(0, 112, 237)");
+    await expect(primary).toHaveCSS("color", "rgb(255, 255, 255)");
     await expect(primary).toHaveCSS("box-shadow", "none");
     await expect(primary).toHaveCSS("cursor", "not-allowed");
     await primary.hover();
-    await expect(primary).toHaveCSS("background-color", "rgb(251, 227, 232)");
+    await expect(primary).toHaveCSS("background-color", "rgb(0, 112, 237)");
     const disabledText = await readableContrast(page, ".prompt-shell .primary", "text", true);
     await primary.evaluate((button: HTMLButtonElement) => button.click());
     await prompt.press("Enter");
@@ -766,16 +781,16 @@ test("pinned mint presentation uses borderless depth, filled states and accessib
     await prompt.fill("Lägenhet i Solna, gärna balkong.");
     await prompt.focus();
     await expect(primary).toBeEnabled();
-    await expect(page.locator("body")).toHaveCSS("background-color", theme === "light" ? "rgb(255, 255, 255)" : "rgb(23, 41, 39)");
+    await expect(page.locator("body")).toHaveCSS("background-color", theme === "light" ? "rgb(255, 255, 255)" : "rgb(23, 23, 23)");
     await expect(page.locator(".prompt-shell")).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
-    await expect(primary).toHaveCSS("background-color", "rgb(251, 227, 232)");
-    await expect(primary).toHaveCSS("color", "rgb(32, 58, 57)");
+    await expect(primary).toHaveCSS("background-color", "rgb(0, 112, 237)");
+    await expect(primary).toHaveCSS("color", "rgb(255, 255, 255)");
     await expect(primary).toHaveCSS("border-radius", "999px");
     await borderlessSurfaces(page, ".prompt-shell .primary,.site-menu-toggle,.public-filters > summary", true);
     await borderlessSurfaces(page, ".prompt-form,.home-intro");
     await borderlessSurfaces(page, ".prompt-shell,#housing-prompt,.compact-header,.compact-footer");
-    await expect(page.locator(".site-menu-toggle")).toHaveCSS("background-color", "rgb(92, 189, 185)");
-    await expect(page.locator(".site-menu-toggle")).toHaveCSS("color", "rgb(32, 58, 57)");
+    await expect(page.locator(".site-menu-toggle")).toHaveCSS("background-color", "rgb(163, 217, 252)");
+    await expect(page.locator(".site-menu-toggle")).toHaveCSS("color", "rgb(32, 32, 32)");
     const text = await readableContrast(page, targets);
     const placeholder = await readableContrast(page, "#housing-prompt", "placeholder");
     await expect(prompt).toHaveCSS("outline-width", "3px");
@@ -785,7 +800,7 @@ test("pinned mint presentation uses borderless depth, filled states and accessib
     await expect(primary).toHaveCSS("outline-width", "3px");
     const actionFocus = await readableContrast(page, ".prompt-shell .primary", "focus");
     await primary.hover();
-    await expect(primary).toHaveCSS("background-color", "rgb(247, 212, 222)");
+    await expect(primary).toHaveCSS("background-color", "rgb(0, 94, 199)");
     const hover = await readableContrast(page, ".prompt-shell .primary");
     reports.push({ theme, text, disabledText, placeholder, focus, actionFocus, hover });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -795,7 +810,7 @@ test("pinned mint presentation uses borderless depth, filled states and accessib
       expect(inputBox!.y + await page.evaluate(() => scrollY)).toBeLessThan(500);
     }
     await heading.click();
-    await expect(primary).toHaveCSS("background-color", "rgb(251, 227, 232)");
+    await expect(primary).toHaveCSS("background-color", "rgb(0, 112, 237)");
     if (process.env.VISUAL_REVIEW === "1") await page.screenshot({ path: test.info().outputPath(`borderless-home-${theme}.png`), fullPage: true, animations: "disabled" });
     await page.getByRole("button", { name: "Meny", exact: true }).click();
     await borderlessSurfaces(page, page.viewportSize()!.width <= 800 ? ".compact-nav" : ".nav-advanced", true);
@@ -825,7 +840,7 @@ test("pinned mint presentation uses borderless depth, filled states and accessib
     const propertyType = page.locator(".manual-controls .type-buttons").getByRole("button", { pressed: true });
     await expect(propertyType).toHaveAttribute("aria-pressed", "true");
     await expect(propertyType).toHaveCSS("text-decoration-line", "underline");
-    await expect(propertyType).toHaveCSS("background-color", "rgb(92, 189, 185)");
+    await expect(propertyType).toHaveCSS("background-color", "rgb(163, 217, 252)");
     const manual = await readableContrast(page);
     await page.getByRole("combobox", { name: "Kommun", exact: true }).focus();
     const manualFocus = await readableContrast(page, ".manual-controls select", "focus");
@@ -865,10 +880,10 @@ test("liquid glass respects reduced transparency and falls back without remounti
     await cdp.send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-transparency", value: "reduce" }] });
     expect(await page.evaluate(() => matchMedia("(prefers-reduced-transparency: reduce)").matches)).toBe(true);
     for (const surface of [".home-intro", ".prompt-form"]) {
-      await expect(page.locator(surface)).toHaveCSS("background-color", theme === "light" ? "rgb(255, 255, 255)" : "rgb(32, 53, 50)");
+      await expect(page.locator(surface)).toHaveCSS("background-color", theme === "light" ? "rgb(255, 255, 255)" : "rgb(34, 34, 34)");
       await expect(page.locator(surface)).toHaveCSS("backdrop-filter", "none");
     }
-    await expect(prompt).toHaveCSS("background-color", theme === "light" ? "rgb(235, 246, 245)" : "rgb(41, 67, 63)");
+    await expect(prompt).toHaveCSS("background-color", theme === "light" ? "rgb(242, 242, 242)" : "rgb(43, 43, 43)");
     await readableContrast(page, ".home-intro h1,.home-intro p,.prompt-shell label,#housing-prompt,#prompt-helper");
     await heroGeometry(page);
     await expect(prompt).toHaveValue(original);
@@ -896,7 +911,7 @@ test("liquid glass respects reduced transparency and falls back without remounti
   });
   expect(removed).toBe(1);
   for (const surface of [".home-intro", ".prompt-form"]) {
-    await expect(page.locator(surface)).toHaveCSS("background-color", "rgb(32, 53, 50)");
+    await expect(page.locator(surface)).toHaveCSS("background-color", "rgb(34, 34, 34)");
     await expect(page.locator(surface)).toHaveCSS("backdrop-filter", "none");
   }
   await expect(prompt).toHaveValue(original);
@@ -919,9 +934,9 @@ test("photo hero remains readable and usable without its image in light and dark
   const reports = [];
   for (const theme of ["light", "dark"] as const) {
     if (theme === "dark") { await more(page, "Mörkt tema"); await page.keyboard.press("Escape"); }
-    await expect(page.locator(".home-hero")).toHaveCSS("background-color", theme === "light" ? "rgb(235, 246, 245)" : "rgb(41, 67, 63)");
+    await expect(page.locator(".home-hero")).toHaveCSS("background-color", theme === "light" ? "rgb(242, 242, 242)" : "rgb(43, 43, 43)");
     for (const surface of [".home-intro", ".prompt-form"]) {
-      await expect(page.locator(surface)).toHaveCSS("background-color", theme === "light" ? "rgb(255, 255, 255)" : "rgb(32, 53, 50)");
+      await expect(page.locator(surface)).toHaveCSS("background-color", theme === "light" ? "rgb(255, 255, 255)" : "rgb(34, 34, 34)");
       await expect(page.locator(surface)).toHaveCSS("backdrop-filter", "none");
     }
     await heroGeometry(page);

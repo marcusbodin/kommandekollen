@@ -28,32 +28,34 @@ Password, email, private source panels, saved profiles and full legal text stay
 progressively disclosed. The new background is decorative, not a property listing
 or a photo card. No inspiration image is rendered inside the public feed.
 
-The user-pinned visual reference supersedes the former rose/cream palette:
-airy white, pale mint input regions, teal brand/details and pale-pink pill
-actions. It supplies a visual language, not finance content, copied artwork or
-a different product. The pinned wordmark and navigation stay.
+The latest user-supplied logo palette supersedes the earlier mint/teal/pink:
+neutral white/gray surfaces and black/white typography, with blue, light blue
+and coral confined to buttons. The supplied logo and interior image retain
+their original colors. Links, status copy, focus, inputs and disclosures stay
+neutral rather than distributing the accent colors across the page.
 Georgia gives the main heading and wordmark a readable native serif voice;
+headings now use the requested heavier weight 700.
 forms, navigation and supporting headings retain the compact Segoe UI stack.
 The owner's subsequent liquid-glass request replaces the two opaque hero panels
-with translucent material: 66% white in light mode, 72% green-dark in dark mode,
+with translucent material: 66% white in light mode, 72% charcoal in dark mode,
 10px backdrop blur, slight saturation and restrained inset light edges over
 the existing offset shadow. The input's inner surfaces are transparent rather
 than hiding the picture behind a second solid block. Hero text/placeholders and
-focus use strong ink; the heading uses deeper teal in light and mint in dark.
+focus use strong neutral ink, dark in light mode and near-white in dark mode.
 Contrast is bounded against both black and white image pixels, not just the
 fallback canvas. Unsupported backdrop filtering, reduced transparency, forced
-colors and image failure restore opaque panels and mint/dark input surfaces.
+colors and image failure restore opaque panels and light/dark gray input surfaces.
 Expanded review/filter panels, menus, dialogs and listing surfaces stay solid.
 No full-photo wash, text shadow, animation or pointer-following distortion is
-added. Mint groups the empty state and footer; pink is for primary actions.
+added. Empty states and the footer are neutral; blue is for primary actions.
 
 The user-supplied house/radar artwork is the pinned site mark, replacing the
-generic home-icon badge in both shared and legacy/demo headers. Its turquoise
-outline/chimney, pale-mint arc and pink wedge must not be redrawn, recolored,
+generic home-icon badge in both shared and legacy/demo headers. The latest blue
+outline/chimney, light-blue arc and coral wedge must not be redrawn, recolored,
 inverted or replaced with a generic icon. A lossless local 80px derivative
 renders at 40px, or 36px on narrow phones, beside the existing wordmark.
-Only the outer blank canvas is cropped; the small original light backing
-protects very pale details in dark mode. A matching 32px PNG is the favicon.
+Only transparent outer padding is trimmed; the artwork is centered on a
+transparent square with no solid backing. A matching 32px PNG is the favicon.
 Explicit dimensions prevent layout shifts; an empty image alt avoids repeating
 the accessible brand-link name. The full brand remains a 44px-high home link.
 The artwork's provenance is separate from the photo license, in
@@ -64,21 +66,21 @@ The `--cp-*` system has these stable roles:
 
 | Role | Light | Dark |
 | --- | --- | --- |
-| Pinned primitives | Pinky `#fbe3e8`, Blue Greeny `#5cbdb9`, Teeny Greeny `#ebf6f5` | Same primitives |
-| Canvas / surface | White `#ffffff` | `#172927` / `#203532` |
-| Soft region / input | Mint `#ebf6f5` | `#29433f` |
-| Primary action / hover | Pink `#fbe3e8` / derived `#f7d4de` | Same pinks |
-| Secondary button / hover | Teal `#5cbdb9` / derived `#7ccdc8` | Same teals |
-| Quiet choice / disabled ink | Mint `#ebf6f5` / `#526b69` | Same colors |
-| Action / secondary foreground | Deep ink `#203a39` | Same deep ink |
-| Text / muted | `#203a39` / `#526b69` | Mint `#ebf6f5` / `#b5ccc7` |
-| Heading / link / selected control | Derived deep teal `#246d69`; hover `#195653` | Pinned teal `#5cbdb9`; hover `#8ed5ce` |
-| Focus | Deep teal `#246d69` | Light teal `#8ed5ce` |
-| Control elevation | `0 3px 10px rgba(32,58,57,.12)` | `0 3px 10px rgba(0,0,0,.22)` |
-| Menu / dialog elevation | `0 10px 28px rgba(32,58,57,.16)` | `0 10px 28px rgba(0,0,0,.36)` |
+| Pinned button primitives | Blue `#0070ed`, ice `#a3d9fc`, coral `#fc6761` | Same primitives |
+| Canvas / surface | White `#ffffff` | `#171717` / `#222222` |
+| Soft region / input | Gray `#f2f2f2` | `#2b2b2b` |
+| Primary action / hover | Blue `#0070ed` / `#005ec7` | Same blues |
+| Secondary button / hover | Ice `#a3d9fc` / `#8bcdf8` | Same light blues |
+| Destructive button / hover | Coral `#fc6761` / `#ed554f` | Same corals |
+| Quiet choice / disabled ink | Gray `#e8e8e8` / `#595959` | Same colors |
+| Primary / secondary foreground | White `#ffffff` / ink `#202020` | Same foregrounds |
+| Text / muted | `#202020` / `#595959` | `#f5f5f5` / `#c2c2c2` |
+| Heading / link / focus | `#202020`; hover `#000000` | `#f5f5f5`; hover `#ffffff` |
+| Control elevation | `0 3px 10px rgba(0,0,0,.12)` | `0 3px 10px rgba(0,0,0,.22)` |
+| Menu / dialog elevation | `0 10px 28px rgba(0,0,0,.16)` | `0 10px 28px rgba(0,0,0,.36)` |
 
-The raw teal fill is never small text on white: deeper teal derivatives provide
-AA text contrast. Pink actions use dark ink, not white. The user's borderless
+Blue buttons use white text (4.62:1); ice and coral buttons use dark text.
+The colors never become small accent text on white. The user's borderless
 refinement replaces persistent edges with filled controls and soft elevation:
 `--cp-shadow-control` groups the prompt, fields, factual cards and ordinary panels;
 `--cp-shadow-panel` raises menus and dialogs. There are no inset rings or
@@ -86,10 +88,11 @@ shadow stripes in place of separators. Header/footer and section separators
 have no borders; spacing and surface colors retain their hierarchy. The
 explicitly requested hero glass is the sole exception to the no-inset-shadow
 rule: its top/bottom light edges describe the transparent material, not controls.
-Primary buttons stay visibly pink even when empty/busy/disabled. Disabled
-controls keep their native disabled semantics, muted readable ink, no elevation
+Primary buttons stay visibly blue with readable white ink when empty/busy/disabled.
+Other disabled controls use neutral readable ink. Disabled controls retain their
+native semantics, no elevation
 and a not-allowed cursor; hover never makes them look enabled. Secondary/Meny
-buttons are teal; quieter choices are mint. Selected property types also have
+buttons are light blue; quieter choices are gray. Selected property types also have
 an underlined, heavier label, not just a different fill. Navigation links stay
 unshadowed text links. No shadows are attached to individual labels.
 
@@ -100,10 +103,11 @@ fields and actions. Pastel fills and soft shadows are grouping cues, not a
 claim of 3:1 boundary contrast. Tests check the actual border widths are zero,
 ordinary elevation has offset/blur rather than an outline ring, labeled controls,
 button states and real text/focus contrast, not colors of removed borders.
-Success, warning and error tokens retain their semantic colors and text cues;
-errors use readable red text instead of a decorative underline. They are not
-decoration. Dark mode uses layered green-dark surfaces, not a
-mechanical inversion. No gradients, glass, external fonts or large shadows.
+Success, warning and errors retain their explicit text and semantics, not
+colored decoration. Error messages use strong neutral ink and weight.
+Destructive buttons use coral but still require their existing confirmations.
+Dark mode uses layered charcoal surfaces, not a mechanical inversion.
+No gradients, external fonts or large shadows; glass stays limited to the hero.
 
 Desktop navigation exposes "Så fungerar det", "Konto"/"Min sökning" and
 "Integritet"; mobile uses the accessible "Meny" toggle. This same menu reveals

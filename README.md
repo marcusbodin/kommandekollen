@@ -96,12 +96,15 @@ aldrig hemma i `VITE_*`, JavaScript-paket, git eller Actions-loggar.
   **Meny** öppnar vanliga filter, sparad sökning/utkast och konto.
   Följdfrågor återanvänder samtycket inom samma utkast; ingen AI körs vid
   sidladdning eller återläsning.
-- Mobilanpassad, ljus sökyta med användarens valda vita/mintgröna färgtema,
-  teal-detaljer och ljusrosa primärknappar. Färgerna använder Clawpilot-variabler;
-  Georgia används i huvudrubrik/logotyp, Segoe UI i formulär och navigation.
+- Mobilanpassad sökyta med neutrala vita/grå ytor och svart/vit text.
+  Den nya loggans blått, ljusblått och korall används endast på knappar:
+  blå primärknappar, ljusblå sekundärknappar och korall för radering/återkallelse.
+  Loggan och bakgrundsbilden behåller sina egna färger.
+  Färgerna använder Clawpilot-variabler; rubriker har fetare vikt 700,
+  Georgia används i huvudrubrik/logotyp och Segoe UI i formulär och navigation.
   Fyllda knappar och mjuka skuggor ersätter dekorativa kantlinjer;
   tydliga tangentbordsmarkeringar och inbyggda formulärkontroller behålls.
-  Inaktiva primärknappar förblir rosa men går inte att skicka.
+  Inaktiva primärknappar förblir blå men går inte att skicka.
   Mörkt läge väljs uttryckligen.
   Manuella filter är alternativet utan AI: kommun och bostadstyper,
   reglage för pris/rum/boarea/avgift, valfri
@@ -125,8 +128,8 @@ aldrig hemma i `VITE_*`, JavaScript-paket, git eller Actions-loggar.
   Det tidigare inspirationskortet är fortsatt borttaget, även i demo och äldre
   medlemsläge. Objektlistan ligger på en vanlig läsyta och visar källänkar och
   faktauppgifter, inga påhittade objektbilder. Historiska oanvända fotofiler behålls.
-- Den tillhandahållna hus-/radarloggan används i sidhuvud och favicon.
-  Små lokala PNG-filer behåller originalets färger och ljusa detaljer.
+- Den nya tillhandahållna blå hus-/radarloggan används i sidhuvud och favicon.
+  Små lokala PNG-filer behåller originalets färger och transparens.
   [Loggans ursprung och bearbetning](public/assets/BRAND.md) redovisas separat
   från fotografiernas licenser.
 - I medlemsläget: ansökan och lösenordsfri e-postverifiering. En verifierad ny användare stannar
