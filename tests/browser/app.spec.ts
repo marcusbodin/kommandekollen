@@ -49,6 +49,9 @@ async function mockApi(page: Page, options: MockOptions = {}) {
     }
     reads.push(path);
     if (path === "/api/status") await route.fulfill({ json: { serviceReady: options.ready ?? false, acceptingApplications: options.ready ?? false, privacyContact: null } });
+    else if (path === "/api/listings") await route.fulfill(options.ready
+      ? { json: { availability: "no_sources", items: [], total: 0, hasMore: false, nextCursor: null } }
+      : { status: 503, json: { code: "not_ready", message: "Objektlistan är inte aktiverad just nu. Försök senare." } });
     else if (path === "/api/me" && ["approved", "pending"].includes(options.state ?? "")) await route.fulfill({ json: {
       id: ownerId, email: "member@example.com", state: options.state, owner: options.owner ?? false, filters, alertsEnabled, profile, searchVersion: version, aiReady: options.ai ?? false,
     } });
@@ -71,13 +74,9 @@ async function noOverflow(page: Page) {
 }
 async function imageLoaded(page: Page) {
   await brandAssets(page);
-  const image = page.locator(".inspiration img");
-  await expect(image).toHaveCount(1);
-  await expect.poll(() => image.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
-  expect(await image.evaluate((img: HTMLImageElement) => new URL(img.currentSrc).origin)).toBe(new URL(page.url()).origin);
-  await expect(image).toHaveAttribute("width", "960");
-  await expect(image).toHaveAttribute("height", "640");
-  await expect(page.getByText("Inspirationsbild · inte ett bostadsobjekt", { exact: true })).toBeVisible();
+  await expect(page.locator(".inspiration,.home-photo")).toHaveCount(0);
+  await expect(page.locator("img:visible:not(.brand-mark)")).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Bild & licens", exact: true })).toHaveCount(0);
 }
 async function touchAndType(page: Page) {
   for (const target of await page.locator("button, summary, input[type=range], nav a, .check").all()) {
@@ -90,7 +89,7 @@ async function touchAndType(page: Page) {
     if (await field.isVisible()) expect(await field.evaluate(el => parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(16);
   }
 }
-test("public shell stays private, light by default even on dark OS, with local imagery", async ({ page }) => {
+test("legacy shell keeps private account controls and public feed, light by default, with the local logo only", async ({ page }) => {
   const { posts, reads } = await mockApi(page);
   const images: string[] = [];
   page.on("request", request => { if (request.resourceType() === "image") images.push(request.url()); });
@@ -324,7 +323,7 @@ test("email action needs explicit POST and token is removed from address bar", a
   await expect(page.getByRole("heading", { name: "Bekräfta och logga in" })).toBeVisible();
   expect(page.url()).not.toContain("aaaa");
   expect(posts).toHaveLength(0);
-  await page.getByRole("button", { name: "Fortsätt", exact: true }).click();
+  await page.getByRole("button", { name: "Bekräfta e-post", exact: true }).click();
   await expect(page.locator(".action-page [role=status]")).toBeVisible();
   expect(posts).toEqual([{ path: "/api/confirm", body: { token: "a".repeat(64) } }]);
 });
@@ -336,15 +335,15 @@ test("personal prompt, one clarification, edited summary and explicit paused sav
   await page.getByRole("button", { name: "Använd exempel: lägenhet" }).click();
   expect(posts).toHaveLength(0);
   await page.getByRole("textbox", { name: "Beskriv ditt nästa hem", exact: true }).fill("Lägenhet i Solna eller Sundbyberg, minst 3 rum, runt 5 miljoner, gärna 80 m² och tyst gata.");
-  await expect(page.getByRole("button", { name: "Hjälp mig att precisera" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Hitta bostad" })).toBeDisabled();
   await page.getByLabel("Jag vill använda AI-texthjälpen").check();
-  await page.getByRole("button", { name: "Hjälp mig att precisera" }).click();
+  await page.getByRole("button", { name: "Hitta bostad" }).click();
   await expect(page.getByRole("textbox", { name: "Är 5 miljoner ett fast pristak?" })).toBeFocused();
   await expect(page.getByRole("button", { name: "Spara pausad sökning" })).toBeDisabled();
   expect(posts.map(p => p.path)).toEqual(["/api/preferences/interpret"]);
   await page.getByRole("button", { name: "Ja, högst 5 miljoner", exact: true }).click();
   expect(posts).toHaveLength(1);
-  await page.getByRole("button", { name: "Tolka mitt svar" }).click();
+  await page.getByRole("button", { name: "Uppdatera sökförslaget" }).click();
   await expect(page.getByRole("heading", { name: "Stämmer det här?" })).toBeFocused();
   await expect(page.locator(".draft-review")).toContainText("Solna eller Sundbyberg");
   await expect(page.locator(".draft-review")).toContainText("Minst 80 m²");
@@ -388,7 +387,7 @@ test("model failure keeps search intact and manual fallback works at 320px", asy
   await page.goto("/");
   await page.getByRole("textbox", { name: "Beskriv ditt nästa hem", exact: true }).fill("Jag söker en villa i Nacka.");
   await page.getByLabel("Jag vill använda AI-texthjälpen").check();
-  await page.getByRole("button", { name: "Hjälp mig att precisera" }).click();
+  await page.getByRole("button", { name: "Hitta bostad" }).click();
   await expect(page.getByRole("alert")).toContainText("Inget har sparats");
   await page.locator(".saved-profile > summary").click();
   await expect(page.locator(".saved-profile")).toContainText("4 250 123 kr");
@@ -436,7 +435,7 @@ test("canceling a pending interpretation cannot replace the saved search", async
   await page.goto("/");
   await page.getByRole("textbox", { name: "Beskriv ditt nästa hem", exact: true }).fill("Villa i Nacka");
   await page.getByLabel("Jag vill använda AI-texthjälpen").check();
-  await page.getByRole("button", { name: "Hjälp mig att precisera" }).click();
+  await page.getByRole("button", { name: "Hitta bostad" }).click();
   await page.getByRole("button", { name: "Avbryt", exact: true }).click();
   release();
   await expect(page.locator(".preference-flow [role=status]")).toContainText("Den sparade sökningen är oförändrad");

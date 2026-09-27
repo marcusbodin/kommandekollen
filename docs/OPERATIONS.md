@@ -10,12 +10,73 @@ and operator-only secret/rotation steps are in [SHARED_ACCESS.md](SHARED_ACCESS.
 The operator deployed this mode on 2026-09-26 after the additive migration.
 The previous owner search and historical reservations were preserved.
 
+## Public listings
+
+The user approved public upcoming facts while retaining password protection for
+AI and personal searches. The core goal is early source-direct discovery, not a
+promise of complete coverage, arrival before every portal or purchase priority.
+No new source authorization accompanies this decision. Current source count is
+zero, and no fixture/demo data is automatically substituted.
+
+`GET /api/listings` runs after existing public/IP rate checks and before the
+shared guest guard. It requires `serviceReady` and valid access configuration;
+disabled/unconfigured service returns explicit HTTP 503 `not_ready`, not empty
+success. CORS, `no-store`, allowed origins, 180/IP/hour and 10,000/day remain
+unchanged. No cache, migration, index, secret or configuration is added.
+
+| Input | Contract |
+| --- | --- |
+| `filters` (optional) | JSON of the complete strict `shared/model.ts` Filters object; omitted means default all. Null numeric bounds are unset, not zero. |
+| `cursor` (optional) | Opaque base64url keyset, at most 1,400 characters, versioned and tied to normalized filters and the previous `(firstSeen,id)` key. |
+| Other/duplicate parameters | HTTP 400 `validation`; even `limit=12` is rejected. The page size is fixed server-side at 12. |
+| Invalid/mismatched cursor | HTTP 400 `invalid_cursor`; refresh or begin with no cursor. Query length is capped at 4,096 encoded characters. |
+
+Response contract is strict `PublicListingsPage` in `shared/public-listings.ts`:
+
+| Field | Meaning |
+| --- | --- |
+| `availability` | `no_sources`: no unexpired source authorization; `empty`: authorizations exist but no eligible records; `ready`: eligible inventory exists, even if filters yield zero matches. |
+| `items` | At most 12 explicit factual DTOs, never arbitrary stored JSON or database rows. |
+| `total` | Current matching count, at most 200; this may change between requests. |
+| `hasMore`, `nextCursor` | More current matching facts follow this page; otherwise false and null. |
+
+Public item fields are exactly `id`, `sourceId`, `status`, `county`,
+`municipality`, `area`, `address`, `type`, nullable `price/rooms/size/fee`, `url`,
+`firstSeen` and `lastSeen`. There are no source runs, license references, feed
+URLs, account/profile/draft/consent fields or internal source error codes.
+Browser-known static source names label source links. Only `active=1` records
+with validated upcoming status, Stockholms län scope, consistent stable IDs,
+current authorization and approved HTTPS hostname pass. Invalid scoped records
+are excluded with a count-only server warning; malformed stored JSON produces
+an explicit read failure rather than a fabricated empty inventory.
+
+At most the existing 200 inventory rows are read server-side per request.
+Canonical `filterSchema` and Swedish-aware `matches` evaluate the whole eligible
+collection, not the loaded page or ASCII SQLite lowercasing. Sort is descending
+normalized first-seen timestamp, then descending unique ID (ordinal, not locale).
+The unsigned cursor is a validated navigation key, not an authorization token.
+Newer arrivals cannot shift an offset and duplicate previously read cards;
+refresh starts at the newest item. This is a changing feed, not a frozen snapshot.
+First seen is this service's observation, **not original publication time**.
+Last checked is preserved; facts older than 48 hours remain visibly marked.
+
+The browser sends `credentials:"omit"`, displays only its loaded count, and
+keeps public filters independent of the personal draft. An explicit "Använd filter"
+applies editing controls; changing applied filters resets results/cursor and
+aborts obsolete requests. Request generations reject late responses, and a
+synchronous guard rejects duplicate load-more clicks. Failed load-more retains
+cards with an explicit retry. Public reads never create sessions, infer, save
+or enqueue mail; only existing traffic-rate counters can change.
+The old catalog, private source-run view and all personal/owner APIs stay gated.
+The 12-card UI is **not** unlimited collection or Free CPU capacity certification.
+
 ### Legacy membership mode
 
 The following application/approval behavior applies when `ACCESS_MODE=membership`,
 which remains the local default, not the active production mode.
 
-The public Pages site contains code, a membership form and synthetic demo only.
+The public Pages bundle contains code and an explicitly synthetic demo, never
+real inventory. Real public facts are fetched through the separate bounded API.
 `GET /api/status` exposes configuration readiness and capacity, never owner
 identity, real listings, source-run results or member data.
 
@@ -39,7 +100,7 @@ Authenticated owner controls:
 Approval invalidates previous sessions, queues an informational notice and leaves
 alerts **off**. The member logs in again and explicitly saves/enables a search.
 Rejection/revocation invalidate sessions and delete pending/sending messages.
-Every catalog, search and owner operation checks the session and membership in D1,
+Every private catalog, personal search and owner operation checks the session and membership in D1,
 not a frontend role claim. Searches always use the authenticated member ID; extra
 fields such as `memberId` or `role` are rejected.
 
@@ -58,7 +119,8 @@ an explicit POST to avoid scanner side effects.
 approved Cloudflare Free authoritative DNS while retaining Inleed as registrar,
 so an active Cloudflare zone can support the API Worker Custom Domain. Preserve
 host-only `__Host-kk_session` cookies on the API: do not add a `Domain` attribute.
-Frontend fetches still require `credentials: "include"` and the API allows only
+Private frontend fetches still require `credentials: "include"`; public-listings
+fetches explicitly omit credentials. The API allows only
 the exact `https://kommandekollen.se` origin with credentialed CORS. SameSite
 does not replace these Origin checks. No bearer-token redesign is needed.
 Cloudflare DNS and the API custom domain are active with API TLS verified.

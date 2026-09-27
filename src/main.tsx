@@ -8,6 +8,8 @@ import { demoListings } from "./demo";
 import { NumericFilter } from "./NumericFilter";
 import { PreferenceFlow, type PreferenceControls } from "./PreferenceFlow";
 import { gateSchema, GateStatus, useSearchAccess, type Gate } from "./SharedAccess";
+import { PublicListings } from "./PublicListings";
+import type { PublicListing } from "../shared/public-listings";
 import "./style.css";
 
 const apiBase = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
@@ -36,16 +38,6 @@ const number = (value: number) => new Intl.NumberFormat("sv-SE").format(value);
 const date = (value: string) => new Intl.DateTimeFormat("sv-SE", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Stockholm" }).format(new Date(value));
 const stale = (value: string) => Date.now() - Date.parse(value) > 48 * 3600_000;
 
-function Inspiration({ home = false }: { home?: boolean }) {
-  const base = `${import.meta.env.BASE_URL}assets/home-light-`;
-  return <figure className={home ? "inspiration home-photo" : "inspiration"}>
-    <img src={`${base}960.webp`} srcSet={`${base}480.webp 480w, ${base}960.webp 960w`}
-      sizes={home ? "(max-width: 960px) calc(100vw - 64px), 720px" : "(max-width: 700px) calc(100vw - 32px), (max-width: 1100px) 45vw, 560px"}
-      width={960} height={640} alt={home ? "Ljust vardagsrum med fåtöljer och turkosa kuddar." : ""} decoding="async" fetchPriority="high" />
-    <figcaption><span>Inspirationsbild · inte ett bostadsobjekt</span>{home &&
-      <a href={`${import.meta.env.BASE_URL}assets/ATTRIBUTION.md`} target="_blank" rel="noopener noreferrer">Foto: Francesca Tosolini · bild & licens</a>}</figcaption>
-  </figure>;
-}
 function BrandMark() {
   return <img className="brand-mark" src={`${import.meta.env.BASE_URL}assets/brand-mark-80.png`}
     width={40} height={40} alt="" decoding="async" />;
@@ -95,10 +87,10 @@ function ActionPage({ shared, action }: { shared: boolean; action: RegExpExecArr
     <Icon name={confirm ? "bell" : "home"} />
     <h1>{confirm ? "Bekräfta och logga in" : "Avsluta ditt medlemskap"}</h1>
     <p>{confirm ? shared || guestConfirm ? "Bekräfta din e-post i samma webbläsare där du begärde länken, med lösenordsåtkomsten kvar. Verifieringen sparar ingen sökning och startar inga bostadsmejl. Återgå därefter och granska sökningen innan du bekräftar sparandet."
-      : "Bekräfta din e-post för att fortsätta. En ny ansökan behöver därefter godkännas av ägaren; verifiering ensam ger ingen tillgång till bostäder eller bevakningar."
+      : "Bekräfta din e-post för att fortsätta. En ny ansökan behöver därefter godkännas av ägaren; verifiering ensam ger ingen tillgång till sparade sökningar eller bevakningar."
       : "Din e-postadress, ditt medlemskap och dina sökpreferenser raderas ur den aktiva databasen när du avslutar."} Ingenting ändras bara av att öppna länken.</p>
     {error && <p role="alert" className="error" tabIndex={-1} ref={outcome}>{error}</p>}
-    {message ? <p role="status" className="notice" tabIndex={-1} ref={outcome}>{message}</p> : <button className="primary" disabled={busy || demo || !apiBase} onClick={submit}>{busy ? "Arbetar…" : confirm ? "Fortsätt" : "Avsluta och radera"}</button>}
+    {message ? <p role="status" className="notice" tabIndex={-1} ref={outcome}>{message}</p> : <button className="primary" disabled={busy || demo || !apiBase} onClick={submit}>{busy ? confirm ? "Bekräftar e-post…" : "Avslutar medlemskapet…" : confirm ? "Bekräfta e-post" : "Avsluta och radera"}</button>}
     {(demo || !apiBase) && <p className="notice">Länken kan inte behandlas i demo eller utan konfigurerat API. Öppna mejlets länk på den riktiga tjänsten.</p>}
     {error && (shared || guestConfirm) && <p>Om länken öppnades på en annan enhet: öppna mejlet i ursprungliga webbläsaren. Om lösenordsåtkomsten har gått ut behöver du öppna tjänsten och begära en ny länk. Skriv inte token eller lösenord i ett supportmeddelande.</p>}
     <a href={guestConfirm ? `${location.pathname}?review=1` : location.pathname + location.search}>{shared || guestConfirm ? "Till sökningen och granskningen" : "Till medlemskapet"}</a>
@@ -168,7 +160,7 @@ function Membership({ member, ready, accepting, refresh, shared = false }: { mem
       }}>Begär en ny mejllänk</button>}
       {deleteConfirm && <div className="notice"><p>{shared ? "Detta raderar kontot, utkasten och bevakningen. Åtkomsten stängs. AI-kvoten återställs inte." : "Detta raderar ansökan, medlemskapet och bevakningen. Du behöver ansöka på nytt om du vill återvända."}</p><button disabled={busy} onClick={() => accountAction("/api/delete-account")}>Bekräfta radering</button></div>}
       </div></details>
-    </> : <div className={shared ? "" : "membership-grid"}>{!shared && <div className="membership-welcome"><Inspiration /><div className="welcome-copy"><h1>En privat väg till nästa hem.</h1><p>Beskriv ditt nästa hem, förtydliga vid behov och godkänn din sökning. Bara för godkända medlemmar.</p></div></div>}
+    </> : <div className={shared ? "" : "membership-grid"}>{!shared && <div className="membership-welcome"><div className="welcome-copy"><h1>En privat väg till nästa hem.</h1><p>Beskriv ditt nästa hem, förtydliga vid behov och godkänn din sökning. Bara för godkända medlemmar.</p></div></div>}
       <form onSubmit={submit}><h2>{login ? "Logga in med mejllänk" : "Ansök om medlemskap"}</h2>
         <p className="small muted">{shared ? "Logga in till ditt befintliga konto med en mejllänk. Det gemensamma lösenordet behövs också för åtkomst."
           : login ? "Få en säker länk till din e-post. Inget personligt lösenord behövs." : "Ansök, verifiera din e-post och invänta ägarens godkännande."}</p>
@@ -180,13 +172,13 @@ function Membership({ member, ready, accepting, refresh, shared = false }: { mem
         <div className="honeypot" aria-hidden="true"><label>Lämna tomt<input name="website" tabIndex={-1} autoComplete="off" /></label></div>
         <button className="primary" disabled={busy || !ready || (!login && !accepting)}>{busy ? "Skickar begäran…" : login ? "Begär inloggningslänk" : "Skicka medlemsansökan"}</button>
         {!shared && <><button type="button" className="text-button" onClick={() => { setLogin(value => !value); setMessage(""); setError(""); }}>{login ? "Ny här? Ansök om medlemskap" : "Har du redan ansökt? Logga in"}</button>
-          <details className="membership-info"><summary>Så fungerar medlemskapet</summary><p className="small muted">Högst 40 medlemskap inklusive väntande ansökningar. E-postverifiering är inte ett medlemsbeslut. Bostäder och bevakningar visas bara för godkända medlemmar. Vi samlar inte in objekt från källor där användningen är förbjuden eller oklar.</p></details>
+          <details className="membership-info"><summary>Så fungerar medlemskapet</summary><p className="small muted">Högst 40 medlemskap inklusive väntande ansökningar. E-postverifiering är inte ett medlemsbeslut. Sparade sökningar och bevakningar är bara för godkända medlemmar. Den offentliga objektlistan kan läsas utan medlemskap. Vi samlar inte in objekt från källor där användningen är förbjuden eller oklar.</p></details>
           <a className="demo-link" href="?demo=1">Prova sökningen med fiktiva exempel<Icon name="arrow" /></a></>}
       </form></div>}
     {error && <p className="error" role="alert">{error}</p>}{message && <p className="notice" role="status">{message}</p>}
   </section>;
 }
-function FilterPanel({ filters, onChange }: { filters: Filters; onChange: (value: Filters) => void }) {
+function FilterPanel({ filters, onChange, heading = "Din sökning" }: { filters: Filters; onChange: (value: Filters) => void; heading?: string }) {
   const update = <K extends keyof Filters>(key: K, value: Filters[K]) => onChange({ ...filters, [key]: value });
   type NumericKey = "minPrice" | "maxPrice" | "minRooms" | "maxRooms" | "minSize" | "maxSize" | "maxFee";
   const updateNumber = (key: NumericKey, value: number | null) => {
@@ -205,7 +197,7 @@ function FilterPanel({ filters, onChange }: { filters: Filters; onChange: (value
   const extraCount = [filters.area || null, filters.minPrice, filters.maxRooms, filters.minSize, filters.maxSize, filters.maxFee,
     filters.includeUnknown ? true : null].filter(value => value !== null).length;
   return <aside className="filter-panel surface" aria-label="Sökfilter">
-    <div className="section-heading"><h2>Din sökning</h2><button className="text-button" onClick={() => onChange({ ...defaultFilters })}>Rensa</button></div>
+    <div className="section-heading"><h2>{heading}</h2><button className="text-button" onClick={() => onChange({ ...defaultFilters })}>Rensa</button></div>
     <label>Kommun<select value={filters.municipality || ""} onChange={event => update("municipality", event.target.value ? event.target.value as Filters["municipality"] : null)}>
       <option value="">Hela Stockholms län</option>{municipalities.map(name => <option key={name}>{name}</option>)}
     </select></label>
@@ -230,8 +222,8 @@ function FilterPanel({ filters, onChange }: { filters: Filters; onChange: (value
     {!filterSchema.safeParse(filters).success && <p role="alert" className="error">Kontrollera intervallen. Minsta värdet får inte vara större än det högsta.</p>}
   </aside>;
 }
-function Property({ listing, profile }: { listing: Listing; profile: Profile }) {
-  const assessment = assess(listing, profile);
+function Property({ listing, profile }: { listing: Listing | PublicListing; profile?: Profile }) {
+  const assessment = profile && "externalId" in listing ? assess(listing, profile) : null;
   return <article className="property surface">
     <div className="property-top"><span className="badge">{demo ? "Demo · kommande" : "Kommande"}</span><span className="small muted">{listing.type}</span></div>
     <div className="property-location">{listing.area} · {listing.municipality}</div>
@@ -242,9 +234,10 @@ function Property({ listing, profile }: { listing: Listing; profile: Profile }) 
       <div><dt>Rum</dt><dd>{listing.rooms === null ? "Ej angivet" : number(listing.rooms)}</dd></div>
       <div><dt>Avgift/mån</dt><dd>{listing.fee === null ? "Ej angivet" : `${number(listing.fee)} kr`}</dd></div>
     </dl>
-    <p className="small">{assessment.needsCheck ? "Matchar kända filter. Manuell kontroll krävs." : "Matchar dina faktabaserade krav."}</p>
-    {assessment.reasons.length > 0 && <ul className="match-reasons small">{assessment.reasons.map(reason => <li key={reason}>{reason}</li>)}</ul>}
-    {profile.unverified.length > 0 && <p className="small muted">Inte bedömt: {profile.unverified.map(c => c.text).join("; ")}.</p>}
+    {assessment && <p className="small">{assessment.needsCheck ? "Matchar kända filter. Manuell kontroll krävs." : "Matchar dina faktabaserade krav."}</p>}
+    {!!assessment?.reasons.length && <ul className="match-reasons small">{assessment.reasons.map(reason => <li key={reason}>{reason}</li>)}</ul>}
+    {!!profile?.unverified.length && <p className="small muted">Inte bedömt: {profile.unverified.map(c => c.text).join("; ")}.</p>}
+    {!profile && <p className="small muted">Först upptäckt: {date(listing.firstSeen)}</p>}
     <div className="property-bottom">
       {demo ? <span className="small muted">Fiktivt objekt · ingen annons</span> : <><div className="small muted">{sources.find(source => source.id === listing.sourceId)?.name}<br />
         <span className={stale(listing.lastSeen) ? "stale" : ""}>{stale(listing.lastSeen) ? "Äldre uppgift: " : "Kontrollerad: "}{date(listing.lastSeen)}</span></div>
@@ -382,6 +375,9 @@ function App() {
   }), [profile, catalog.listings, sort]);
   const enabledSources = catalog.sources.filter(source => source.authorized).length;
   const changeTheme = () => { const next = theme === "dark" ? "light" : "dark"; setTheme(next); document.documentElement.dataset.theme = next; };
+  const publicFeed = !demo && <PublicListings apiBase={apiBase}
+    renderFilters={(filters, change) => <FilterPanel filters={filters} onChange={change} heading="Objektfilter" />}
+    renderListing={listing => <Property listing={listing} />} />;
   return <div className={minimal ? "website-shell" : undefined}>
     <a className="skip" href="#main">Hoppa till innehåll</a>
     {minimal && <header className="site-header compact-header" onKeyDown={event => {
@@ -422,27 +418,29 @@ function App() {
         {minimal && <>
           <div className="home-composition">
           <section className="home-intro" aria-labelledby="home-title">
-            <h1 id="home-title">Vad är viktigt i ditt nästa hem?</h1>
-            <p>Beskriv var och hur du vill bo. Kommandekollen hjälper dig att förtydliga dina önskemål och skapa en personlig bostadssökning för Stockholms län.</p>
+            <h1 id="home-title">Hitta kommande bostäder före andra</h1>
+            <p>Vi bygger en samlad koll på kommande bostäder direkt från mäklarna. Målet: hitta ditt nästa hem innan annonsen når de stora bostadssajterna.</p>
           </section>
           <PreferenceFlow apiBase={apiBase} demo={false} minimal authorized={!!gate} authorize={authorize}
             controlsRef={preferenceControls}
             member={guestFlow || !gate ? null : member} guest={guestFlow || !gate ? { aiReady: gate?.aiReady ?? false } : undefined}
             ready={catalog.serviceReady && !error && !loading} refresh={refresh} onInference={refresh}
             renderFilters={(filters, change) => <FilterPanel filters={filters} onChange={change} />} onDemoPreview={setDemoProfile} />
-          <Inspiration home />
           </div>
+          {publicFeed}
           {accountError && <div className="notice" role="alert"><p>{accountError} Din text finns kvar.</p><button onClick={refresh}>Kontrollera åtkomst igen</button></div>}
           {!apiBase && <p role="status" className="notice">Tjänsten är inte ansluten. Ingen text kan skickas. Ett fiktivt exempel finns i menyn.</p>}
           {panel && <div className="secondary-heading"><h2 ref={panelHeading} tabIndex={-1}>{panel === "account" ? "Ditt konto" : panel === "results" ? "Resultat & källor" : panel === "help" ? "Så fungerar det" : "Integritet"}</h2>
             <button onClick={() => showSearch()}>Tillbaka till texten</button></div>}
           {panel === "help" && <section className="how-it-works" aria-label="Så skapar du en sökning">
+            <p>Objektlistan är öppen för alla. Filtrera utan lösenord eller AI och följ länken till källan. Täckningen beror på anslutna källor och deras tillstånd. Vi garanterar inte alla objekt eller ett försprång framför andra bostadssajter.</p>
+            <p>Först upptäckt är när Kommandekollen såg objektet, inte när mäklaren publicerade det. Vill du ha hjälp att formulera din personliga sökning är AI-hjälpen valfri:</p>
             <ol>
-              <li><strong>Beskriv.</strong> Berätta var och hur du vill bo. Du öppnar texthjälpen med det gemensamma lösenordet och väljer om din text får behandlas av AI.</li>
+              <li><strong>Beskriv.</strong> Berätta var och hur du vill bo. Välj Hitta bostad, ange det gemensamma lösenordet och godkänn AI-hjälpen. Lösenordet är inte ett personligt konto.</li>
               <li><strong>Förtydliga.</strong> Svara på en fråga i taget när något behöver förklaras. Du kan också använda vanliga filter, utan AI.</li>
-              <li><strong>Granska och spara.</strong> Skilj på krav, önskemål och sådant du behöver kontrollera själv. Du godkänner sammanfattningen innan du sparar.</li>
+              <li><strong>Granska.</strong> Kontrollera krav, önskemål och sådant du behöver undersöka själv. Sökförslaget är inte sparat ännu.</li>
             </ol>
-            <p>När du sparar första gången verifierar du din e-post i samma webbläsare. Sedan granskar och bekräftar du exakt den sökningen igen. Verifieringen ensam sparar ingenting.</p>
+            <p>Vill du spara? Verifiera din e-post i samma webbläsare. Granska sedan sökförslaget igen och bekräfta sparandet. Verifieringen ensam sparar ingenting.</p>
             <details><summary>Om AI, integritet och gränser</summary>
               <p>Built with Llama. Med ditt godkännande skickas bostadstexten och föregående utkast till Cloudflare, utan tillagd konto- eller e-postinformation. Skriv inga personliga eller känsliga uppgifter. Granska alltid tolkningen.</p>
               <p>Hela piloten delar på högst sex AI-försök per UTC-dygn, även misslyckade anrop räknas. Vanliga filter använder inte AI. Ingen rå prompt eller chatthistorik sparas i appen; tolkade utkast gäller i 30 minuter.</p>
@@ -460,11 +458,13 @@ function App() {
           {accountLoading && <p role="status" className="notice">Kontrollerar medlemskap…</p>}
           {accountError && <div className="notice" role="alert"><p>{accountError}</p><button onClick={refresh}>Försök igen</button></div>}
           <Membership member={member} ready={ready} accepting={accepting} refresh={refresh} />
+          {!canSearch && publicFeed}
         </>}
         {canSearch && (!minimal || panel === "results") && <>
-        {!minimal && <><section className="search-heading"><Inspiration /><div className="search-heading-copy"><h1>Beskriv ditt nästa hem.</h1><p>Dina krav. Dina önskemål. Du godkänner innan något sparas.</p></div></section>
+        {!minimal && <><section className="search-heading"><div className="search-heading-copy"><h1>Beskriv ditt nästa hem.</h1><p>Dina krav. Dina önskemål. Du godkänner innan något sparas.</p></div></section>
         <PreferenceFlow apiBase={apiBase} demo={demo} member={guestFlow ? null : member} guest={guestFlow ? { aiReady: gate!.aiReady } : undefined} ready={catalog.serviceReady && !error && !loading} refresh={refresh}
-          renderFilters={(filters, change) => <FilterPanel filters={filters} onChange={change} />} onDemoPreview={setDemoProfile} onInference={shared ? refresh : undefined} /></>}
+          renderFilters={(filters, change) => <FilterPanel filters={filters} onChange={change} />} onDemoPreview={setDemoProfile} onInference={shared ? refresh : undefined} />
+          {publicFeed}</>}
         {shared && !member && <details className="surface"><summary>Har du redan en sparad sökning? Logga in</summary>
           <Membership member={null} ready={ready} accepting={false} refresh={refresh} shared /></details>}
         <div className="coverage-strip"><span className="status-dot" aria-hidden="true" /><span>{demo ? "6 exempelbostäder · 0 anslutna livekällor" : `${enabledSources} tillåtna källor · begränsad täckning`}</span><a href="#kallor">Se källstatus<Icon name="arrow" /></a></div>
@@ -505,7 +505,7 @@ function App() {
       <a href="?info=privacy" onClick={event => openInfo(event, "privacy")}>Integritet & radering</a>
       <a href="mailto:kontakt@kommandekollen.se">Kontakt</a>
     </footer>}
-    <footer hidden={minimal} className="site-footer"><span>kommandekollen.</span><a href="#integritet">Integritet & radering</a><a href={`${import.meta.env.BASE_URL}assets/ATTRIBUTION.md`}>Bild & licens</a>{canSearch && <a href="#kallor">Källstatus</a>}<span className="small">{shared ? "Delat lösenord · e-post när du sparar" : "Privat tjänst · medlemskap efter godkännande"}</span></footer>
+    <footer hidden={minimal} className="site-footer"><span>kommandekollen.</span><a href="#integritet">Integritet & radering</a>{canSearch && <a href="#kallor">Källstatus</a>}<span className="small">{shared ? "Delat lösenord · e-post när du sparar" : "Privat tjänst · medlemskap efter godkännande"}</span></footer>
   </div>;
 }
 createRoot(document.getElementById("root")!).render(<StrictMode><App /></StrictMode>);

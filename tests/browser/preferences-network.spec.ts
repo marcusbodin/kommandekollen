@@ -9,6 +9,7 @@ import { defaultFilters } from "../../shared/model";
 import { manualProfile, type Interpretation } from "../../shared/preferences";
 import { readableContrast } from "./contrast";
 import { brandAssets } from "./brand";
+import { publicFixtures } from "../fixtures/public-listings";
 
 const frontend = "http://127.0.0.1:5174";
 const api = "http://127.0.0.1:8787";
@@ -70,7 +71,9 @@ test.beforeEach(async ({ page }) => {
   base = `http://127.0.0.1:${address.port}`;
   await page.context().addCookies([{ name: "kk_session", value: token, domain: "127.0.0.1", path: "/", httpOnly: true, sameSite: "Strict" }]);
   await page.route(`${api}/**`, async route => {
-    const response = await route.fetch({ url: `${base}${new URL(route.request().url()).pathname}` });
+    const url = new URL(route.request().url());
+    const response = await route.fetch({ url: `${base}${url.pathname}${url.search}`,
+      ...(url.pathname === "/api/listings" ? { headers: { ...route.request().headers(), cookie: "" } } : {}) });
     await route.fulfill({ response });
   });
 });
@@ -93,12 +96,12 @@ async function seedCompletedAttempts(count: number) {
 test("real Worker HTTP/D1 allows a fourth attempt and explicit save leaves a persisted receipt", async ({ page }) => {
   await seedCompletedAttempts(3);
   await enterPrompt(page);
-  await page.getByRole("button", { name: "Hjälp mig att precisera" }).click();
+  await page.getByRole("button", { name: "Hitta bostad" }).click();
   await expect(page.getByRole("heading", { name: "Stämmer det här?" })).toBeFocused();
   expect(await env.DB.prepare("SELECT search_version FROM subscriptions").first()).toEqual({ search_version: 0 });
   await page.getByLabel("Jag godkänner den här sökningen").check();
   await page.getByRole("button", { name: "Spara pausad sökning" }).click();
-  const receipt = page.getByRole("heading", { name: "Sökningen är sparad pausad", exact: true });
+  const receipt = page.getByRole("heading", { name: "Din sökning är sparad och pausad", exact: true });
   await expect(receipt).toBeVisible();
   await expect(receipt).toBeInViewport();
   await expect(page.locator(".save-receipt")).toContainText("Solna");
@@ -116,7 +119,7 @@ test("real rejected AI output is visible, focused and retains text; recovery doe
   await enterPrompt(page);
   const before = await page.getByRole("textbox", { name: "Beskriv ditt nästa hem", exact: true }).inputValue();
   const response = page.waitForResponse(response => response.url().endsWith("/api/preferences/interpret"));
-  await page.getByRole("button", { name: "Hjälp mig att precisera" }).click();
+  await page.getByRole("button", { name: "Hitta bostad" }).click();
   expect((await response).status()).toBe(502);
   const error = page.locator(".preference-flow [role=alert]");
   await expect(error).toContainText("Texthjälpens svar gick inte att kontrollera");
@@ -160,7 +163,7 @@ test("a late initial draft GET cannot overwrite manual changes already in progre
 test("six exhausted attempts explain the shared budget and manual saving remains available", async ({ page }) => {
   await seedCompletedAttempts(6);
   await enterPrompt(page);
-  await page.getByRole("button", { name: "Hjälp mig att precisera" }).click();
+  await page.getByRole("button", { name: "Hitta bostad" }).click();
   const error = page.locator(".preference-flow [role=alert]");
   await expect(error).toContainText("gratisgräns");
   await expect(error).toBeFocused();
@@ -171,7 +174,7 @@ test("six exhausted attempts explain the shared budget and manual saving remains
   await page.getByRole("button", { name: "Granska ändringarna" }).click();
   await page.getByLabel("Jag godkänner den här sökningen").check();
   await page.getByRole("button", { name: "Spara pausad sökning" }).click();
-  await expect(page.getByRole("heading", { name: "Sökningen är sparad pausad", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Din sökning är sparad och pausad", exact: true })).toBeVisible();
   expect(calls).toBe(0);
   expect(await env.DB.prepare("SELECT count(*) AS n FROM ai_attempts").first()).toEqual({ n: 6 });
 });
@@ -181,7 +184,7 @@ test("a non-JSON gateway response is actionable instead of exposing a parser exc
     status: 503, contentType: "text/html", body: "<html><body>Upstream unavailable</body></html>",
   }));
   await enterPrompt(page);
-  await page.getByRole("button", { name: "Hjälp mig att precisera" }).click();
+  await page.getByRole("button", { name: "Hitta bostad" }).click();
   const error = page.locator(".preference-flow [role=alert]");
   await expect(error).toContainText("HTTP 503");
   await expect(error).toContainText("Resultatet kunde inte bekräftas");
@@ -235,19 +238,20 @@ async function websiteSurface(page: Page) {
   await expect(page.getByRole("textbox", { name: "Beskriv ditt nästa hem", exact: true })).toBeVisible();
   await expect(page.locator("textarea:visible")).toHaveCount(1);
   await expect(page.locator("input:visible")).toHaveCount(0);
-  await expect(page.locator("main .primary:visible")).toHaveCount(1);
-  await expect(page.getByRole("button", { name: "Förfina min sökning", exact: true })).toBeVisible();
+  await expect(page.locator(".preference-flow .primary:visible")).toHaveCount(1);
+  await expect(page.getByRole("button", { name: "Hitta bostad", exact: true })).toBeVisible();
   await expect(page.locator("header:visible")).toHaveCount(1);
   await expect(page.locator("footer:visible")).toHaveCount(1);
   await expect(page.getByRole("link", { name: "kommandekollen. – till sökningen" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Meny", exact: true })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Vad är viktigt i ditt nästa hem?" })).toBeVisible();
-  await expect(page.locator(".home-intro")).toContainText("personlig bostadssökning för Stockholms län");
-  await expect(page.locator(".pilot-note")).toHaveText("Just nu sparas sökningar pausade – inga bostadsobjekt eller bostadsmejl ännu.");
+  await expect(page.getByRole("heading", { name: "Hitta kommande bostäder före andra" })).toBeVisible();
+  await expect(page.locator(".home-intro p")).toHaveText("Vi bygger en samlad koll på kommande bostäder direkt från mäklarna. Målet: hitta ditt nästa hem innan annonsen når de stora bostadssajterna.");
+  await expect(page.locator(".pilot-note")).toHaveText("Just nu sparas sökningar pausade – inga bostadsmejl ännu.");
   await expect(page.locator("footer:visible").getByRole("link", { name: "Kontakt", exact: true })).toHaveAttribute("href", "mailto:kontakt@kommandekollen.se");
   await expect(page.locator("footer:visible")).toContainText("©");
-  await expect(page.locator(".home-photo")).toHaveCount(1);
-  await expect(page.getByText("Inspirationsbild · inte ett bostadsobjekt", { exact: true })).toBeVisible();
+  await expect(page.locator(".home-photo,.inspiration")).toHaveCount(0);
+  await expect(page.locator("img:visible:not(.brand-mark)")).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Senaste kommande bostäder" })).toBeVisible();
   await expect(page.locator(".privacy:visible, .results:visible, .saved-profile:visible, .draft-review:visible")).toHaveCount(0);
   await expect(page.getByRole("dialog")).toHaveCount(0);
 }
@@ -273,10 +277,10 @@ async function borderlessSurfaces(page: Page, selectors: string, elevated = fals
   }
 }
 async function consentToInterpret(page: Page, password = false) {
-  await page.getByRole("button", { name: /^(Förfina min sökning|Tolka mitt svar)$/ }).click();
+  await page.getByRole("button", { name: /^(Hitta bostad|Uppdatera sökförslaget)$/ }).click();
   if (password) await page.getByLabel("Gemensamt lösenord").fill(gatePassword);
   await page.getByLabel("Jag vill använda AI-texthjälpen").check();
-  await page.getByRole("button", { name: "Tolka min text", exact: true }).click();
+  await page.getByRole("button", { name: "Skapa med AI", exact: true }).click();
 }
 async function deliverVerification() {
   let delivered = "";
@@ -301,10 +305,10 @@ test("shared password guest can try AI then verify email and explicitly confirm 
   await consentToInterpret(page, true);
   await expect(page.getByRole("heading", { name: "Stämmer det här?" })).toBeFocused();
   await page.getByLabel("Jag godkänner den här sökningen").check();
-  await page.getByRole("button", { name: "Spara pausad sökning", exact: true }).click();
+  await page.getByRole("button", { name: "Fortsätt till e-post", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Verifiera e-post för att spara" })).toBeFocused();
   await page.getByLabel("E-postadress", { exact: true }).first().fill("new-browser@example.com");
-  await page.getByRole("button", { name: "Skicka verifieringslänk" }).click();
+  await page.getByRole("button", { name: "Begär verifieringslänk" }).click();
   await expect(page.locator(".preference-flow [role=status]")).toContainText("Inget har sparats ännu");
   const link = await deliverVerification();
   await page.reload();
@@ -314,7 +318,7 @@ test("shared password guest can try AI then verify email and explicitly confirm 
   expect(new URL(page.url()).hash).toBe("");
   expect(await env.DB.prepare("SELECT state,search_version FROM subscriptions WHERE email='new-browser@example.com'").first())
     .toEqual({ state: "unverified", search_version: 0 });
-  await page.getByRole("button", { name: "Fortsätt", exact: true }).click();
+  await page.getByRole("button", { name: "Bekräfta e-post", exact: true }).click();
   await expect(page.locator(".action-page [role=status]")).toContainText("Sökningen är inte sparad");
   await page.getByRole("link", { name: "Till sökningen och granskningen" }).click();
   await expect(page.getByText("E-postadressen är verifierad. Granska den här sammanfattningen", { exact: false })).toBeVisible();
@@ -324,7 +328,7 @@ test("shared password guest can try AI then verify email and explicitly confirm 
     .toEqual({ state: "approved", search_version: 0, alerts_enabled: 0 });
   await page.getByLabel("Jag godkänner den här sökningen").check();
   await confirm.click();
-  await expect(page.getByRole("heading", { name: "Sökningen är sparad pausad", exact: true })).toBeInViewport();
+  await expect(page.getByRole("heading", { name: "Din sökning är sparad och pausad", exact: true })).toBeInViewport();
   expect(await env.DB.prepare("SELECT search_version,alerts_enabled FROM subscriptions WHERE email='new-browser@example.com'").first())
     .toEqual({ search_version: 1, alerts_enabled: 0 });
   expect(calls).toBe(1);
@@ -340,11 +344,11 @@ test("wrong-password errors are visible and a separate browser cannot claim the 
   await page.goto("/");
   const prompt = page.getByRole("textbox", { name: "Beskriv ditt nästa hem", exact: true });
   await prompt.fill("Villa i Nacka. Gärna stor trädgård.");
-  await page.getByRole("button", { name: /^(Förfina min sökning|Tolka mitt svar)$/ }).click();
+  await page.getByRole("button", { name: /^(Hitta bostad|Uppdatera sökförslaget)$/ }).click();
   await expect(page.getByLabel("Gemensamt lösenord")).toBeFocused();
   await page.getByLabel("Gemensamt lösenord").fill("wrong");
   await page.getByLabel("Jag vill använda AI-texthjälpen").check();
-  await page.getByRole("button", { name: "Tolka min text", exact: true }).click();
+  await page.getByRole("button", { name: "Skapa med AI", exact: true }).click();
   await expect(page.getByRole("alert")).toContainText("Lösenordet kunde inte godkännas");
   await expect(page.getByRole("alert")).toBeFocused();
   await readableContrast(page, ".access-dialog [role=alert]");
@@ -359,9 +363,9 @@ test("wrong-password errors are visible and a separate browser cannot claim the 
   await expect(page.getByLabel("Jag vill använda AI-texthjälpen")).toHaveCount(0);
   await page.getByRole("button", { name: "Fortsätt utan AI", exact: true }).click();
   await page.getByLabel("Jag godkänner den här sökningen").check();
-  await page.getByRole("button", { name: "Spara pausad sökning", exact: true }).click();
+  await page.getByRole("button", { name: "Fortsätt till e-post", exact: true }).click();
   await page.getByLabel("E-postadress", { exact: true }).first().fill("device@example.com");
-  await page.getByRole("button", { name: "Skicka verifieringslänk" }).click();
+  await page.getByRole("button", { name: "Begär verifieringslänk" }).click();
   await expect(page.locator(".preference-flow [role=status]")).toContainText("Inget har sparats ännu");
   const link = await deliverVerification();
   const other = await browser.newContext();
@@ -371,7 +375,7 @@ test("wrong-password errors are visible and a separate browser cannot claim the 
       await route.fulfill({ response: await route.fetch({ url: `${base}${new URL(route.request().url()).pathname}` }) });
     });
     await second.goto(link);
-    await second.getByRole("button", { name: "Fortsätt", exact: true }).click();
+    await second.getByRole("button", { name: "Bekräfta e-post", exact: true }).click();
     await expect(second.locator(".action-page [role=alert]")).toContainText("gemensamma lösenordet");
     await expect(second.locator(".action-page [role=alert]")).toBeFocused();
     await expect(second.locator(".action-page [role=alert]")).toBeInViewport();
@@ -404,7 +408,7 @@ test("gate rotation blocks an existing owner session while keeping its saved pro
   await page.reload();
   await websiteSurface(page);
   await page.getByRole("textbox", { name: "Beskriv ditt nästa hem", exact: true }).fill("Solna, gärna balkong");
-  await page.getByRole("button", { name: /^(Förfina min sökning|Tolka mitt svar)$/ }).click();
+  await page.getByRole("button", { name: /^(Hitta bostad|Uppdatera sökförslaget)$/ }).click();
   await expect(page.getByLabel("Gemensamt lösenord")).toBeVisible();
   expect(await env.DB.prepare("SELECT preference_profile,search_version FROM subscriptions").first()).toEqual({ preference_profile: JSON.stringify(saved), search_version: 4 });
   expect(calls).toBe(1);
@@ -466,7 +470,7 @@ test("compact website shell explains the service, fits small screens and defers 
   await more(page, "Så fungerar det");
   await expect(page.getByRole("heading", { name: "Så fungerar det", exact: true })).toBeFocused();
   await expect(page.getByRole("region", { name: "Så skapar du en sökning" })).toContainText("samma webbläsare");
-  await expect(page.getByRole("region", { name: "Så skapar du en sökning" })).toContainText("bekräftar du exakt den sökningen igen");
+  await expect(page.getByRole("region", { name: "Så skapar du en sökning" })).toContainText("Granska sedan sökförslaget igen och bekräfta sparandet");
   await expect(prompt).toHaveValue(original);
   await page.getByRole("link", { name: "kommandekollen. – till sökningen" }).click();
   await expect(prompt).toBeFocused();
@@ -485,12 +489,12 @@ test("compact website shell explains the service, fits small screens and defers 
   await page.keyboard.press("Escape");
   await expect(page.getByRole("button", { name: "Meny", exact: true })).toBeFocused();
   await expect(page.getByRole("button", { name: "Meny", exact: true })).toHaveAttribute("aria-expanded", "false");
-  await page.getByRole("button", { name: /^(Förfina min sökning|Tolka mitt svar)$/ }).click();
+  await page.getByRole("button", { name: /^(Hitta bostad|Uppdatera sökförslaget)$/ }).click();
   await expect(page.getByLabel("Gemensamt lösenord")).toBeFocused();
   const consent = page.getByLabel("Jag vill använda AI-texthjälpen");
   await expect(consent).not.toBeChecked();
   await page.getByLabel("Gemensamt lösenord").fill(gatePassword);
-  await expect(page.getByRole("button", { name: "Tolka min text", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Skapa med AI", exact: true })).toBeDisabled();
   await page.getByLabel("Gemensamt lösenord").press("Enter");
   expect(gatePosts).toBe(0); expect(calls).toBe(0);
   if (test.info().project.name === "mobile") await page.setViewportSize({ width: 320, height: 380 });
@@ -501,7 +505,7 @@ test("compact website shell explains the service, fits small screens and defers 
   if (process.env.VISUAL_REVIEW === "1") await page.screenshot({ path: test.info().outputPath("contextual-access-keyboard.png"), animations: "disabled" });
   await page.keyboard.press("Escape");
   await expect(prompt).toBeFocused(); await expect(prompt).toHaveValue(original);
-  await page.getByRole("button", { name: /^(Förfina min sökning|Tolka mitt svar)$/ }).click();
+  await page.getByRole("button", { name: /^(Hitta bostad|Uppdatera sökförslaget)$/ }).click();
   await expect(consent).not.toBeChecked();
   await page.getByRole("button", { name: "Avbryt", exact: true }).click();
   await expect(prompt).toHaveValue(original);
@@ -514,15 +518,15 @@ test("one consented submit cannot duplicate inference and followups reuse only t
   output = { ...interpretation, question: { text: "Hur stor boarea vill du ha?", choices: ["Gärna minst 70 m²"], required: false } };
   await page.goto("/");
   await page.getByRole("textbox", { name: "Beskriv ditt nästa hem", exact: true }).fill("Lägenhet i Solna, högst 4 miljoner.");
-  await page.getByRole("button", { name: /^(Förfina min sökning|Tolka mitt svar)$/ }).click();
+  await page.getByRole("button", { name: /^(Hitta bostad|Uppdatera sökförslaget)$/ }).click();
   await page.getByLabel("Gemensamt lösenord").fill(gatePassword);
   await page.getByLabel("Jag vill använda AI-texthjälpen").check();
-  await page.getByRole("button", { name: "Tolka min text", exact: true }).evaluate((button: HTMLButtonElement) => { button.click(); button.click(); });
+  await page.getByRole("button", { name: "Skapa med AI", exact: true }).evaluate((button: HTMLButtonElement) => { button.click(); button.click(); });
   await expect(page.getByRole("textbox", { name: "Hur stor boarea vill du ha?" })).toBeFocused();
   expect(calls).toBe(1); expect(gatePosts).toBe(1);
   output = interpretation;
   await page.getByRole("button", { name: "Gärna minst 70 m²", exact: true }).click();
-  await page.getByRole("button", { name: /^(Förfina min sökning|Tolka mitt svar)$/ }).evaluate((button: HTMLButtonElement) => { button.click(); button.click(); });
+  await page.getByRole("button", { name: /^(Hitta bostad|Uppdatera sökförslaget)$/ }).evaluate((button: HTMLButtonElement) => { button.click(); button.click(); });
   await expect(page.getByRole("heading", { name: "Stämmer det här?" })).toBeFocused();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   expect(calls).toBe(2); expect(gatePosts).toBe(1);
@@ -533,7 +537,7 @@ test("one consented submit cannot duplicate inference and followups reuse only t
   await more(page, "Fortsätt utkast");
   await expect(page.getByRole("heading", { name: "Stämmer det här?" })).toBeVisible();
   await page.locator("#housing-prompt").fill("Gärna balkong också.");
-  await page.getByRole("button", { name: /^(Förfina min sökning|Tolka mitt svar)$/ }).click();
+  await page.getByRole("button", { name: /^(Hitta bostad|Uppdatera sökförslaget)$/ }).click();
   await expect(page.getByLabel("Gemensamt lösenord")).toHaveCount(0);
   await expect(page.getByLabel("Jag vill använda AI-texthjälpen")).not.toBeChecked();
   await page.getByRole("button", { name: "Avbryt", exact: true }).click();
@@ -612,20 +616,14 @@ test("pinned mint presentation uses borderless depth, filled states and accessib
     const style = getComputedStyle(document.documentElement);
     return ["--cp-pink", "--cp-brand", "--cp-mint"].map(token => style.getPropertyValue(token).trim());
   })).toEqual(["#fbe3e8", "#5cbdb9", "#ebf6f5"]);
-  const heading = page.getByRole("heading", { name: "Vad är viktigt i ditt nästa hem?" });
+  const heading = page.getByRole("heading", { name: "Hitta kommande bostäder före andra" });
   await expect(heading).toHaveCSS("font-family", /Georgia/);
   await expect(heading).toHaveCSS("font-weight", "400");
   await expect(page.getByRole("button", { name: "Meny", exact: true })).toHaveCSS("font-family", /Segoe UI/);
-  const image = page.locator(".home-photo img"), prompt = page.locator("#housing-prompt");
-  await expect.poll(() => image.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
-  expect(await image.evaluate((img: HTMLImageElement) => new URL(img.currentSrc).origin)).toBe(frontend);
-  await expect(image).toHaveAttribute("srcset", /assets\/home-light-480\.webp 480w, .*assets\/home-light-960\.webp 960w/);
-  await expect(image).toHaveAttribute("alt", "Ljust vardagsrum med fåtöljer och turkosa kuddar.");
-  const credit = page.getByRole("link", { name: "Foto: Francesca Tosolini · bild & licens" });
-  const creditResponse = await page.request.get(await credit.getAttribute("href") ?? "");
-  expect(creditResponse.status()).toBe(200);
-  expect(await creditResponse.text()).toContain("Francesca Tosolini");
-  const targets = ".home-intro h1,.home-intro p,.prompt-shell label,#housing-prompt,#prompt-helper,.prompt-shell .primary,.pilot-note,.home-photo figcaption,.home-photo a,.compact-header .brand,.compact-nav a,.nav-essential button,.site-menu-toggle,.compact-footer span,.compact-footer a";
+  const prompt = page.locator("#housing-prompt");
+  await expect(page.locator(".home-photo,.inspiration")).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Foto: Francesca Tosolini · bild & licens" })).toHaveCount(0);
+  const targets = ".home-intro h1,.home-intro p,.prompt-shell label,#housing-prompt,#prompt-helper,.prompt-shell .primary,.pilot-note,.public-listings h2,.public-listings p,.public-listings summary,.compact-header .brand,.compact-nav a,.nav-essential button,.site-menu-toggle,.compact-footer span,.compact-footer a";
   const reports = [];
   for (const theme of ["light", "dark"] as const) {
     if (theme === "dark") {
@@ -634,7 +632,7 @@ test("pinned mint presentation uses borderless depth, filled states and accessib
     }
     await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
     await brandAssets(page);
-    const primary = page.getByRole("button", { name: "Förfina min sökning", exact: true });
+    const primary = page.getByRole("button", { name: "Hitta bostad", exact: true });
     await prompt.fill("");
     await heading.click();
     await expect(primary).toBeDisabled();
@@ -660,7 +658,7 @@ test("pinned mint presentation uses borderless depth, filled states and accessib
     await expect(primary).toHaveCSS("background-color", "rgb(251, 227, 232)");
     await expect(primary).toHaveCSS("color", "rgb(32, 58, 57)");
     await expect(primary).toHaveCSS("border-radius", "999px");
-    await borderlessSurfaces(page, ".prompt-shell,.home-photo,.prompt-shell .primary,.site-menu-toggle", true);
+    await borderlessSurfaces(page, ".prompt-shell,.prompt-shell .primary,.site-menu-toggle,.public-filters > summary", true);
     await borderlessSurfaces(page, "#housing-prompt,.compact-header,.compact-footer,.pilot-note");
     await expect(page.locator(".site-menu-toggle")).toHaveCSS("background-color", "rgb(92, 189, 185)");
     await expect(page.locator(".site-menu-toggle")).toHaveCSS("color", "rgb(32, 58, 57)");
@@ -678,9 +676,8 @@ test("pinned mint presentation uses borderless depth, filled states and accessib
     reports.push({ theme, text, disabledText, placeholder, focus, actionFocus, hover });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     if (page.viewportSize()!.width <= 960) {
-      const inputBox = await prompt.boundingBox(), imageBox = await image.boundingBox();
-      expect(imageBox!.y).toBeGreaterThan(inputBox!.y + inputBox!.height);
-      expect(imageBox!.height).toBeLessThanOrEqual(160);
+      const inputBox = await prompt.boundingBox(), feedBox = await page.locator(".public-listings").boundingBox();
+      expect(feedBox!.y).toBeGreaterThan(inputBox!.y + inputBox!.height);
       expect(inputBox!.y + await page.evaluate(() => scrollY)).toBeLessThan(500);
     }
     await heading.click();
@@ -722,7 +719,7 @@ test("pinned mint presentation uses borderless depth, filled states and accessib
   }
   await test.info().attach("theme-contrast", { body: JSON.stringify(reports, null, 2), contentType: "application/json" });
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await expect(page.getByRole("button", { name: "Förfina min sökning", exact: true })).toHaveCSS("transition-duration", "0s");
+  await expect(page.getByRole("button", { name: "Hitta bostad", exact: true })).toHaveCSS("transition-duration", "0s");
   expect(await page.evaluate(() => document.getAnimations().filter(animation => animation.playState === "running").length)).toBe(0);
   await more(page, "Ljust tema");
   await page.getByRole("button", { name: "Meny", exact: true }).click();
@@ -735,5 +732,194 @@ test("pinned mint presentation uses borderless depth, filled states and accessib
   }
   await cdp.send("Emulation.setEmulatedVisionDeficiency", { type: "none" });
   await cdp.detach();
+  expect(calls).toBe(0); expect(gatePosts).toBe(0);
+});
+
+async function seedPublicInventory() {
+  env.AUTHORIZED_SOURCES = JSON.stringify([{ id: "authorized", hosts: ["listings.example.com"],
+    licenseReference: "Synthetic local browser fixture only", expiresAt: "2099-01-01T00:00:00Z" }]);
+  await env.DB.batch(publicFixtures.map(({ id, firstSeen, lastSeen, ...listing }) =>
+    env.DB.prepare("INSERT INTO listings VALUES(?,?,?,?,?,1)").bind(id, listing.sourceId, JSON.stringify(listing), firstSeen, lastSeen)));
+}
+async function browsingState() {
+  return Promise.all(["subscriptions", "sessions", "guest_sessions", "guest_drafts", "guest_saves", "search_drafts", "ai_attempts", "outbox", "quotas", "gate_logins"]
+    .map(async table => ({ table, rows: (await env.DB.prepare(`SELECT * FROM ${table}`).all()).results })));
+}
+test("public feed reads real HTTP/D1 pages anonymously and filters all objects without changing the personal search", async ({ page }) => {
+  env.ACCESS_MODE = "shared"; env.SHARED_ACCESS_PASSWORD = gatePassword;
+  await seedPublicInventory();
+  await env.DB.prepare("UPDATE subscriptions SET preference_profile=?,search_version=4").bind(JSON.stringify(manualProfile({ ...defaultFilters, maxPrice: 4250123 }))).run();
+  await page.context().clearCookies();
+  const before = await browsingState();
+  const reads: { url: string; credentials: RequestCredentials }[] = [];
+  await page.exposeFunction("capturePublicRead", (url: string, credentials: RequestCredentials) => { reads.push({ url, credentials }); });
+  await page.addInitScript(() => {
+    const original = window.fetch;
+    window.fetch = (input, init) => {
+      if (String(input).includes("/api/listings")) {
+        const capture = Reflect.get(window, "capturePublicRead") as (url: string, credentials: RequestCredentials | undefined) => void;
+        capture(String(input), init?.credentials);
+      }
+      return original(input, init);
+    };
+  });
+  const errors: string[] = [];
+  page.on("pageerror", error => errors.push(error.message));
+  await page.goto("/");
+  const feed = page.locator(".public-listings"), cards = feed.locator(".property"), prompt = page.locator("#housing-prompt");
+  await expect(cards).toHaveCount(12);
+  await expect(cards.first()).toContainText("Syntetiska gatan 29");
+  await websiteSurface(page);
+  await brandAssets(page);
+  await prompt.fill("Villa i Nacka, gärna en trädgård.");
+  const contrast = [];
+  for (const theme of ["light", "dark"] as const) {
+    if (theme === "dark") { await more(page, "Mörkt tema"); await page.keyboard.press("Escape"); }
+    await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+    contrast.push(await readableContrast(page, ".public-listings h2,.public-listings h3,.public-listings p,.public-listings a,.public-listings dt,.public-listings dd,.public-listings span,.public-listings summary,.public-listings button"));
+    await borderlessSurfaces(page, ".public-listings .property,.public-filters > summary,.public-load-more button", true);
+    await page.locator(".public-filters > summary").focus();
+    await expect(page.locator(".public-filters > summary")).toHaveCSS("outline-width", "3px");
+    contrast.push(await readableContrast(page, ".public-filters > summary", "focus"));
+    if (process.env.VISUAL_REVIEW === "1") {
+      await page.locator("#public-listings-title").evaluate(el => window.scrollTo({ top: el.getBoundingClientRect().top + scrollY - 24, behavior: "instant" }));
+      await page.screenshot({ path: test.info().outputPath(`public-feed-populated-${theme}.png`), animations: "disabled" });
+    }
+  }
+  await more(page, "Ljust tema"); await page.keyboard.press("Escape");
+  for (const width of test.info().project.name === "mobile" ? [320, 360, 390, 430] : [1440]) {
+    await page.setViewportSize({ width, height: width === 1440 ? 1000 : 850 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    if (width <= 430) expect((await page.locator(".compact-header").boundingBox())!.height).toBeLessThanOrEqual(84);
+    for (const target of await feed.locator("button:visible,summary:visible,.property a:visible").all()) {
+      const box = (await target.boundingBox())!;
+      expect(box.height).toBeGreaterThanOrEqual(44); expect(box.width).toBeGreaterThanOrEqual(44);
+    }
+  }
+  await feed.getByRole("button", { name: "Ladda fler", exact: true }).evaluate((button: HTMLButtonElement) => { button.click(); button.click(); });
+  await expect(cards).toHaveCount(24);
+  expect(reads.filter(read => new URL(read.url).searchParams.has("cursor"))).toHaveLength(1);
+  await feed.getByRole("button", { name: "Ladda fler", exact: true }).click();
+  await expect(cards).toHaveCount(29);
+  await expect(feed.getByRole("button", { name: "Ladda fler", exact: true })).toHaveCount(0);
+  expect(new Set(await cards.locator("h3").allTextContents()).size).toBe(29);
+  await feed.locator(":scope > details > summary").click();
+  await feed.getByRole("combobox", { name: "Kommun", exact: true }).selectOption("Stockholm");
+  await readableContrast(page, ".public-listings label,.public-listings button,.public-listings select,.public-listings legend,.public-listings summary");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await feed.getByRole("button", { name: "Använd filter", exact: true }).click();
+  await expect(cards).toHaveCount(12);
+  for (const location of await cards.locator(".property-location").allTextContents()) expect(location).toContain("Stockholm");
+  await feed.getByRole("button", { name: "Ladda fler", exact: true }).click();
+  await expect(cards).toHaveCount(15);
+  await feed.locator(":scope > details > summary").click();
+  await feed.getByRole("button", { name: "Rensa", exact: true }).click();
+  await feed.locator(".more-filters > summary").click();
+  await feed.getByRole("searchbox", { name: "Område eller gata" }).fill("åRSTA öSTRA");
+  await feed.getByRole("button", { name: "Använd filter", exact: true }).click();
+  await expect(cards).toHaveCount(1);
+  await expect(cards.first()).toContainText("Syntetiska gatan 1");
+  await expect(cards.first()).toContainText("Pris ej angivet");
+  await expect(cards.first()).toContainText("Först upptäckt:");
+  await expect(cards.first()).toContainText("Äldre uppgift:");
+  await expect(cards.first().getByRole("link", { name: "Visa objekt" })).toHaveAttribute("href", publicFixtures[0].url);
+  await expect(feed).not.toContainText("Matchar dina");
+  await expect(prompt).toHaveValue("Villa i Nacka, gärna en trädgård.");
+  await more(page, "Så fungerar det");
+  await page.getByRole("link", { name: "kommandekollen. – till sökningen" }).click();
+  await expect(prompt).toHaveValue("Villa i Nacka, gärna en trädgård.");
+  await expect(cards).toHaveCount(1);
+  await page.getByRole("button", { name: "Hitta bostad", exact: true }).click();
+  await expect(page.getByLabel("Gemensamt lösenord")).toBeFocused();
+  await expect(page.getByLabel("Jag vill använda AI-texthjälpen")).not.toBeChecked();
+  await page.keyboard.press("Escape");
+  expect(reads.every(read => read.credentials === "omit")).toBe(true);
+  expect(await browsingState()).toEqual(before);
+  expect(calls).toBe(0); expect(gatePosts).toBe(0); expect(errors).toEqual([]);
+  await test.info().attach("public-feed-contrast", { body: JSON.stringify(contrast), contentType: "application/json" });
+});
+
+async function holdPublicResponse(page: Page, match: (url: URL) => boolean) {
+  let release!: () => void, reached!: () => void, done!: () => void;
+  const held = new Promise<void>(resolve => { release = resolve; });
+  const received = new Promise<void>(resolve => { reached = resolve; });
+  const completed = new Promise<void>(resolve => { done = resolve; });
+  let once = true;
+  await page.route(`${api}/api/listings?**`, async route => {
+    const url = new URL(route.request().url());
+    if (!once || !match(url)) { await route.fallback(); return; }
+    once = false;
+    const response = await route.fetch({ url: `${base}${url.pathname}${url.search}`, headers: { ...route.request().headers(), cookie: "" } });
+    reached(); await held;
+    await route.fulfill({ response }); done();
+  });
+  return { release, received, completed };
+}
+test("public feed retains cards on failed load more and ignores late pages and old filter responses", async ({ page }) => {
+  env.ACCESS_MODE = "shared"; env.SHARED_ACCESS_PASSWORD = gatePassword;
+  await seedPublicInventory(); await page.context().clearCookies();
+  await page.goto("/");
+  const feed = page.locator(".public-listings"), cards = feed.locator(".property");
+  await expect(cards).toHaveCount(12);
+  await page.locator("#housing-prompt").fill("Min oskickade bostadstext.");
+  await page.route(`${api}/api/listings?**`, route => route.abort("failed"), { times: 1 });
+  await feed.getByRole("button", { name: "Ladda fler", exact: true }).click();
+  await expect(feed.getByRole("alert")).toContainText("Kontrollera anslutningen");
+  await expect(feed.getByRole("alert")).toContainText("Redan inlästa objekt finns kvar");
+  await expect(cards).toHaveCount(12);
+  await feed.getByRole("button", { name: "Försök igen", exact: true }).click();
+  await expect(cards).toHaveCount(24);
+  const oldPage = await holdPublicResponse(page, url => url.searchParams.has("cursor"));
+  await feed.getByRole("button", { name: "Ladda fler", exact: true }).click();
+  await oldPage.received;
+  await feed.locator(":scope > details > summary").click();
+  await feed.getByRole("combobox", { name: "Kommun", exact: true }).selectOption("Stockholm");
+  await feed.getByRole("button", { name: "Använd filter", exact: true }).click();
+  await expect(cards).toHaveCount(12);
+  oldPage.release(); await oldPage.completed;
+  await expect(cards).toHaveCount(12);
+  expect((await cards.locator(".property-location").allTextContents()).every(text => text.includes("Stockholm"))).toBe(true);
+  const oldFilter = await holdPublicResponse(page, url => JSON.parse(url.searchParams.get("filters") || "{}").municipality === "Nacka");
+  await feed.locator(":scope > details > summary").click();
+  await feed.getByRole("combobox", { name: "Kommun", exact: true }).selectOption("Nacka");
+  await feed.getByRole("button", { name: "Använd filter", exact: true }).click();
+  await oldFilter.received;
+  await feed.locator(":scope > details > summary").click();
+  await feed.getByRole("combobox", { name: "Kommun", exact: true }).selectOption("Solna");
+  await feed.getByRole("button", { name: "Använd filter", exact: true }).click();
+  await expect(cards).toHaveCount(12);
+  oldFilter.release(); await oldFilter.completed;
+  await expect(cards).toHaveCount(12);
+  expect((await cards.locator(".property-location").allTextContents()).every(text => text.includes("Solna"))).toBe(true);
+  await feed.getByRole("button", { name: "Ladda fler", exact: true }).click();
+  await expect(cards).toHaveCount(14);
+  await expect(page.locator("#housing-prompt")).toHaveValue("Min oskickade bostadstext.");
+  expect(calls).toBe(0); expect(gatePosts).toBe(0);
+});
+
+test("public feed distinguishes no sources, unready service, empty inventory and no filter matches", async ({ page }) => {
+  env.ACCESS_MODE = "shared"; env.SHARED_ACCESS_PASSWORD = gatePassword;
+  await page.context().clearCookies();
+  await page.goto("/");
+  const feed = page.locator(".public-listings");
+  await expect(feed).toContainText("Inga bostadskällor är anslutna ännu. Därför visas inga bostäder just nu.");
+  await expect(feed.locator(".property")).toHaveCount(0);
+  env.SERVICE_ENABLED = "false";
+  await feed.getByRole("button", { name: "Uppdatera listan" }).click();
+  await expect(feed.getByRole("alert")).toContainText("Objektlistan är inte aktiverad");
+  await expect(feed).not.toContainText("Inga bostadskällor är anslutna ännu");
+  env.SERVICE_ENABLED = "true";
+  await seedPublicInventory();
+  await env.DB.prepare("UPDATE listings SET active=0").run();
+  await feed.getByRole("button", { name: "Försök igen", exact: true }).click();
+  await expect(feed.getByRole("heading", { name: "Inga kommande objekt just nu" })).toBeVisible();
+  await env.DB.prepare("UPDATE listings SET active=1").run();
+  await feed.locator(":scope > details > summary").click();
+  await feed.getByRole("combobox", { name: "Kommun", exact: true }).selectOption("Nacka");
+  await feed.getByRole("button", { name: "Använd filter", exact: true }).click();
+  await expect(feed.getByRole("heading", { name: "Inga objekt matchar filtren" })).toBeVisible();
+  await feed.getByRole("button", { name: "Rensa filter", exact: true }).click();
+  await expect(feed.locator(".property")).toHaveCount(12);
+  await expect(feed.getByRole("button", { name: "Ladda fler", exact: true })).toBeVisible();
   expect(calls).toBe(0); expect(gatePosts).toBe(0);
 });

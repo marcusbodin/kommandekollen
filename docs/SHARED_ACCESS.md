@@ -16,8 +16,18 @@ The isolated input-first frontend was published on 2026-09-27 through Pages
 run `36299417326`; no Worker, secret, configuration or migration changed.
 The user's subsequent correction restores a lightweight website shell around
 that public input: existing wordmark, navigation, purpose copy and footer with
-privacy/contact/copyright. Search remains dominant. This new frontend revision
-also needs only Pages deployment; it does not change the backend or access flow.
+privacy/contact/copyright. The later user decision makes a separate upcoming
+feed public while retaining the gate for AI and saved searches. This revision
+requires the new Worker read route plus Pages; it changes no gate/save flow,
+configuration, secret or migration.
+
+The product goal is early discovery directly at brokers, before larger portals,
+not an all-source or first-buyer guarantee. Optional AI clarifies wishes; public
+reading/filtering uses none. The homepage explicitly frames that discovery goal
+as "Vi bygger"/"Målet:". The user-pinned headline "Hitta kommande bostäder före andra"
+and initial "Hitta bostad" action do not change that goal into proven coverage.
+Zero connected sources remains an honest empty state; the prompt helper explains
+that the gated AI action creates a search proposal, not a saved profile.
 
 Describe a home locally -> explicitly send -> enter the shared password if
 needed and explicitly consent to Cloudflare processing -> interpret -> review
@@ -34,12 +44,10 @@ saved drafts, account/login/logout/owner tools, quota and results/source status.
 The old input-level "Mer" is removed. Privacy/contact is also in the footer.
 Manual review and account login request the gate when needed but never AI
 consent or inference. The existing backend remains the authorization boundary.
-A bounded, locally hosted inspiration photo accompanies the white/mint search
-composition. The user's pinned palette supplies teal details and pale-pink
-actions; a native serif display complements the unchanged sans-serif controls.
-The photo is explicitly not a listing, links to its credit/license and
-follows the input on mobile. Legacy/demo imagery is unchanged. This presentation
-refinement changes no gate, inference, storage or save contract.
+The supplied local house/radar logo stays; all inspiration photography is removed,
+including legacy/demo. The white/mint search composition precedes the public feed.
+The pinned palette supplies teal details and pale-pink actions; a native serif
+display complements the unchanged sans-serif controls.
 Decorative borders are replaced by soft shadows and filled pink/teal/mint
 controls. Keyboard focus and native control affordances remain. Disabled
 buttons retain their color but not elevation or submission ability; no
@@ -83,6 +91,12 @@ confirmation and owner routes, requires a valid gate in shared mode.
 Infrastructure `/admin/*` keeps its independent server secret.
 Signed POST `/api/unsubscribe` remains ungated for deletion.
 The public `/api/status` adds `accessMode`; it exposes no guest/member details.
+`GET /api/listings` is the other public read surface, before the guest guard in
+both access modes. Its explicit facts-only DTO, whole-inventory filters and
+12-item pagination are documented in [OPERATIONS.md](OPERATIONS.md#public-listings).
+The frontend uses `credentials:"omit"`; reading, filtering and loading more
+create no gate/account, draft, AI attempt, save or email. Existing traffic-rate
+buckets still apply. The old `/api/catalog` is not ungated or exposed wholesale.
 
 | Route | Contract |
 | --- | --- |

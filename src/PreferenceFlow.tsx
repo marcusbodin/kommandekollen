@@ -295,9 +295,9 @@ export function PreferenceFlow({ apiBase, demo, member, ready, refresh, renderFi
       <label htmlFor="housing-prompt">{draft?.question && !dirty ? draft.question.text : draft ? "Vill du rätta eller lägga till något?" : "Beskriv ditt nästa hem"}</label>
       <textarea id="housing-prompt" ref={input} value={text} onChange={event => editText(event.target.value)} maxLength={1600} rows={3}
         placeholder={minimal ? "Till exempel: en trea i Solna, högst 4 miljoner. Gärna balkong." : "Var vill du bo, vad måste finnas och vad vore fint?"} disabled={busy} aria-describedby={minimal ? "prompt-helper" : "prompt-privacy"} />
-      {minimal && <div className="prompt-tools"><p id="prompt-helper" className="small muted">{authorized ? "E-post först när du sparar." : "Lösenord i nästa steg. E-post först när du sparar."}</p>
+      {minimal && <div className="prompt-tools"><p id="prompt-helper" className="small muted">{authorized ? "AI-hjälpen skapar ett förslag. E-post först när du sparar." : "Få ett sökförslag med AI. Lösenord krävs. E-post först när du sparar."}</p>
         <button className="primary" disabled={busy || dirty || text.trim().length < 3}>
-          {activity === "interpret" ? "Tolkar…" : draft ? "Tolka mitt svar" : "Förfina min sökning"}</button></div>}
+          {activity === "interpret" ? "Skapar sökförslag…" : draft ? "Uppdatera sökförslaget" : "Hitta bostad"}</button></div>}
       </div>
       {!minimal && <p className="small muted" id="prompt-privacy">Skriv inga namn, kontaktuppgifter eller känsliga uppgifter. {demo ? "Detta är ett fast, illustrativt exempel – inte AI. Din text tolkas inte." : "Din bostadstext och föregående utkast skickas till Cloudflare. Vi lägger inte till konto eller mejladress."}</p>}
       {!minimal && !draft && <><div className="example-chips">{examples.map((example, i) => <button type="button" key={example} disabled={busy}
@@ -306,7 +306,7 @@ export function PreferenceFlow({ apiBase, demo, member, ready, refresh, renderFi
       {!minimal && !demo && <label className="check"><input type="checkbox" checked={aiConsent} onChange={event => setAiConsent(event.target.checked)} /><span>Jag vill använda AI-texthjälpen hos Cloudflare.</span></label>}
       {!minimal && !demo && !aiEnabled && <p className="notice">AI-texthjälpen är inte aktiverad. Du kan skapa samma sparade sökning med vanliga filter nedan.</p>}
       <div className="flow-actions">{!minimal && <button className="primary" disabled={busy || dirty || (!demo && (!aiEnabled || !aiConsent || text.trim().length < 3))}>
-        {activity === "interpret" ? "Tolkar dina önskemål…" : demo ? draft ? "Visa exemplets svar" : "Visa exempelutkast" : draft ? "Tolka mitt svar" : "Hjälp mig att precisera"}</button>}
+        {activity === "interpret" ? "Skapar sökförslag…" : demo ? draft ? "Visa exemplets svar" : "Visa exempelutkast" : draft ? "Uppdatera sökförslaget" : "Hitta bostad"}</button>}
         {(activity === "interpret" || (draft && !busy)) && <button type="button" onClick={() => void cancel()}>{activity === "interpret" ? "Avbryt" : "Börja om"}</button>}
         {draft?.question && !draft.question.required && !dirty && <button type="button" disabled={busy} onClick={() => void review(true)}>Hoppa över frågan</button>}</div>
       {(busy || error || message) && <div ref={feedback} tabIndex={-1} className={`flow-feedback ${error ? "error" : "notice"}`} role={error ? "alert" : "status"} aria-atomic="true">
@@ -322,9 +322,9 @@ export function PreferenceFlow({ apiBase, demo, member, ready, refresh, renderFi
       </div>}
       {!minimal && !demo && <p className="small muted">Built with Llama · <a href="https://github.com/meta-llama/llama-models/blob/main/models/llama3_3/LICENSE" target="_blank" rel="noopener noreferrer">Modellvillkor</a>. Högst sex försök per medlem/IP och sex totalt i piloten per dygn (UTC). Granska alltid tolkningen.</p>}
     </form>
-    {minimal && !ready && !draft && !receipt && <p className="pilot-note">Just nu sparas sökningar pausade – inga bostadsobjekt eller bostadsmejl ännu.</p>}
+    {minimal && !ready && !draft && !receipt && <p className="pilot-note">Just nu sparas sökningar pausade – inga bostadsmejl ännu.</p>}
     {receipt && <section className="save-receipt">
-      <h2 ref={savedHeading} tabIndex={-1}>{receipt.alertsEnabled ? "Sökningen är sparad och bevakningen startad" : "Sökningen är sparad pausad"}</h2>
+      <h2 ref={savedHeading} tabIndex={-1}>{receipt.alertsEnabled ? "Din sökning är sparad och bevakningen startad" : "Din sökning är sparad och pausad"}</h2>
       <p>{receipt.alertsEnabled ? "Bara nya objekt kan skickas i morgonbevakningen." : "Inga bostadsmejl har aktiverats."} Bekräftad version {receipt.searchVersion}.</p>
       <ProfileSummary profile={receipt.profile} />
     </section>}
@@ -340,14 +340,14 @@ export function PreferenceFlow({ apiBase, demo, member, ready, refresh, renderFi
       <label className="check"><input type="checkbox" checked={consent} onChange={event => setConsent(event.target.checked)} disabled={dirty || blocking || busy} />
         <span>{ready ? "Jag godkänner den här sökningen och vill starta daglig mejlbevakning." : "Jag godkänner den här sökningen och vill spara den pausad."}</span></label>
       <button className="primary" disabled={busy || dirty || !!text.trim() || blocking || !valid || !consent || (profile.unverified.some(c => c.must) && !accept)} onClick={() => void save()}>
-        {activity === "save" ? "Arbetar med sparandet…" : demo ? "Förhandsvisa sparande" : guest && saveIntent?.verified
+        {activity === "save" ? guest && !saveIntent?.verified ? "Begär verifieringslänk…" : "Sparar sökningen…" : demo ? "Förhandsvisa sparande" : guest && saveIntent?.verified
           ? ready ? "Bekräfta och starta daglig bevakning" : "Bekräfta och spara pausad sökning"
-          : ready ? "Spara och starta daglig bevakning" : "Spara pausad sökning"}</button>
+          : guest ? "Fortsätt till e-post" : ready ? "Spara och starta daglig bevakning" : "Spara pausad sökning"}</button>
       {guest && emailEntry && <form onSubmit={event => { event.preventDefault(); void sendVerification(); }}>
         <h3 ref={emailHeading} tabIndex={-1}>Verifiera e-post för att spara</h3>
         <p>Öppna mejlets länk i samma webbläsare, med lösenordsåtkomsten kvar. Du får sedan granska och bekräfta sparandet igen. Ingen ansökan eller ägarprövning behövs. Högst 40 konton i piloten.</p>
         <label>E-postadress<input type="email" autoComplete="email" required maxLength={254} value={email} onChange={event => setEmail(event.target.value)} disabled={busy} /></label>
-        <button className="primary" disabled={busy || !consent || dirty || !!text.trim()}>Skicka verifieringslänk</button>
+        <button className="primary" disabled={busy || !consent || dirty || !!text.trim()}>Begär verifieringslänk</button>
       </form>}
     </div>}
     <details hidden={minimal && !editing && !draft && !error} className="manual-search" open={editing} onToggle={event => setEditing(event.currentTarget.open)}>

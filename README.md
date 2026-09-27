@@ -1,10 +1,13 @@
 # Kommandekollen
 
-Bostadssökning och morgonbevakning för Stockholms län.
-**Piloten på https://kommandekollen.se öppnas med ett gemensamt lösenord.
-Besökare kan prova AI eller manuella filter utan e-post. E-post verifieras
+**Målet är att upptäcka kommande bostäder tidigt direkt hos mäklaren**, innan
+de dyker upp på större bostadssajter, så att bostadssökaren kan kontakta mäklaren.
+Ingen fullständig mäklartäckning, tidsvinst eller möjlighet att köpa före andra
+garanteras. **Den nya objektlistan är offentlig; AI och sparade sökningar
+behåller lösenordsskyddet.** Texthjälpen är valfri, inte tjänstens kärnvärde.
+Besökare med lösenord kan prova AI eller egna sökfilter utan e-post. E-post verifieras
 först vid sparande, följt av en ny uttrycklig granskning/bekräftelse.
-Ingen medlemsansökan eller manuell ägarprövning behövs.**
+Ingen medlemsansökan eller manuell ägarprövning behövs i delat lösenordsläge.
 **AI-budgeten är högst sex anrop per dygn för hela tjänsten, inte per besökare.
 Inga livekällor är anslutna; sökningar kan bara sparas pausade.**
 Schemalagd städning och hantering av inloggningsmejl är påslagna. Ägaren har
@@ -27,10 +30,10 @@ npm ci
 npm run dev
 ```
 
-Öppna `http://127.0.0.1:5173/` för den stängda medlemsytan, eller
+Öppna `http://127.0.0.1:5173/` för webbplatsen, eller
 `http://127.0.0.1:5173/?demo=1` för den tydligt märkta, helt fiktiva sökningen.
 Demo varken sparar uppgifter eller skickar mejl. Utan API-konfiguration går det
-inte att ansöka eller logga in.
+inte att hämta objekt, ansöka eller logga in; anslutningsfelet visas uttryckligen.
 
 Projektet installerar sin egen Node 22-binär som används av npm-skripten.
 Installation kan startas från Node 18.20.8; `EBADENGINE`-varningar under denna
@@ -51,6 +54,16 @@ aldrig hemma i `VITE_*`, JavaScript-paket, git eller Actions-loggar.
 
 ## Det som finns
 
+- Offentlig, separat objektlista via `GET /api/listings`: 12 kommande objekt
+  åt gången, **Ladda fler**, senast upptäckta först och **Filtrera objekt** över
+  hela det tillgängliga urvalet. Filtren ändrar ingen personlig sökning och
+  använder ingen AI. Bara aktiva objekt i Stockholms län från aktuellt tillåtna
+  källor får visas. Tom källista, tomt utbud, inga filterträffar och tjänstefel
+  har skilda lägen; ingen demo ersätter riktiga data.
+  Först upptäckt är tjänstens observation, inte mäklarens publiceringsdatum.
+  [Publikt API, sidmarkörer och begränsningar](docs/OPERATIONS.md#public-listings).
+  Denna ändring behöver matchande Worker och Pages, men inga migrationer,
+  nya inställningar, hemligheter eller aktiverade källor.
 - Personligt sökflöde: beskriv hemmet, besvara högst en fråga åt gången,
   granska **Måste ha / Gärna / Behöver kontrolleras av dig**, redigera och
   godkänn uttryckligen. Utan redo källor sparas sökningen **pausad**.
@@ -60,14 +73,13 @@ aldrig hemma i `VITE_*`, JavaScript-paket, git eller Actions-loggar.
   gränssnittet/backend är driftsatta. Lokal standardkonfiguration håller AI avstängd.
 - Startsidan i delat lösenordsläge har logotyp, meny, en kort förklaring av
   tjänsten och en sidfot med integritet och kontakt. Fritextrutan och
-  **Förfina min sökning** är i fokus; en lugn pilotnotis förklarar att inga
-  bostadsobjekt eller bostadsmejl finns ännu. Lösenord och uttryckligt
+  **Hitta bostad** står ovanför objektlistan; en lugn pilotnotis förklarar
+  att sökningar sparas pausade utan bostadsmejl. Lösenord och uttryckligt
   AI-godkännande efterfrågas vid första sökningen, inte när sidan öppnas.
   Texten behålls vid avbrott, fel och navigation till information.
   **Meny** öppnar vanliga filter, sparad sökning/utkast och konto.
   Följdfrågor återanvänder samtycket inom samma utkast; ingen AI körs vid
-  sidladdning eller återläsning. Denna frontendändring kräver bara Pages,
-  inga nya hemligheter, Worker-inställningar eller migrationer.
+  sidladdning eller återläsning.
 - Mobilanpassad, ljus sökyta med användarens valda vita/mintgröna färgtema,
   teal-detaljer och ljusrosa primärknappar. Färgerna använder Clawpilot-variabler;
   Georgia används i huvudrubrik/logotyp, Segoe UI i formulär och navigation.
@@ -79,21 +91,21 @@ aldrig hemma i `VITE_*`, JavaScript-paket, git eller Actions-loggar.
   reglage för pris/rum/boarea/avgift, valfri
   exakt inmatning och extra sökval under **Fler filter**. Ingen gräns är ett eget
   val; befintliga exakta sökvärden avrundas inte. Saknade uppgifter är inte noll.
-- En licensverifierad, lokalt optimerad interiörbild, tydligt märkt som
-  inspiration och aldrig kopplad till ett objekt. Den luftiga startsidan
-  kombinerar vit bakgrund och mintgrön sökruta med bilden; på mobil ligger en kort
-  bildbeskärning efter sökrutan. Bildtexten länkar till
-  [bildkälla och licens](public/assets/ATTRIBUTION.md).
+- Inspirationsfotografiet är borttaget från alla vyer, även demo och äldre
+  medlemsläge. Objektkorten visar källänkar och faktauppgifter, inga påhittade
+  objektbilder. De oanvända lokala fotofilerna och deras
+  [licenshistorik](public/assets/ATTRIBUTION.md) behålls.
 - Den tillhandahållna hus-/radarloggan används i sidhuvud och favicon.
   Små lokala PNG-filer behåller originalets färger och ljusa detaljer.
   [Loggans ursprung och bearbetning](public/assets/BRAND.md) redovisas separat
   från interiörbildens licens.
 - I medlemsläget: ansökan och lösenordsfri e-postverifiering. En verifierad ny användare stannar
-  i **väntar på godkännande**, utan objekttillgång eller mejlbevakning.
+  i **väntar på godkännande**, utan personliga sökningar eller mejlbevakning.
+  Den offentliga objektlistan kräver inte godkännande.
 - Ägarvy för granskning, godkännande, avslag och återkallelse i medlemsläget;
   lösenordsläget behåller återkallelse men ingen manuell antagning. Ägarrollen kommer
   endast från privat `OWNER_EMAIL`. Återkallelse stoppar API-åtkomst och köade mejl.
-- Backend-skyddad katalog, källstatus och separat sparad sökning per medlem.
+- Backend-skyddad personlig katalog, intern källstatus och separat sparad sökning per medlem.
   Ingen verklig inventering lagras i statiska filer eller publika byggartefakter.
 - D1-migration, krypterad mejlkö, atomiska kvoter, begränsade återförsök,
   verifierings-/inloggningslänkar, utloggning, paus och kontoradering.
@@ -131,7 +143,8 @@ API-simuleringar körs faktiska HTTP-anrop genom Worker och lokal D1, med enbart
 modell och mejlleverantör ersatta av testfixturer. Inga verkliga mejl skickas
 och förhandsvisningen på 5173 lämnas orörd. Testerna täcker
 320/360/390/430px, tangentbordsstyrda reglage, exakta sparade värden,
-medlemsgränser, lokal bildladdning och ljust standardtema även vid mörkt OS.
+medlemsgränser, offentlig sidindelning/filter/återförsök, lokal logga/favicon,
+frånvaro av inspirationsfoto och ljust standardtema även vid mörkt OS.
 
 Koden finns i [marcusbodin/kommandekollen](https://github.com/marcusbodin/kommandekollen).
 Domänen registreras och betalas fortsatt hos Inleed; auktoritativ DNS är flyttad

@@ -18,8 +18,8 @@ documented in [SHARED_ACCESS.md](SHARED_ACCESS.md). Existing member endpoints
 also require the shared gate when that mode is active; they are not a bypass.
 Its compact website shell adds wordmark/menu, purpose copy and privacy/contact
 footer around the public input. It defers password and unchecked AI consent until
-explicit "Förfina min sökning", retaining text across cancel/error and information
-navigation. Followups use "Tolka mitt svar" and reuse consent only
+explicit "Hitta bostad", retaining text across cancel/error and information
+navigation. Followups use "Uppdatera sökförslaget" and reuse consent only
 within the current in-memory draft. Existing server drafts and saved searches
 stay behind explicit disclosure on arrival; the email return opens review, never
 confirmation or inference. The API/matching/quotas below are unchanged.
@@ -32,6 +32,13 @@ approval and alert consent are separate. Generating, editing, cancelling,
 reloading or encountering an AI error does not update the active search.
 Without ready sources the button says **Spara pausad sökning**. Activation needs
 fresh consent and backend service/source readiness.
+For a guest without verified identity, the first save-intent action instead says
+**Fortsätt till e-post**, followed by **Begär verifieringslänk**. The email page's
+**Bekräfta e-post** never saves. The second reviewed confirmation remains
+**Bekräfta och spara pausad sökning**; its real receipt says
+**Din sökning är sparad och pausad**. Only labels changed, not the consent,
+revision, request or identity guards. Public `GET /api/listings` browsing/filtering
+is independent of this private profile flow and uses no model call.
 
 Manual sliders and exact-entry fields are secondary, fully functional without
 AI. Existing exact filters remain compatible, including `null` (unset) versus
@@ -52,7 +59,8 @@ that manual checks are required. Unsupported MUST criteria require explicit
 acceptance of manual checking before saving, or must be edited/removed.
 
 Saved results always use the approved profile. An unsaved AI draft is not an
-active filter. Only the synthetic demo previews unsaved manual filters. The
+active personal filter. The public feed has its own separate browsing filters;
+only the synthetic demo previews unsaved personal-profile edits. The
 demo's prompt sequence is a fixed illustrated example, not a model invocation
 or a promise to understand arbitrary text.
 

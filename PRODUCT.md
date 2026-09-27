@@ -9,6 +9,9 @@ web
 ## Users
 
 Swedish-speaking home seekers looking for upcoming homes in Stockholm.
+The latest explicit user decision makes the upcoming-listings feed public.
+Browsing and filtering need neither a password nor AI. Personal interpretation
+and saved searches remain protected; this does not authorize any new source.
 The owner approved shared-password access on 2026-09-26. Visitors who have the
 shared password may try AI without email. Email is verified only when saving,
 followed by a second explicit review/confirmation. No manual application or
@@ -17,7 +20,14 @@ the previous membership mode remains the local/missing-setting default.
 
 ## Product Purpose
 
-Let authorized visitors describe their next home, clarify material ambiguity,
+Help home seekers discover upcoming homes early, directly at the broker, with
+the objective of contacting that broker before the home reaches larger portals.
+This is the product's core value, not a verified coverage or latency claim:
+there are still zero connected sources. No all-brokers/all-listings, buying
+priority or competitive head-start guarantee is justified.
+
+Show permitted upcoming facts publicly, newest observed first. Optional AI lets
+authorized visitors describe their next home, clarify material ambiguity,
 review hard requirements, soft preferences and unverified criteria, then
 explicitly save their personal selection. Manual filters remain a fallback.
 New matching objects may be emailed each morning only after separate consent
@@ -37,7 +47,8 @@ The user's latest correction requires a recognizable lightweight website:
 existing wordmark, clear menu, short purpose explanation, dominant housing
 input and a footer with privacy/contact/copyright. This supersedes the literal
 input-only surface, not the decision to ask for the password at first search
-rather than on arrival. A calm note states the paused-only, no-listings pilot.
+rather than on arrival. A calm note states paused saving and no housing emails.
+The public feed independently explains the current absence of connected sources.
 The site menu exposes privacy before authentication, manual filters without AI,
 own search/draft, account/login/logout/owner tools and source/result information.
 An already-open gate skips password entry, not AI consent. In-memory consent
@@ -55,9 +66,15 @@ unsent text in place.
 - Owner purchased kommandekollen.se.
 - Intended personal GitHub owner is marcusbodin.
 - Public source repository approved for free GitHub Pages.
-- Public code is not public inventory. Shared mode requires a backend-validated
-  guest gate for inventory/AI and a verified own-account session for saved data.
-  Membership mode still requires approved membership.
+- A narrow public `GET /api/listings` exposes only authorized upcoming facts in
+  Stockholms län, 12 at a time, with independent filters across the bounded
+  inventory. It never returns private source runs, contracts or personal data.
+  The existing catalog and personal APIs stay gated; saved data requires the
+  verified own-account session, plus the guest gate in shared mode.
+  Membership mode still requires approval for personal functions, not public browsing.
+- The initial 12-card page and explicit Load more do not remove the existing
+  200-record pilot inventory cap. First seen means Kommandekollen's observation,
+  not the broker's original publication date. Unknown and stale facts stay explicit.
 - The owner role is fixed by private server configuration, never first-signup
   or a client-selected role. Owner identity is configured privately in production.
 - Authorized public controller identity: Marcus Bodin (privatperson);
@@ -110,8 +127,16 @@ by the task flow on Hemnet, without copying its branding or content.
 Confirmed mobile preference: bright/lightweight, default-light interface even
 on a dark-preferring OS, larger touch targets and numeric sliders with optional
 precise entry. Existing ranges and saved-search semantics remain available.
-Use freely licensed local home imagery only as labeled inspiration, never as
-a representation of an actual listing.
+The pinned supplied house/radar logo and local favicon stay unchanged.
+The user's white/mint/teal/pink palette, Georgia display, Segoe controls,
+borderless surfaces and filled buttons remain binding. Remove all inspiration
+photography from rendered views; listings have no image field.
+The user's exact homepage headline is "Hitta kommande bostäder före andra" and
+the initial primary CTA is "Hitta bostad". These supersede earlier wording.
+Its introduction explicitly says "Vi bygger" and "Målet:", distinguishing the
+source-direct discovery goal from the zero-source pilot actually operating.
+The adjacent helper explains that the protected AI step makes a search proposal,
+not a saved profile. Public browsing/filtering is separate and needs no AI.
 
 ## Evidence on Hand
 
@@ -122,10 +147,12 @@ Fastighetsbyran explicitly disallows automated access without special permission
 in https://www.fastighetsbyran.com/robots.txt (checked 2026-09-25).
 Svensk Fast's website terms explicitly prohibit scraping and automatic indexing
 without permission. Other assessed candidate sources remain unverified.
-Private membership does not override source restrictions or create a reuse license.
+Neither private membership nor the public-feed decision overrides source
+restrictions or creates a reuse license.
 A regular free Unsplash interior photo by Francesca Tosolini is locally cropped
 and optimized; its verified source/license is recorded in
-`public/assets/ATTRIBUTION.md`. It is not a Stockholm property or coverage claim.
+`public/assets/ATTRIBUTION.md`. These historical files are retained but are no
+longer rendered. The supplied logo's provenance is separate in `public/assets/BRAND.md`.
 
 ## Product Principles
 

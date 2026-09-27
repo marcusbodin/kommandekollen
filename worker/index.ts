@@ -5,6 +5,7 @@ import { manualProfile } from "../shared/preferences";
 import { aiReady } from "./ai";
 import { preferenceRoute, savedProfile } from "./preferences";
 import { gateRoute, guestPreferenceRoute } from "./guest";
+import { publicListings } from "./listings";
 import { approvalNotice, cleanup, dispatchOne, prepareDigest, queueVerification } from "./mail";
 import {
   ApiError, authenticate, authorizations, equalSecrets, hash, isOwner, json, keyed, randomToken,
@@ -42,6 +43,7 @@ async function route(request: Request, env: Env): Promise<Response> {
       accessMode: sharedAccess(env) ? "shared" : "membership", privacyContact: env.PRIVACY_CONTACT || null });
   }
   if (path === "/api/gate" || path === "/api/gate/logout") return gateRoute(request, env, ipHash);
+  if (request.method === "GET" && path === "/api/listings") return publicListings(request, env);
   const guest = path !== "/api/unsubscribe" && sharedAccess(env) ? await authenticateGuest(request, env) : null;
   if (path.startsWith("/api/guest/preferences/")) {
     if (!guest) throw new ApiError(404, "not_found", "Sidan finns inte.");

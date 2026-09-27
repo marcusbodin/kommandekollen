@@ -23,5 +23,8 @@ identifiable people, logos or featured artwork. This is a stock inspiration
 photograph, not an estate-agency listing, and no property-release guarantee,
 endorsement or Stockholm location is claimed.
 
-The interface labels it **“Inspirationsbild · inte ett bostadsobjekt”**. It is
+These historical files are no longer rendered or credited in the interface:
+the user requested removal of inspiration photography in the public-feed release.
+Previously the image was labeled **“Inspirationsbild · inte ett bostadsobjekt”**,
 never attached to a real or synthetic address as if it depicted that property.
+The separate supplied site logo remains documented in `BRAND.md`.

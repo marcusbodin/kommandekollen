@@ -52,10 +52,10 @@ export const listingSchema = z.object({
   rooms: optionalNumber(30),
   size: optionalNumber(10_000),
   fee: optionalNumber(100_000),
-  url: z.string().url().max(1000).refine(value => {
+  url: z.string().url().max(1000).pipe(z.string().refine(value => {
     const url = new URL(value);
     return url.protocol === "https:" && !url.username && !url.password && !url.hash;
-  }, "Endast HTTPS-länkar utan inloggningsuppgifter eller fragment tillåts."),
+  }, "Endast HTTPS-länkar utan inloggningsuppgifter eller fragment tillåts.")),
 }).strict();
 export type ListingInput = z.infer<typeof listingSchema>;
 export type Listing = ListingInput & { id: string; firstSeen: string; lastSeen: string };

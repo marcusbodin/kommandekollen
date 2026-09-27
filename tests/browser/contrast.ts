@@ -1,11 +1,13 @@
 import { expect, type Page } from "@playwright/test";
 
-const defaultSelectors = "h1,h2,h3,label,.notice,.error,.muted,.inspiration figcaption,.welcome-copy p,.numeric-heading output,.numeric-scale,.exact-value summary,.type-buttons button,.source-status,.property-location,.price,dt,dd,.badge,.property-bottom a";
+const defaultSelectors = "h1,h2,h3,label,.notice,.error,.muted,.welcome-copy p,.numeric-heading output,.numeric-scale,.exact-value summary,.type-buttons button,.source-status,.property-location,.price,dt,dd,.badge,.property-bottom a";
 export async function readableContrast(page: Page, selectors = defaultSelectors, kind: "text" | "border" | "focus" | "placeholder" = "text", includeDisabled = false) {
   const measurements = await page.evaluate(async ({ selectors, kind, includeDisabled }) => {
-    await Promise.allSettled(document.getAnimations()
-      .filter(animation => animation.effect?.getTiming().iterations !== Infinity)
-      .map(animation => animation.finished));
+    // Like animations:"disabled" screenshots, sample settled colors. Closed
+    // details can suspend finite transitions indefinitely, so do not await them.
+    for (const animation of document.getAnimations()) {
+      if (Number.isFinite(Number(animation.effect?.getComputedTiming().endTime))) animation.finish();
+    }
     const rgba = (color: string) => {
       const values = color.match(/[\d.]+/g)!.map(Number);
       return color.startsWith("color(srgb ") ? values.map((n, i) => i < 3 ? n * 255 : n) : values;

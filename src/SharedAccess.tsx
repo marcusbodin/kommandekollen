@@ -78,7 +78,7 @@ function AccessDialog({ apiBase, gate, purpose, finish }: {
       }
       catch (error) { setError(error instanceof Error ? error.message : "Åtkomsten kunde inte öppnas."); }
       finally { clearTimeout(timer); submitting.current = false; setBusy(false); }
-    }}><h2 id="access-title">{purpose === "ai" ? "Innan din text tolkas" : "Öppna din åtkomst"}</h2>
+    }}><h2 id="access-title">{purpose === "ai" ? "Skapa ett sökförslag med AI" : "Öppna åtkomsten med lösenord"}</h2>
       {needsPassword && <label>Gemensamt lösenord<input autoFocus type="password" autoComplete="current-password" value={password}
         onChange={event => setPassword(event.target.value)} required maxLength={128} disabled={busy} /></label>}
       {purpose === "ai" && <>
@@ -96,7 +96,7 @@ function AccessDialog({ apiBase, gate, purpose, finish }: {
       {error && <p className="error" role="alert" tabIndex={-1} ref={feedback}>{error}</p>}
       {busy && <p role="status">Kontrollerar åtkomst… Inget AI-anrop har gjorts.</p>}
       <div className="flow-actions"><button className="primary" disabled={busy || unavailable || (needsPassword && !password) || (purpose === "ai" && !consent)}>
-        {purpose === "ai" ? "Tolka min text" : "Fortsätt utan AI"}</button>
+        {purpose === "ai" ? "Skapa med AI" : "Fortsätt utan AI"}</button>
         <button type="button" onClick={cancel}>{unavailable ? "Tillbaka till text och filter" : "Avbryt"}</button></div>
     </form>
   </dialog>;
