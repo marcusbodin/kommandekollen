@@ -2,6 +2,7 @@ import { test, expect, type Page } from "@playwright/test";
 import { defaultFilters, type Filters } from "../../shared/model";
 import { sources } from "../../shared/sources";
 import { manualProfile, type Draft } from "../../shared/preferences";
+import { readableContrast } from "./contrast";
 
 const api = "http://127.0.0.1:8787";
 const ownerId = "00000000-0000-4000-8000-000000000001";
@@ -87,32 +88,6 @@ async function touchAndType(page: Page) {
     if (await field.isVisible()) expect(await field.evaluate(el => parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(16);
   }
 }
-async function readableContrast(page: Page) {
-  const failures = await page.evaluate(() => {
-    const rgba = (color: string) => color.match(/[\d.]+/g)!.map(Number);
-    const over = (front: number[], back: number[]) => {
-      const alpha = front[3] ?? 1;
-      return front.slice(0, 3).map((n, i) => n * alpha + back[i] * (1 - alpha));
-    };
-    const luminance = (color: number[]) => color.slice(0, 3).map(n => n / 255)
-      .map(n => n <= .04045 ? n / 12.92 : ((n + .055) / 1.055) ** 2.4)
-      .reduce((sum, n, i) => sum + n * [.2126, .7152, .0722][i], 0);
-    return [...document.querySelectorAll<HTMLElement>("h1,h2,h3,label,.notice,.muted,.inspiration figcaption,.welcome-copy p,.numeric-heading output,.numeric-scale,.exact-value summary,.type-buttons button,.source-status,.property-location,.price,dt,dd,.badge,.property-bottom a")]
-      .filter(el => el.getClientRects().length && !el.closest("[disabled], .honeypot"))
-      .flatMap(el => {
-        const style = getComputedStyle(el), ancestors: Element[] = [];
-        for (let current: Element | null = el; current; current = current.parentElement) ancestors.unshift(current);
-        const background = ancestors.reduce((color, node) => over(rgba(getComputedStyle(node).backgroundColor), color), [255, 255, 255]);
-        const foreground = over(rgba(style.color), background);
-        const a = luminance(foreground), b = luminance(background);
-        const ratio = (Math.max(a, b) + .05) / (Math.min(a, b) + .05);
-        const large = parseFloat(style.fontSize) >= 24 || (parseFloat(style.fontSize) >= 18.66 && Number(style.fontWeight) >= 700);
-        return ratio + .01 < (large ? 3 : 4.5) ? [{ text: el.textContent?.slice(0, 60), ratio }] : [];
-      });
-  });
-  expect(failures).toEqual([]);
-}
-
 test("public shell stays private, light by default even on dark OS, with local imagery", async ({ page }) => {
   const { posts, reads } = await mockApi(page);
   const images: string[] = [];

@@ -34,7 +34,10 @@ saved drafts, account/login/logout/owner tools, quota and results/source status.
 The old input-level "Mer" is removed. Privacy/contact is also in the footer.
 Manual review and account login request the gate when needed but never AI
 consent or inference. The existing backend remains the authorization boundary.
-There is no hero photo on the compact home; licensed imagery remains in legacy/demo.
+A bounded, locally hosted inspiration photo now accompanies the rose-tinted
+search region. It is explicitly not a listing, links to its credit/license and
+follows the input on mobile. Legacy/demo imagery is unchanged. This presentation
+refinement changes no gate, inference, storage or save contract.
 
 Password success is not implicit consent. The unchecked processing checkbox and
 one explicit awaited continuation are required before inference. A synchronous

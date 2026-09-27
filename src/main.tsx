@@ -36,13 +36,14 @@ const number = (value: number) => new Intl.NumberFormat("sv-SE").format(value);
 const date = (value: string) => new Intl.DateTimeFormat("sv-SE", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Stockholm" }).format(new Date(value));
 const stale = (value: string) => Date.now() - Date.parse(value) > 48 * 3600_000;
 
-function Inspiration() {
+function Inspiration({ home = false }: { home?: boolean }) {
   const base = `${import.meta.env.BASE_URL}assets/home-light-`;
-  return <figure className="inspiration">
+  return <figure className={home ? "inspiration home-photo" : "inspiration"}>
     <img src={`${base}960.webp`} srcSet={`${base}480.webp 480w, ${base}960.webp 960w`}
-      sizes="(max-width: 700px) calc(100vw - 32px), (max-width: 1100px) 45vw, 560px"
-      width={960} height={640} alt="" decoding="async" fetchPriority="high" />
-    <figcaption>Inspirationsbild · inte ett bostadsobjekt</figcaption>
+      sizes={home ? "(max-width: 960px) calc(100vw - 64px), 720px" : "(max-width: 700px) calc(100vw - 32px), (max-width: 1100px) 45vw, 560px"}
+      width={960} height={640} alt={home ? "Ljust vardagsrum med fåtöljer och turkosa kuddar." : ""} decoding="async" fetchPriority="high" />
+    <figcaption><span>Inspirationsbild · inte ett bostadsobjekt</span>{home &&
+      <a href={`${import.meta.env.BASE_URL}assets/ATTRIBUTION.md`} target="_blank" rel="noopener noreferrer">Foto: Francesca Tosolini · bild & licens</a>}</figcaption>
   </figure>;
 }
 function Icon({ name }: { name: "home" | "bell" | "arrow" | "sun" | "moon" }) {
@@ -415,6 +416,7 @@ function App() {
     <main id="main" className={`container${minimal ? " compact-home" : ""}`}>
       {action ? <ActionPage key={action[2]} shared={!!shared} action={action} /> : <>
         {minimal && <>
+          <div className="home-composition">
           <section className="home-intro" aria-labelledby="home-title">
             <h1 id="home-title">Vad är viktigt i ditt nästa hem?</h1>
             <p>Beskriv var och hur du vill bo. Kommandekollen hjälper dig att förtydliga dina önskemål och skapa en personlig bostadssökning för Stockholms län.</p>
@@ -424,6 +426,8 @@ function App() {
             member={guestFlow || !gate ? null : member} guest={guestFlow || !gate ? { aiReady: gate?.aiReady ?? false } : undefined}
             ready={catalog.serviceReady && !error && !loading} refresh={refresh} onInference={refresh}
             renderFilters={(filters, change) => <FilterPanel filters={filters} onChange={change} />} onDemoPreview={setDemoProfile} />
+          <Inspiration home />
+          </div>
           {accountError && <div className="notice" role="alert"><p>{accountError} Din text finns kvar.</p><button onClick={refresh}>Kontrollera åtkomst igen</button></div>}
           {!apiBase && <p role="status" className="notice">Tjänsten är inte ansluten. Ingen text kan skickas. Ett fiktivt exempel finns i menyn.</p>}
           {panel && <div className="secondary-heading"><h2 ref={panelHeading} tabIndex={-1}>{panel === "account" ? "Ditt konto" : panel === "results" ? "Resultat & källor" : panel === "help" ? "Så fungerar det" : "Integritet"}</h2>

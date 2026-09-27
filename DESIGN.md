@@ -9,7 +9,16 @@ personal housing searches for Stockholms län without claiming live inventory.
 "Förfina min sökning" describes the first action; followups use "Tolka mitt svar".
 A calm pilot note says searches currently save paused, without homes or housing
 emails. Password, email, source panels, saved profiles and full legal text are
-not initial-page content. There is no decorative hero photograph.
+not initial-page content. One clearly labeled home inspiration photograph is
+integrated with the intro/search, not a listing image or a giant photo hero.
+
+The warmer refinement uses the established rose as a deliberate atmospheric
+region: 14% `--cp-accent` mixed with `--cp-bg`, a rose heading and home-icon
+badge, white/dark elevated input surface and a softly tinted footer.
+Typography, exact purpose copy and navigation remain unchanged. Body copy on
+the colored region uses `--cp-text`; footer links retain rose underlines with
+high-contrast text, including in dark mode. Status colors are not decoration.
+The image supplies natural teal, wood and sunlight rather than a new UI palette.
 
 Desktop navigation exposes "Så fungerar det", "Konto"/"Min sökning" and
 "Integritet"; mobile uses the accessible "Meny" toggle. This same menu reveals
@@ -30,8 +39,10 @@ after progression. Draft restore is explicit, except return from email review.
 Email-at-save verification and the second explicit confirmation stay separate.
 
 The legacy membership mode and synthetic demo retain their existing layout.
-Their freely licensed local interior photograph is always labeled
+The shared site's reused local interior photograph is always labeled
 "Inspirationsbild · inte ett bostadsobjekt". It never represents a listing.
+Its caption links to the existing credit/license record. Alt text describes
+only the pictured room, not a property, address or Stockholm location.
 Provenance and modifications are documented in
 `public/assets/ATTRIBUTION.md`. No agency branding, fictional coverage claims,
 maps without map data or decorative listing thumbnails are used.
@@ -50,8 +61,10 @@ one material followup and an editable
 summary separating requirements, wishes and manual checks. One explicit
 confirmation saves the reviewed profile; with no ready sources it saves paused.
 No endless chat transcript or fake AI in the deterministic public demo.
-The compact homepage uses a central search column no wider than 760px within
-an 1120px header/footer shell. Natural spacing and a minimum-height page put
+The compact homepage uses an 1120px shell with search/intro beside a bounded
+photo on desktop. At 960px and below the image follows the input, with a
+160px crop (132px on narrow phones), so it does not push the input down.
+Desktop requests the existing higher-resolution crop. Natural spacing and a minimum-height page put
 the footer after the content, not over the keyboard. The public textarea has a
 persistent visible label, a factual example placeholder and a short next-step
 helper. Native dialogs remain scrollable. At 320px, 16px side gutters preserve
@@ -75,7 +88,8 @@ or save. Crossed bounds move the paired limit to maintain min <= max.
 The application form and privacy text similarly stack; approved account
 controls collapse, while pending approval and service errors stay explicit.
 No sticky controls obscure forms or the mobile keyboard.
-Use 4px spacing steps, 10px control corners and 16px card corners. No
+Use 4px spacing steps, 10px control corners and 16px card corners. Brief
+hover transitions respect reduced motion; no looping or background animation. No
 drop-shadow-heavy nested panels, gradients, custom scrollbars or entrance effects.
 
 Explicit states: public/unconfigured, email verification, pending approval,

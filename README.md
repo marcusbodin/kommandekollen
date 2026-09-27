@@ -74,7 +74,10 @@ aldrig hemma i `VITE_*`, JavaScript-paket, git eller Actions-loggar.
   exakt inmatning och extra sökval under **Fler filter**. Ingen gräns är ett eget
   val; befintliga exakta sökvärden avrundas inte. Saknade uppgifter är inte noll.
 - En licensverifierad, lokalt optimerad interiörbild, tydligt märkt som
-  inspiration och aldrig kopplad till ett objekt. [Bildkälla och licens](public/assets/ATTRIBUTION.md).
+  inspiration och aldrig kopplad till ett objekt. Den varmare startsidan
+  kombinerar ett rostonat sökområde med bilden; på mobil ligger en kort
+  bildbeskärning efter sökrutan. Bildtexten länkar till
+  [bildkälla och licens](public/assets/ATTRIBUTION.md).
 - I medlemsläget: ansökan och lösenordsfri e-postverifiering. En verifierad ny användare stannar
   i **väntar på godkännande**, utan objekttillgång eller mejlbevakning.
 - Ägarvy för granskning, godkännande, avslag och återkallelse i medlemsläget;

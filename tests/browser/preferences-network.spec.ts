@@ -7,6 +7,7 @@ import { hash, keyed, type Env } from "../../worker/support";
 import { dispatchOne } from "../../worker/mail";
 import { defaultFilters } from "../../shared/model";
 import { manualProfile, type Interpretation } from "../../shared/preferences";
+import { readableContrast } from "./contrast";
 
 const frontend = "http://127.0.0.1:5174";
 const api = "http://127.0.0.1:8787";
@@ -244,7 +245,9 @@ async function websiteSurface(page: Page) {
   await expect(page.locator(".pilot-note")).toHaveText("Just nu sparas sökningar pausade – inga bostadsobjekt eller bostadsmejl ännu.");
   await expect(page.locator("footer:visible").getByRole("link", { name: "Kontakt", exact: true })).toHaveAttribute("href", "mailto:kontakt@kommandekollen.se");
   await expect(page.locator("footer:visible")).toContainText("©");
-  await expect(page.locator(".inspiration:visible, .privacy:visible, .results:visible, .saved-profile:visible, .draft-review:visible")).toHaveCount(0);
+  await expect(page.locator(".home-photo")).toHaveCount(1);
+  await expect(page.getByText("Inspirationsbild · inte ett bostadsobjekt", { exact: true })).toBeVisible();
+  await expect(page.locator(".privacy:visible, .results:visible, .saved-profile:visible, .draft-review:visible")).toHaveCount(0);
   await expect(page.getByRole("dialog")).toHaveCount(0);
 }
 async function consentToInterpret(page: Page, password = false) {
@@ -565,4 +568,56 @@ test("closing shared access removes disclosed owner data without erasing local t
   await expect(page.getByRole("heading", { name: "Hantera medlemskap" })).toHaveCount(0);
   expect(await env.DB.prepare("SELECT preference_profile,search_version FROM subscriptions").first()).toEqual({ preference_profile: JSON.stringify(saved), search_version: 4 });
   expect(calls).toBe(0);
+});
+
+test("warm home presentation uses local credited inspiration and readable light and dark surfaces", async ({ page }) => {
+  env.ACCESS_MODE = "shared"; env.SHARED_ACCESS_PASSWORD = gatePassword;
+  await page.context().clearCookies();
+  await page.emulateMedia({ colorScheme: "dark" });
+  await page.goto("/");
+  await websiteSurface(page);
+  const image = page.locator(".home-photo img"), prompt = page.locator("#housing-prompt");
+  await expect.poll(() => image.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
+  expect(await image.evaluate((img: HTMLImageElement) => new URL(img.currentSrc).origin)).toBe(frontend);
+  await expect(image).toHaveAttribute("srcset", /assets\/home-light-480\.webp 480w, .*assets\/home-light-960\.webp 960w/);
+  await expect(image).toHaveAttribute("alt", "Ljust vardagsrum med fåtöljer och turkosa kuddar.");
+  const credit = page.getByRole("link", { name: "Foto: Francesca Tosolini · bild & licens" });
+  const creditResponse = await page.request.get(await credit.getAttribute("href") ?? "");
+  expect(creditResponse.status()).toBe(200);
+  expect(await creditResponse.text()).toContain("Francesca Tosolini");
+  const targets = ".home-intro h1,.home-intro p,.prompt-shell label,#housing-prompt,#prompt-helper,.prompt-shell .primary,.pilot-note,.home-photo figcaption,.home-photo a,.compact-header .brand,.compact-header .brand-mark,.compact-nav a,.nav-essential button,.site-menu-toggle,.compact-footer span,.compact-footer a";
+  const reports = [];
+  for (const theme of ["light", "dark"] as const) {
+    if (theme === "dark") {
+      await more(page, "Mörkt tema");
+      await page.getByRole("button", { name: "Meny", exact: true }).click();
+    }
+    await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+    await prompt.fill("Lägenhet i Solna, gärna balkong.");
+    await prompt.focus();
+    const primary = page.getByRole("button", { name: "Förfina min sökning", exact: true });
+    await expect(primary).toHaveCSS("background-color", theme === "light" ? "rgb(177, 31, 75)" : "rgb(253, 142, 161)");
+    const text = await readableContrast(page, targets);
+    const placeholder = await readableContrast(page, "#housing-prompt", "placeholder");
+    const border = await readableContrast(page, ".prompt-shell", "border");
+    await expect(prompt).toHaveCSS("outline-width", "3px");
+    const focus = await readableContrast(page, "#housing-prompt", "focus");
+    await primary.hover();
+    await expect(primary).toHaveCSS("background-color", theme === "light" ? "rgb(154, 26, 65)" : "rgb(251, 123, 145)");
+    const hover = await readableContrast(page, ".prompt-shell .primary");
+    reports.push({ theme, text, placeholder, border, focus, hover });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    if (page.viewportSize()!.width <= 960) {
+      const inputBox = await prompt.boundingBox(), imageBox = await image.boundingBox();
+      expect(imageBox!.y).toBeGreaterThan(inputBox!.y + inputBox!.height);
+      expect(imageBox!.height).toBeLessThanOrEqual(160);
+      expect(inputBox!.y + await page.evaluate(() => scrollY)).toBeLessThan(500);
+    }
+    if (process.env.VISUAL_REVIEW === "1") await page.screenshot({ path: test.info().outputPath(`warm-home-${theme}.png`), fullPage: true });
+  }
+  await test.info().attach("theme-contrast", { body: JSON.stringify(reports, null, 2), contentType: "application/json" });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await expect(page.getByRole("button", { name: "Förfina min sökning", exact: true })).toHaveCSS("transition-duration", "0s");
+  expect(await page.evaluate(() => document.getAnimations().filter(animation => animation.playState === "running").length)).toBe(0);
+  expect(calls).toBe(0); expect(gatePosts).toBe(0);
 });
