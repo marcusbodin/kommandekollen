@@ -1222,15 +1222,15 @@ test("private observations travel through importer HTTP Worker D1 and render unk
   env.ACCESS_MODE = "shared"; env.SHARED_ACCESS_PASSWORD = gatePassword;
   env.PRIVATE_OBSERVATION_SOURCES = JSON.stringify([{ id: "notar", hosts: ["www.notar.se"],
     basisReference: "Synthetic test evidence only; not a real source grant", expiresAt: "2099-01-01T00:00:00.000Z" }]);
-  const preview = {
-    kind: "notar-rendered-preview", ingestible: false, sourceId: "notar", coverage: { complete: false },
+  const observations = {
+    kind: "listing-observations", version: 1, sourceId: "notar", coverage: "partial",
     observationId: crypto.randomUUID(), observedAt: new Date(Date.now() - 60000).toISOString(),
-    items: publicFixtures.slice(0, 15).map(({ firstSeen: _first, lastSeen: _last, ...item }) => ({
-      ...item, id: `notar:${item.externalId}`, sourceId: "notar", type: null, price: null, fee: null,
+    items: publicFixtures.slice(0, 15).map(({ id: _id, firstSeen: _first, lastSeen: _last, coverage: _coverage, ...item }) => ({
+      ...item, sourceId: "notar", type: null, price: null, fee: null,
       url: `https://www.notar.se/kopa-bostad/objekt/${item.externalId}`,
     })),
   };
-  const data = prepareObservations(preview, env);
+  const data = prepareObservations(observations, env);
   expect(await sendObservations(data, env, base, env.ADMIN_TOKEN, true)).toMatchObject({ inserted: 15, retired: 0 });
   await page.context().clearCookies();
   await page.goto("/");

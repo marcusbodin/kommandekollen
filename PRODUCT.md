@@ -24,8 +24,9 @@ the previous membership mode remains the local/missing-setting default.
 Help home seekers discover upcoming homes early, directly at the broker, with
 the objective of contacting that broker before the home reaches larger portals.
 This is the product's core value, not a verified coverage or latency claim:
-the manual private pilot has three verified HusmanHagberg observations as of
-2026-09-27, not scheduled or comprehensive coverage. No all-brokers/all-listings, buying
+the manual private pilot imported three HusmanHagberg observations on
+2026-09-27. These are now historical stored facts, not continuously refreshed
+or comprehensive coverage. No all-brokers/all-listings, buying
 priority or competitive head-start guarantee is justified.
 
 Show permitted upcoming facts to authorized visitors, newest observed first. Optional AI lets
@@ -64,6 +65,14 @@ unsent text in place.
 
 ## Capabilities and Constraints
 
+- Latest owner decision, 2026-09-27: remove custom web scraping and the cancelled
+  on-demand URL collection feature. No source fetch/render/HTML extraction,
+  scraper preview CLI or collection workflow remains. Search reads stored facts;
+  it does not start collection. ScraperAPI is only under assessment, with no
+  integration, key, signup, paid commitment or source permission implied.
+  Existing facts, original observation times, grants needed for reading,
+  accounts, profiles, AI budgets and paused property emails are preserved.
+  The strict JSON import contracts remain for separately authorized data.
 - Intended coverage: the major Stockholm estate agencies, subject to each
   source's access terms and available authorized feeds.
 - Never represent disabled or unverified sources as working integrations.

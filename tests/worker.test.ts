@@ -8,7 +8,7 @@ import worker from "../worker/index";
 import { AI_MODEL } from "../worker/ai";
 import { prepareDigest } from "../worker/mail";
 import { actionUrl, hash, keyed, seal, unseal, type Env, type MemberState } from "../worker/support";
-import { parseJsonLd } from "../scripts/collector";
+import { authorizedFeed } from "./fixtures/authorized-feed";
 
 const ORIGIN = "https://app.example.com", BASE = "https://api.example.com";
 const bindings = {
@@ -41,9 +41,7 @@ async function seed(email: string, state: MemberState = "approved", alerts = fal
   return { id, cookie: `__Host-kk_session=${token}` };
 }
 async function fixtureFeed() {
-  const html = readFileSync(new URL("./fixtures/authorized-page.html", import.meta.url), "utf8");
-  const listings = parseJsonLd(html, { id: "authorized", format: "jsonld-page", url: "https://listings.example.com/upcoming", licenseReference: "test license", licenseExpires: "2099-01-01T00:00:00Z", allowedListingHosts: ["listings.example.com"] });
-  return { sourceId: "authorized", observedAt: new Date().toISOString(), listings };
+  return authorizedFeed();
 }
 beforeEach(async () => {
   sent = []; providerStatus = 200;

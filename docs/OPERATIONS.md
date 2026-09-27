@@ -16,8 +16,12 @@ The latest user decision supersedes public upcoming facts: only the owner and
 invited password holders may browse. Email and AI consent are not required to
 browse; they retain separate roles for personal searches. The core goal is early source-direct discovery, not a
 promise of complete coverage, arrival before every portal or purchase priority.
-No new source authorization accompanies this decision. Current source count is
-zero, and no fixture/demo data is automatically substituted.
+No new source authorization accompanies this decision. The last verified
+production inventory contains three HusmanHagberg observations from
+`2026-09-27T16:07:54.625Z`; they are historical, not refreshed by searches.
+No fixture/demo data is automatically substituted. Custom scraping and all
+collection workflows have been removed at the owner's request. This local
+removal does not mutate stored facts, timestamps, grants, accounts or settings.
 
 `GET /api/listings` runs after existing public/IP rate checks and the shared
 guest guard (or approved-member authentication in legacy mode), before parsing
@@ -168,20 +172,19 @@ does not clear a source failure newer than its observation time.
 
 ### Controlled importer
 
-The source preview kinds remain `ingestible:false`, never accepted by either
-ingestion endpoint. `scripts/import-observations.ts` deliberately validates and
-projects a captured preview into the new partial contract. Supported source
-preview kinds are Notar, HusmanHagberg and MOHV; the source branch supplies
-their genuine observationId/observedAt metadata. A bare offline HTML replay
-without that capture evidence cannot convert. Computed preview item IDs are
-checked and removed; timestamps and observation identity are preserved.
+`scripts/import-observations.ts` accepts only an already structured
+`listing-observations` JSON envelope. It validates the strict shared schema,
+source/host authorization and original observation identity/time. It does not
+fetch sources, parse HTML/DOM, infer missing facts, convert legacy preview
+formats or turn partial data into complete snapshots. Legacy preview kinds,
+computed item IDs, copied content and invented backend timestamps are rejected.
 
 Set the reviewed private allowlist in the operator's private environment,
 not the public repository. Preparation makes **no network requests**:
 
 ```sh
 ./node_modules/node/bin/node --import tsx scripts/import-observations.ts \
-  --prepare /absolute/private/captured-preview.json \
+  --prepare /absolute/private/observations.json \
   --output /absolute/private/new-observation-envelope.json
 ```
 
@@ -198,43 +201,21 @@ the exact HTTPS admin origin and `INGEST_TOKEN` privately, then:
 Only explicit `--local` permits `http://127.0.0.1:<port>` for synthetic tests.
 Redirects are refused. The importer does not fetch brokers, inspect raw API
 responses, automatically enroll sources or retry with a new identity. stdout
-has counts only; failures are sanitized. Capture metadata is trusted
+has counts only; failures are sanitized. Observation metadata is trusted
 operator-supplied evidence, not a cryptographic attestation of broker consent.
 
 ### Manual private browser runner
 
-`private-observations.yml` is a separate **manual-only** workflow for one chosen
-Notar, HusmanHagberg or MOHV observation. Only the personal repository owner
-`marcusbodin` can run its collection job. There is no schedule or automatic retry,
-and it shares the `private-ingestion` concurrency lock with the legacy importer.
-
-Configure the same reviewed, expiring `PRIVATE_OBSERVATION_SOURCES` as a Worker
-production secret and a GitHub Actions repository secret. Do not restore a public
-empty variable of the same name: it would conflict with the private binding.
-For the initial migration from a public `[]` variable, deploy its removal before
-creating the secret; Cloudflare rejects a secret with a name already used by a
-plain variable. Preserve all other bindings and do not rotate existing credentials.
-Missing grants still default closed. `AUTHORIZED_SOURCES` remains `[]`.
-The collection step alone receives the existing `INGEST_TOKEN` and the
-`PUBLIC_API_URL` repository variable as `INGEST_API_URL`.
-
-```sh
-node --import tsx scripts/collect-private.ts --source notar
-```
-
-Preflight checks source/host/expiry, token and the exact production HTTPS API
-origin before starting any broker request. On Linux it uses the unchanged
-bounded renderers and robots rules, followed by the strict existing importer.
-No extra API replay, pagination, proxy, challenge bypass or capacity increase
-is introduced. Every invocation keeps its capture only in memory. A valid empty
-preview reports `no_items`, not a successful populated feed.
-
-Only aggregate partial receipts or fixed failure codes reach logs; real facts,
-DOM, raw exceptions and credentials are not published as logs or artifacts.
-Any access/robots/readiness failure stops that source. A failed import must not
-be retried with a fabricated fresh capture time. A successful manual observation
-does not establish complete broker coverage, permission for recurring database
-extraction, or eligibility for housing emails.
+**Removed on the owner's request, 2026-09-27.** The manual observation workflow,
+the older scheduled collector, source-specific browser/HTML parsers and preview
+commands no longer exist in the source tree. Historical run IDs and outcomes
+remain in [SOURCES.md](SOURCES.md#manual-private-production-pilot-2026-09-27);
+they are not instructions to run an old workflow or restore an old checkout.
+The unshipped on-demand feature, Browser Worker/Durable Object configuration and
+unapplied migration 0006 were also removed. Migrations 0001-0005 are unchanged.
+Publishing the cleanup removes the collection workflow definitions from the
+active branch. Secrets, deployed Workers and D1 state are unchanged; old GitHub
+workflow history is retained.
 
 ### Property emails remain paused
 
@@ -253,18 +234,16 @@ preparation and send-time rechecks even if email enablement is later approved.
 The only enabled email flag added here is an explicit **synthetic test binding**
 for pre-existing mail regression cases, not production configuration.
 
-### Future morning runner (not enabled)
+### Replacement collection is only under assessment
 
-Reuse the bounded GitHub Actions/Node tooling after a separate operator
-decision. Keep a single non-overlapping job, existing source/request/body/time
-bounds and a Stockholm calendar-day idempotency guard; evaluate the IANA zone
-instead of assuming a fixed UTC offset. Prepare private capture/envelope files
-in ephemeral storage and send authenticated partial batches; keep UUID/time
-for transport retries. Never send a truncated page as a complete snapshot.
-Keep all raw facts, HTML, tokens and diagnostics out of public logs/artifacts.
-Do not run a browser in the Worker, increase free-tier caps, use paid fallback
-or trigger AI/mail per listing. No new schedule, collection flag or recurring
-browser operation is enabled by this implementation.
+ScraperAPI is being assessed separately, not integrated. There is no replacement
+runner, provider key, automatic collection or new schedule. A provider cannot
+grant broker/database rights or justify bypassing robots, access controls or
+explicit source restrictions. Any future integration needs separate approval,
+source-specific permission review and a verified free-tier budget. It must feed
+the retained strict observation/snapshot boundaries, preserve original times
+and never label a partial page as a complete snapshot. Existing cleanup and
+technical-email processing remain unchanged; property emails remain off.
 
 ### Legacy membership mode
 

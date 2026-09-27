@@ -1,5 +1,25 @@
 # Deployment and launch status
 
+## Custom collection removal, 2026-09-27
+
+The owner cancelled on-demand scraping and requested removal of all custom web
+scraping. The source tree removes its collectors, preview commands,
+scraping-only workflows/dependencies and unshipped Browser Worker/Durable Object
+feature. Migration 0006 was never deployed and has been removed; migrations
+0001-0005 and the production Worker/UI code remain unchanged. ScraperAPI is
+under assessment only, not integrated or authorized for restricted sources.
+
+This is a source-only release: publishing it removes the collection workflow
+definitions from the active branch. Existing workflow history is retained.
+No secret, grant, database, Pages or Worker deployment needs changing.
+The production-configured frontend bundles remain byte-identical to the
+published `index-BYkC9A39.js` and `index-LqHVXeMz.css`.
+The historical three HusmanHagberg observations retain their original
+time; reading still requires the existing private grant and shared gate.
+Property emails remain off. The release records below describe **historical
+deployments**, not currently available local scraping commands or approval to
+re-run historical workflows.
+
 ## Solid blue-white logo and first private objects, 2026-09-27
 
 Pages `36332659680` published `7b234d6`, including the logo/button change
@@ -529,16 +549,18 @@ flow before opening membership, then monitor bounces/complaints and quota.
 
 ## Collection Actions
 
-`ingest.yml` is disabled unless `INGEST_ENABLED=true`; default configuration
-contains zero collection sources. It runs at 03:15 UTC (before the Stockholm
-morning window in both seasons), at most five minutes, with a concurrency lock.
+The scheduled collector and manual browser-observation workflow are removed
+from current source. Do not enable old `INGEST_ENABLED`/`COLLECTION_CONFIG`
+settings or dispatch historical workflows. Their removal is a code release,
+not a database migration or a request to delete stored observations.
+Existing remote workflow history and secrets are retained. In particular,
+the Worker's private source grant
+is still needed to read existing data; do not remove it as an unused scraper key.
 
-Private Actions **secrets**: `INGEST_API_URL`, `INGEST_TOKEN` (matching Worker
-`ADMIN_TOKEN`) and `COLLECTION_CONFIG` (exact permitted-source allowlist).
-Never use pull-request event code to run these secrets. No data artifacts or
-raw source content are uploaded. The job only imports to the protected Worker.
-See [SOURCES.md](SOURCES.md) for the actual supported parser contract and the
-difference between infrastructure and a verified live source.
+The retained [JSON observation importer](OPERATIONS.md#controlled-importer)
+requires explicit private admin credentials and source authorization, validates
+already structured facts and never fetches a broker or replacement provider.
+No automated collection or replacement-provider workflow is supplied.
 
 ## Required launch evidence
 

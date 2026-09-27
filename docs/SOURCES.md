@@ -1,5 +1,38 @@
 # Sources and collection status
 
+## Current state: custom scraping removed
+
+The owner requested removal of all custom web scraping on 2026-09-27, after
+cancelling the on-demand URL feature. The collectors, source-fetch/browser/HTML
+parsers, preview commands, scraping-only tests and collection workflows are
+removed from the source tree. The unshipped Browser Worker/Durable
+Object runtime and unapplied migration 0006 are also removed.
+
+The three previously imported HusmanHagberg observations remain historical
+stored facts at `2026-09-27T16:07:54.625Z`. This cleanup does not read, delete,
+refresh or rewrite production data, accounts, grants or deployments. Existing
+grant expiry, private access, 48-hour stale disclosure and 30-day retention
+still apply. No search-triggered or automatic collection is implemented, and
+property emails remain off.
+
+ScraperAPI is only being assessed; no provider integration/key or replacement
+runner is present. A scraping provider is not permission to extract a broker's
+database, republish links, bypass access restrictions or ignore robots.
+The operator's latest [Mäklarhuset terms review](https://www.maklarhuset.se/allmanna-villkor)
+found permission requirements for database use (9.1) and linking (9.4), with
+additional presentation/use restrictions (9.2).
+[Its robots](https://www.maklarhuset.se/robots.txt) excludes query URLs with
+`Disallow: /*?`, except the `maklare` exception, as well as object/internal paths.
+The supplied search URL was not fetched; no query stripping, alternate host,
+browser attempt, parser or grant was introduced.
+
+The source investigations below are **historical evidence for removed tools**,
+not active integrations, current fetch instructions or permission to resume
+collection. Their run IDs, original counts and policy restrictions are retained.
+Only the strict structured-data [observation importer](OPERATIONS.md#controlled-importer)
+and complete-snapshot contract at the end of this document remain executable
+data boundaries; neither fetches sources or parses HTML.
+
 ## Manual private production pilot, 2026-09-27
 
 After the owner's explicit approval, the complete linked Notar, HusmanHagberg
@@ -14,7 +47,7 @@ One bounded manual Linux run was made per source, using unchanged normal-browser
 allowlists, robots checks and request/time/size limits. No detail pages, paging,
 API replay, challenge bypass, proxy, retry or stale-capture retimestamping was used.
 
-| Source | Fresh production result | Current activation |
+| Source | Historical production result | Last verified grant state |
 | --- | --- | --- |
 | HusmanHagberg | Run `36332042322`: 3 genuine upcoming Stockholm-county facts imported at `2026-09-27T16:07:54.625Z`; partial receipt 3 inserted, 0 updated/ignored/retired | Active private usage-basis grant, exact `www.husmanhagberg.se` host, expires `2026-10-04T18:00:00.000Z` |
 | Notar | Run `36331879123`: `access_denied`; stopped, no import | Grant removed; disabled |
@@ -29,8 +62,8 @@ browser rendering is not claimed by the import/database verification.
 
 Only the working HusmanHagberg grant remains in private Worker/GitHub secrets.
 `AUTHORIZED_SOURCES=[]` and `PROPERTY_EMAILS_ENABLED=false` remain unchanged.
-There is **no scheduled collection**; these observations will age without another
-explicit operation. Source access, private facts and authorization basis are not
+There is **no collection in the current code**; these observations age without
+retimestamping. Source access, private facts and authorization basis are not
 published in workflow logs/artifacts. Only source IDs and aggregate outcomes are.
 
 ## Historical preview and initial policy status
@@ -152,7 +185,7 @@ Robots reads are separate from browser traffic. Real HTML, operation metrics
 and extracted records remain in private session files, never public fixtures,
 static bundles, workflow artifacts or console logs.
 
-`scripts/notar-dom.ts` parses the **observed rendered structure**, not generic
+The removed `scripts/notar-dom.ts` parsed the **observed rendered structure**, not generic
 JSON-LD: selected `.custom-tab[role=tab]`, `a.card[href]`, `.v-card-title`,
 three `.subtitle-info > span` fields (status, area, municipality), and `li > span`
 facts with `rok`, `kvm` and `kr/mån` units. Every included card must explicitly
@@ -181,20 +214,12 @@ identity/values and conflicting duplicate IDs are explicit failures, not a
 successful empty inventory. A valid page containing only out-of-scope cards can
 produce zero matches, still with unknown total and incomplete coverage.
 
-### Manual local reproduction
+### Historical local reproduction (removed)
 
-Requires the repository's existing Node/tsx and installed Playwright Chromium;
-there is no new dependency, CI job or recurring browser fleet. Output must be
-a **new absolute file outside the checkout**, in an existing private directory:
-
-```bash
-./node_modules/node/bin/node --import tsx scripts/preview-notar.ts \
-  --output /absolute/private/notar-preview.json
-```
-
-This command launches one fresh browser at the fixed official index, selects
-`Kommande` at most once, and closes it. No arbitrary URL argument exists.
-Separate local-browser caps: 100 allowed / 200 attempted requests, 12 MB decoded
+The retired Notar command used the repository's Node/tsx and Playwright
+Chromium. It launched one fresh browser at the fixed official index, selected
+`Kommande` at most once, and closed it. It had no arbitrary URL argument.
+Its local-browser caps were 100 allowed / 200 attempted requests, 12 MB decoded
 traffic, 30-second browser-phase deadline, 15-second launch/navigation deadlines,
 10-second readiness deadlines, 500 KB rendered DOM and 50 cards. Fresh robots
 checks use the existing 12-second/64 KB bounds, followed by a two-second
@@ -205,16 +230,8 @@ launched in that case. Zero or absent delay retains the initial two-second wait.
 The website's own functional requests run normally within that explicit browser
 budget; this is not the production collector's two-request budget.
 
-To reproduce extraction from an already captured DOM with **no network**:
-
-```bash
-./node_modules/node/bin/node --import tsx scripts/preview-notar.ts \
-  --from-html /absolute/private/notar-rendered.html \
-  --output /absolute/private/notar-offline-preview.json
-```
-
-Offline extraction does not invent a new capture/last-seen timestamp.
-Fresh Notar previews now persist an `observationId` UUID and `observedAt`;
+The removed offline parser never invented a new capture/last-seen timestamp.
+Successful Notar previews persisted an `observationId` UUID and `observedAt`;
 the legacy `capturedAt` alias is exactly that same successful-capture timestamp.
 The UUID is generated once for that capture and stored with the output. Bare
 `--from-html` has `observationId: null` and `observedAt: null`, never a newly
@@ -224,19 +241,11 @@ Output is mode 0600, exclusive (never overwrites a file or symlink); stdout
 contains counts and non-ingestible/partial status, not property facts.
 Errors exit nonzero. Do not put real HTML or JSON in the repository.
 
-Tests use anonymized minimal DOM, an intercepted synthetic Chromium page and
-the existing collector regression cases; no broker requests are made by tests:
-
-```bash
-./node_modules/node/bin/node ./node_modules/vitest/vitest.mjs run \
-  tests/notar-preview.test.ts tests/model.test.ts
-```
-
-The preview is **not wired to `collectSource` or `/admin/ingest`** and cannot
-retire inventory. Production collection, Worker, D1, quotas, source allowlists
-and authorization remain unchanged. Publication still requires a defensible
-reuse basis plus a separately designed complete-snapshot or safe-delta contract;
-copying this page's 13 records into the existing snapshot route is not safe.
+The former tests used minimal synthetic DOM and an intercepted Chromium page,
+with no broker traffic. These scraping-only tests and commands are now removed;
+UI browser tests and strict data-import regressions remain.
+The preview was never a complete snapshot. Copying the historical 13 records
+into the complete-snapshot route, or relabeling their timestamp, remains unsafe.
 
 ## HusmanHagberg and MOHV bounded previews
 
@@ -364,7 +373,7 @@ first-50-card region was 87,099 bytes. The committed runner further removes
 promotional siblings, images, scripts and unrelated attributes from the saved
 results fragment. No DOM, network, production or quota cap was increased.
 
-`scripts/broker-browser.ts` shares safeguards between the two new sources.
+The removed `scripts/broker-browser.ts` shared safeguards between the two sources.
 Both use fresh contexts, default Chromium identity, blocked service workers,
 100 allowed / 200 attempted requests, 12 MB actual decoded traffic, a
 30-second browser-phase deadline, 15-second launch/navigation and 10-second
@@ -376,24 +385,13 @@ Allowed page/runtime/data HTTP failures, redirects, request failures,
 unclassified functional operations, missing cards and visible challenges fail
 explicitly, never as retained-card or empty-inventory success.
 
-### Manual private commands and capture identity
+### Historical private capture identity (commands removed)
 
-The new source-specific parsers share a manual CLI, not a production collector:
-
-```bash
-./node_modules/node/bin/node --import tsx scripts/preview-broker.ts \
-  --source husmanhagberg --output /absolute/private/hh-preview.json \
-  --capture-output /absolute/private/hh-capture.json
-
-./node_modules/node/bin/node --import tsx scripts/preview-broker.ts \
-  --source mohv --output /absolute/private/mohv-preview.json \
-  --capture-output /absolute/private/mohv-capture.json
-```
-
-Each invocation opens only the fixed public upcoming index, takes at most the
-first 50 property cards in original DOM order, and closes the browser. There is
-no arbitrary URL, paging, filter-rewrite, automatic retry, paid dependency,
-recurring job or newly opened app server. Recheck current terms before live use.
+The removed source-specific parsers shared a manual CLI. Each invocation opened
+only the fixed public upcoming index, took at most the first 50 property cards
+in original DOM order, and closed the browser. There was no arbitrary URL,
+paging, filter-rewrite, automatic retry or paid dependency. This evidence does
+not authorize resuming collection or restoring a historical workflow.
 
 Results keep `kind: "<source>-rendered-preview"`, `ingestible: false` and `items`
 (including the existing-style computed `id`). `coverage.complete` is always
@@ -406,28 +404,15 @@ that MOHV's 27 matches exhaust Stockholm, or that no more HH homes exist.
 Successful live capture creates one UUID `observationId` and one canonical UTC
 `observedAt`. Optional capture output stores a versioned `broker-dom-capture`
 envelope with source ID, the same identity/time, pre-window count, minimal DOM,
-and its SHA-256 hash. An offline replay preserves them:
-
-```bash
-./node_modules/node/bin/node --import tsx scripts/preview-broker.ts \
-  --source mohv --from-capture /absolute/private/mohv-capture.json \
-  --output /absolute/private/mohv-replayed-preview.json
-```
+and its SHA-256 hash. The former offline replay preserved that identity/time.
 
 The hash detects mismatched DOM/metadata files; it is **not** a publisher
 signature, legal authorization, or proof that arbitrary user-supplied capture
 metadata is genuine. Only trusted, actually observed capture files should be
 used. Replaying a capture never renews its time, changes its UUID or makes an
-old observation fresh. The backend's separate importer owns any controlled
-conversion and freshness enforcement; these envelopes are not ingestion feeds.
-
-Bare DOM extraction also works without any network:
-
-```bash
-./node_modules/node/bin/node --import tsx scripts/preview-broker.ts \
-  --source husmanhagberg --from-html /absolute/private/hh-results.html \
-  --output /absolute/private/hh-offline-preview.json
-```
+old observation fresh. These preview/capture envelopes are not ingestion feeds;
+the retained importer now accepts only strict structured observation JSON and
+does not convert or extract them.
 
 Bare HTML has no authenticated capture metadata: `observationId`, `observedAt`,
 `renderedCards` and `truncated` are null. The known `sampledCards` remains the
@@ -441,13 +426,7 @@ errors are sanitized and exit nonzero. Real DOM, listings and traffic proof stay
 in private session files, never fixtures, bundles, logs or public artifacts.
 Only anonymized observed-structure fixtures are committed.
 
-```bash
-./node_modules/node/bin/node ./node_modules/vitest/vitest.mjs run \
-  tests/broker-preview.test.ts tests/notar-preview.test.ts tests/model.test.ts
-npm run build
-```
-
-These tests use actual Chromium with **all network intercepted**, including
+The former tests used actual Chromium with **all network intercepted**, including
 denials, changed operations, request/decoded-byte caps, the exact 266-to-50
 window, metadata replay, exclusions, malformed facts and private file handling.
 Separate local offline parsing verified the real captured HH and MOHV windows.
@@ -456,49 +435,21 @@ safeguards/browser limits and genuine Notar live-capture metadata were added.
 `collector.ts`, `ingest.ts`, `source-config.ts`, Worker/shared schemas and
 production source grants/configuration were not changed by this expansion.
 
-## Existing complete-snapshot collector (unchanged)
+## Historical complete-snapshot collector (removed)
 
-`scripts/collector.ts` actually fetches robots and one configured resource,
-parses structured HTML or JSON, normalizes facts and rejects invalid data.
-The HTML parser supports the explicit `RealEstateListing` contract in the
-synthetic fixture. This is **not** proof any named agency emits that contract.
-The named Notar DOM preview above is separate; it does not make this generic
-HTML contract compatible with Notar or authorize production activation.
+The former collector fetched robots and one configured resource, then parsed
+HTML/JSON-LD or a JSON feed. It was limited to four sources, one URL per host,
+two requests/source, 12 seconds/request, 64 KB robots and 500 KB content.
+Its HTML format was demonstrated only on synthetic data, not a named agency.
+The collector, exact-URL configuration loader, scheduled workflow and HTML
+fixtures are now removed. Do not populate old collection settings to restore it.
 
-The private CI `COLLECTION_CONFIG` JSON secret is an exact-URL allowlist:
-
-```json
-[{
-  "id": "authorized",
-  "format": "json-feed",
-  "url": "https://feeds.example.com/approved-upcoming.json",
-  "licenseReference": "Reference to a verified license permitting this use",
-  "licenseExpires": "2099-01-01T00:00:00Z",
-  "allowedListingHosts": ["listings.example.com"]
-}]
-```
-
-The example is not a working feed or a license. Keep real feed endpoints, tokens
-and permission correspondence out of public source control. End users cannot
-supply fetch URLs. Redirects, non-HTTPS URLs, credentials in URLs and private
-IP resolutions are rejected. Because this is a trusted owner-maintained
-allowlist, only known publisher-owned hosts may be configured; never put
-user-controlled/dynamic-DNS hosts on it.
-
-Per job: at most 4 sources and one URL per host. Each source gets a fresh robots
-check plus **one** content request; no discovery crawl, pagination, browser fleet,
-retry loop, API probing or link following. At least 2 seconds between requests;
-longer robots crawl delays are honored up to 60 seconds, otherwise fail closed.
-Timeout 12 seconds/request, robots 64 KB, content 500 KB. Missing/unreadable
-robots, network failures, redirects, unsupported markup and invalid fields fail
-the source explicitly. A blocked source's listings are never fetched.
-
-The job sends normalized data to authenticated `POST /admin/ingest`; the Worker
-checks a second private `AUTHORIZED_SOURCES` allowlist with source ID, permitted
-listing hosts, license reference and expiration. No URL fetch runs inside the
-Worker. Snapshot bodies are limited to 100 KB and 50 items; sources are throttled
-to one new snapshot/5 minutes. Failed batches roll back in D1. Failures are
-reported through `/admin/source-failure` without replacing prior inventory.
+The separate authenticated `POST /admin/ingest` data boundary remains. It checks
+the private `AUTHORIZED_SOURCES` grant, source ID, approved listing hosts and
+expiry. Snapshot bodies remain limited to 100 KB and 50 items, jointly throttled
+with partial imports to one new batch/source/five-minute bucket. Failed batches
+roll back. `/admin/source-failure` remains an authenticated metadata operation;
+it does not fetch a source or replace inventory.
 
 ## Normalized complete snapshot
 
@@ -526,14 +477,14 @@ reported through `/admin/source-failure` without replacing prior inventory.
 
 All numerical facts may be `null`, never invented zero. `status`, county and a
 Stockholm municipality are mandatory. Timestamps must be within an hour of
-import; feed timestamps are preserved, not relabeled as fresh. HTML must
-explicitly mark `Försäljningsstatus=Kommande`; no status inference from URL.
-The fixture explains the supported HTML structured-data fields.
+import; feed timestamps are preserved, not relabeled as fresh. Only already
+structured, explicitly validated facts are accepted. No HTML parsing or status
+inference from URLs remains.
 
 Snapshots are **complete per source**, not pages/deltas. Missing objects become
 inactive only on successful import, including an explicitly valid empty JSON
-snapshot. Unsupported/empty HTML is a parse failure. Repeated or older snapshots
-are idempotent. ID = source ID + publisher's stable ID; first-seen time is
+snapshot. HTML and legacy previews are rejected. An identical receipt replay is
+idempotent; a new older snapshot is rejected. ID = source ID + publisher's stable ID; first-seen time is
 preserved on updates. Cross-agency identity is not guessed from addresses:
 two different publishers' IDs can describe the same home. This is disclosed as
 a remaining deduplication limitation, not silently merged.

@@ -3,38 +3,19 @@ import { open, realpath } from "node:fs/promises";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { z } from "zod";
-import { listingId, listingSchema } from "../shared/model";
-import { captureTimeSchema, observationSchema, OBSERVATION_WINDOW_MS, type Observation } from "../shared/observations";
+import { observationSchema, OBSERVATION_WINDOW_MS, type Observation } from "../shared/observations";
 import { observationAuthorizations, type SourceConfiguration } from "../worker/support";
 
-const previewSchema = z.object({
-  kind: z.enum(["notar-rendered-preview", "husmanhagberg-rendered-preview", "mohv-rendered-preview"]),
-  ingestible: z.literal(false),
-  sourceId: z.enum(["notar", "husmanhagberg", "mohv"]),
-  observationId: z.string().uuid(),
-  observedAt: captureTimeSchema,
-  coverage: z.object({ complete: z.literal(false) }).passthrough(),
-  items: z.array(listingSchema.extend({ id: z.string() }).strict()).max(50),
-}).passthrough();
 function authorized(data: Observation, config: SourceConfiguration) {
   const grant = observationAuthorizations(config).find(source => source.id === data.sourceId);
   if (!grant || data.items.some(item => !grant.hosts.includes(new URL(item.url).hostname)))
     throw new Error("No active owner-configured private observation grant for this source and its hosts.");
 }
 export function prepareObservations(input: unknown, config: SourceConfiguration, now = Date.now()): Observation {
-  const preview = previewSchema.parse(input);
-  if (preview.kind !== `${preview.sourceId}-rendered-preview` || preview.items.some(item => item.id !== listingId(item)))
-    throw new Error("Preview source or stable identity does not match.");
-  const items = preview.items.map(item => ({
-    externalId: item.externalId, sourceId: item.sourceId, status: item.status, county: item.county,
-    municipality: item.municipality, area: item.area, address: item.address, type: item.type,
-    price: item.price, rooms: item.rooms, size: item.size, fee: item.fee, url: item.url,
-  }));
-  const data = observationSchema.parse({ kind: "listing-observations", version: 1, observationId: preview.observationId,
-    sourceId: preview.sourceId, observedAt: preview.observedAt, coverage: "partial", items });
-  authorized(data, config);
+  const data = observationSchema.parse(input);
   if (Date.parse(data.observedAt) > now || now - Date.parse(data.observedAt) > OBSERVATION_WINDOW_MS)
-    throw new Error("Capture evidence is outside the one-hour import window; it must not be retimestamped.");
+    throw new Error("Observation evidence is outside the one-hour import window; it must not be retimestamped.");
+  authorized(data, config);
   return data;
 }
 export async function sendObservations(input: unknown, config: SourceConfiguration, api: string, token: string, local = false) {
@@ -66,7 +47,7 @@ async function privatePath(path: string, output: boolean) {
   const actual = output ? resolve(await realpath(dirname(path)), path.split("/").at(-1)!) : await realpath(path);
   const within = relative(root, actual);
   if (!within || (!within.startsWith("../") && !isAbsolute(within)))
-    throw new Error("Real capture and observation files must stay outside the checkout.");
+    throw new Error("Real observation files must stay outside the checkout.");
   return actual;
 }
 export async function readPrivateInput(path: string) {
@@ -100,12 +81,12 @@ async function main() {
     const result = await sendObservations(await readPrivateInput(args[1]), config,
       process.env.INGEST_API_URL || "", process.env.INGEST_TOKEN || "", args[2] === "--local");
     console.log(JSON.stringify(result));
-  } else throw new Error("Use --prepare /private/preview.json --output /private/new-envelope.json OR --send /private/envelope.json [--local].");
+  } else throw new Error("Use --prepare /private/observations.json --output /private/new-envelope.json OR --send /private/envelope.json [--local].");
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   main().catch(error => {
-    console.error(error instanceof z.ZodError ? "Invalid observation or capture evidence; nothing can be confirmed." :
-      "Observation preparation/import failed. Check private paths, capture evidence, owner grants and authenticated server status; no automatic retry.");
+    console.error(error instanceof z.ZodError ? "Invalid observation evidence; nothing can be confirmed." :
+      "Observation preparation/import failed. Check private paths, observation evidence, owner grants and authenticated server status; no automatic retry.");
     process.exitCode = 1;
   });
 }

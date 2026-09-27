@@ -9,15 +9,20 @@ Besökare med lösenord kan prova AI eller egna sökfilter utan e-post. E-post v
 först vid sparande, följt av en ny uttrycklig granskning/bekräftelse.
 Ingen medlemsansökan eller manuell ägarprövning behövs i delat lösenordsläge.
 **AI-budgeten är högst sex anrop per dygn för hela tjänsten, inte per besökare.
-Den manuella privata piloten har tre färska objekt från HusmanHagberg
-(2026-09-27); sökningar kan fortfarande bara sparas pausade.**
+De tre tidigare importerade HusmanHagberg-observationerna från
+2026-09-27 är historiska uppgifter; sökningar kan fortfarande bara sparas pausade.**
 Schemalagd städning och hantering av inloggningsmejl är påslagna. Ägaren har
 loggat in via ett riktigt mejl, använt AI-flödet och uttryckligen sparat en
 pausad sökning. Den sparade profilen och avstängda bostadsmejl är verifierade
 i produktionsdatabasen. Fleranvändarflöden och kapacitet återstår att följa upp.
-Automatisk insamling från de efterfrågade
-mäklarsajterna är fortfarande en uttrycklig lanseringsblockerare, inte en färdig
-funktion som ersatts av en demo.
+**Egen webbskrapning är borttagen på ägarens begäran.** Det gäller även det
+avbrutna arbetet med hämtning vid sökning. Ingen insamling körs vid sökning,
+sidladdning eller via insamlingsjobb. De lagrade objekten, deras ursprungliga
+observationstid, konton och sparade sökningar raderas eller förnyas inte av
+kodändringen. Befintliga regler för åtkomst, inaktuell information och gallring
+gäller fortfarande. ScraperAPI utvärderas endast; ingen ersättningsintegration,
+leverantörsnyckel eller automatisk hämtning är införd. En sådan tjänst ger inte
+tillstånd att kringgå mäklarnas villkor eller åtkomstbegränsningar.
 
 Migrationerna till och med `0005`, privat objektåtkomst och `ACCESS_MODE=shared`
 är driftsatta. Lösenordet finns bara som privat serverhemlighet och hos ägaren.
@@ -49,13 +54,13 @@ npm run api:dev           # lokal Worker, standardport 8787
 npm run build            # typkontroll + statisk frontend
 npm test                 # riktiga lokala D1/transaktioner, simulerad mejlleverantör
 npm run test:browser     # desktop + mobil; installera Chromium om den saknas
-npm run ingest           # inget hämtas med tom konfiguration
 ```
 
-Både `npm test` och `npm run test:browser` behöver Playwrights Chromium
-(`npx playwright install chromium`). Skrapartesterna använder en riktig
-webbläsare men fångar alla nätverksanrop till syntetiska fixturer. CI installerar
-webbläsaren före båda testsviterna; inga mäklarsidor behöver hämtas för kontrollerna.
+`npm test` behöver ingen Chromium och använder endast syntetiska strukturerade
+data och lokala testtjänster. `npm run test:browser` behöver Playwrights Chromium
+(`npx playwright install chromium`) för gränssnittsregressioner. CI installerar
+webbläsaren inför dessa tester; inga mäklarsidor eller insamlingsleverantörer
+behöver kontaktas.
 
 Kopiera `.env.example` respektive `.dev.vars.example` vid behov. Hemligheter hör
 aldrig hemma i `VITE_*`, JavaScript-paket, git eller Actions-loggar.
@@ -148,29 +153,15 @@ aldrig hemma i `VITE_*`, JavaScript-paket, git eller Actions-loggar.
   verifierings-/inloggningslänkar, utloggning, paus och kontoradering.
 - Morgonjobb i `Europe/Stockholm`, även sommartid. Bara nya matchningar, högst
   20 per mejl. Misslyckad leverans markerar inte objekt som sedda.
-- Begränsad collector för tillåtna JSON-feeds och explicit strukturerad
-  HTML/JSON-LD, med parserfixturer, robotskontroll, tids-/storleksgränser och
-  autentiserad import. **Den är testad på syntetiska fixturer, inte på någon
-  fungerande liveintegration med en mäklare.**
-- Separata, manuella skrapare för **Notar, HusmanHagberg och MOHV** har verifierats
-  mot faktiskt renderad DOM med vanlig Chromium. Notars tidigare prov gav
-  13 Stockholmsträffar av 24 kort. HusmanHagberg gav 1 entydig träff av 18 kort
-  efter att motstridiga statusetiketter uteslutits. MOHV gav 27 träffar bland
-  de första 50 av 266 kort på den undersökta sidan; det är inte full täckning.
-  [Källspecifika belägg, begränsningar och lokala kommandon](docs/SOURCES.md#husmanhagberg-and-mohv-bounded-previews).
-  Resultaten är privata och uttryckligen ofullständiga, **inte kompletta
-  inläsningssnapshots**. Saknade fakta förblir `null`. Sparad fångstmetadata
-  behåller ursprunglig observationstid och identitet vid lokal återläsning.
-  SkandiaMäklarna och Länsförsäkringar är stoppade på uttryckliga villkor;
-  privat användning ger inte automatiskt tillstånd till indexering.
-  Förhandsvisningsverktygen importerar inte själva. Den separata manuella
-  [privata körningen](docs/OPERATIONS.md#manual-private-browser-runner)
-  importerade tre färska HusmanHagberg-objekt den 27 september.
-  Notar stoppades vid nekad åtkomst och MOHV vid ett resultat som inte kunde
-  verifieras; deras tidigare prov används inte som färska objekt.
-  Bara HusmanHagberg är nu aktiverad, med tidsbegränsad privat användningsgrund
-  till 4 oktober. Ingen allmän mäklarlicens, automatisk insamling eller
-  mejlbevakning har aktiverats.
+- Administratörsskyddad validering/import av strukturerade JSON-fakta finns kvar;
+  verktyget läser inte mäklarsidor, HTML eller DOM. Kompletta licensierade
+  snapshots och partiella observationer har fortsatt skilda kontrakt.
+  De tidigare skraparna, webbläsarrenderarna, förhandsvisningskommandona och
+  insamlingsflödena i Actions är borttagna.
+  [Historiska källbelägg och kvarstående begränsningar](docs/SOURCES.md) bevaras.
+  Den befintliga privata HusmanHagberg-grunden behövs fortfarande för att
+  läsa lagrade observationer och har inte ändrats av borttagningen.
+  Notar/MOHV förblir avstängda; gamla fångster blir inte nya observationer.
 
 ## Begränsningar och dokumentation
 
