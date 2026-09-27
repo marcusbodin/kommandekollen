@@ -3,7 +3,11 @@ let generation = 0;
 let pending = new AbortController();
 const channel = typeof BroadcastChannel === "undefined" ? null : new BroadcastChannel("kommandekollen-access");
 
-export class PrivateAccessError extends Error {}
+export class PrivateAccessError extends Error {
+  constructor(message = "Åtkomsten är stängd. Öppna den igen för att fortsätta.") {
+    super(message);
+  }
+}
 
 export const accessGeneration = () => generation;
 export function closePrivateAccess(broadcast = false) {
@@ -21,14 +25,20 @@ export function onAccessClosed(listener: () => void) {
 }
 export async function privateFetch(url: string, init: RequestInit = {}, allowAnonymous = false) {
   const current = generation;
-  const response = await fetch(url, {
-    ...init, credentials: "include", cache: "no-store", redirect: "error",
-    signal: AbortSignal.any([pending.signal, init.signal ?? AbortSignal.timeout(25_000)]),
-  });
-  if (current !== generation) throw new PrivateAccessError("Åtkomsten har stängts. Öppna den igen för att fortsätta.");
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      ...init, credentials: "include", cache: "no-store", redirect: "error",
+      signal: AbortSignal.any([pending.signal, init.signal ?? AbortSignal.timeout(25_000)]),
+    });
+  } catch (error) {
+    if (current !== generation) throw new PrivateAccessError();
+    throw error;
+  }
+  if (current !== generation) throw new PrivateAccessError();
   if (response.status === 401 && !allowAnonymous) {
     closePrivateAccess();
-    throw new PrivateAccessError("Åtkomsten är stängd. Öppna den igen för att fortsätta.");
+    throw new PrivateAccessError();
   }
   if (response.status === 503) {
     const failure: unknown = await response.clone().json().catch(() => null);

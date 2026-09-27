@@ -33,4 +33,16 @@ describe("private access errors", () => {
     const { accessRequest } = await import("../src/SharedAccess");
     await expect(accessRequest("https://api.example", "/api/gate")).rejects.toThrow("Kunde inte nå tjänsten");
   });
+
+  it("identifies a pending request aborted by another access check as access loss", async () => {
+    vi.stubGlobal("fetch", vi.fn((_url: string, init: RequestInit) => new Promise<Response>((_resolve, reject) => {
+      init.signal!.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")), { once: true });
+    })));
+    const access = await import("../src/access");
+    const { accessRequest } = await import("../src/SharedAccess");
+    const request = accessRequest("https://api.example", "/api/gate");
+    const rejected = expect(request).rejects.toThrow("Åtkomsten är stängd");
+    access.closePrivateAccess();
+    await rejected;
+  });
 });
