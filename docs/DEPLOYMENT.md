@@ -1,5 +1,72 @@
 # Deployment and launch status
 
+## Private listings rollout, 2026-09-27
+
+The owner's later decision supersedes anonymous browsing: real listings are
+for the owner and invited users behind the shared password. The public branded
+shell remains accessible; browsing after the password needs neither email nor
+AI consent.
+
+Migration `0005_private_observations.sql` has been applied through the pinned,
+atomic migration runner and verified against the expected schema and ledger.
+Private before/after fingerprints confirmed that the existing saved profile
+and all four AI reservations were unchanged. Inventory remains zero.
+
+Worker version `c693db09-982a-4363-9daa-5ec26e26fe56` enables the private API
+boundary and additive observation infrastructure. Both `/api/listings` and
+`/api/catalog` return 401 with no listing/count data and `Cache-Control: no-store`
+without the gate, including malformed listing parameters. These checks succeeded
+with both exact apex/www origins. `AUTHORIZED_SOURCES=[]`,
+`PRIVATE_OBSERVATION_SOURCES=[]` and `PROPERTY_EMAILS_ENABLED=false` are explicit.
+Shared access, verification mail, AI budgets and the existing cleanup schedule
+remain unchanged. No broker facts were imported.
+
+Pages run `36319779490` successfully published final commit `821b8cd`,
+including the private UI, safe partial importer, three manual source previews
+and corrected access-loss feedback. The published bundle is
+`index-BNUsr6g2.js` with the unchanged `index-Dn7utxJQ.css`. Actual HTTPS reads
+matched both files byte-for-byte to the tested production build; logo, favicon
+and both hero images also matched their local originals.
+Source previews remain operator-only tools, not an enabled
+daily collection job or a license. Offline replays of the original private
+captures reproduced HusmanHagberg's 1/18 and MOHV's 27/50 sampled results from
+266 rendered cards without renewing capture timestamps.
+
+The owner authorized `www.kommandekollen.se` as the canonical hostname. Its
+DNS-only CNAME to `marcusbodin.github.io` is verified at two public resolvers.
+The initial canonical switch remained blocked by certificate provisioning.
+To restore availability, Pages was returned to `kommandekollen.se` and redeployed:
+**the apex HTTPS site now returns 200, but the www transition is not complete.**
+GitHub reset HTTPS enforcement during certificate replacement and currently
+rejects re-enabling it until issuance; HTTP currently also returns 200.
+Use the explicit HTTPS address during this interval. The two-host certificate
+request remains pending, and the www CNAME remains intact.
+
+Before the final switch, require an approved certificate and successful ordinary
+TLS checks for both hosts. Restore HTTPS enforcement, complete the www canonical
+configuration and verify HTTP/HTTPS redirects, path/query/fragment preservation
+and final email URLs. These redirect checks have **not** passed yet.
+The Worker temporarily accepts both exact origins and still generates apex
+email links. No wildcard origins or certificate-check bypasses are used.
+A bounded, read-only session-local certificate monitor is running; it is not
+a production collection job or a recurring automation.
+
+The integrated build and 113 coupled local Worker/D1/migration/model tests
+passed. The current macOS host then failed bare Chromium startup outside Vitest,
+with a native SIGSEGV; no source code change, larger cap or dependency reinstall
+was used to mask that failure. Fresh local browser verification remains blocked.
+The existing Linux workflow previously installed Chromium after `npm test`,
+although source-preview unit tests now need it. Commit `b9b4b25` moves that
+existing installation before both suites. Linux exposed an access-error wrapper
+bug and a concurrent revocation race, repaired in `7260323` and `821b8cd`,
+plus a test HTTP-bridge teardown race. **Final Linux run `36319433460` passed
+all 211 unit tests and all 66 desktop/mobile browser tests.** Broker traffic
+in those tests is intercepted to synthetic fixtures; no further live broker
+loads were made. Production checks used read-only HTTPS/API requests and no
+password, email, AI or mutation requests; they are not a claimed live browser run.
+
+## Prior releases through the copy-only homepage (historical)
+
 The owner authorized step-by-step deployment on 2026-09-25. The public repository
 and GitHub Pages shell are published under **marcusbodin**. Cloudflare Free DNS
 is active while Inleed remains the registrar. The production Worker is deployed
@@ -197,13 +264,14 @@ DNS. No registrar transfer, paid DNS, hosting, mail hosting or SSL is required.
 
 | Host | Hosting and DNS |
 | --- | --- |
-| `https://kommandekollen.se` | GitHub Pages, site DNS records **DNS-only initially** (not Cloudflare-proxied) |
+| `https://kommandekollen.se` | GitHub Pages, DNS-only A records; temporary canonical host with working TLS during certificate replacement |
+| `https://www.kommandekollen.se` | Approved final canonical host; DNS-only CNAME to `marcusbodin.github.io`; certificate transition pending |
 | `https://api.kommandekollen.se` | Cloudflare Worker Custom Domain in the active Free DNS zone; routing/DNS/certificate managed by Workers |
 
-`www` is not an application origin by default. If selected later, follow GitHub's
-documented apex/www redirect setup and use the canonical apex for login links.
-Do not add `www`, `github.io`, preview deployments or `workers.dev` to production
-CORS merely to make an unconfigured hostname work.
+The owner explicitly selected `www`; both exact HTTPS website origins are
+temporarily configured in CORS. Email links remain on the working apex until
+the canonical transition is verified. Do not add `github.io`, preview deployments,
+wildcards or `workers.dev` to production CORS.
 
 ## Safe DNS migration procedure
 
