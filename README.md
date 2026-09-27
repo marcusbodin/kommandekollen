@@ -97,8 +97,10 @@ aldrig hemma i `VITE_*`, JavaScript-paket, git eller Actions-loggar.
   Följdfrågor återanvänder samtycket inom samma utkast; ingen AI körs vid
   sidladdning eller återläsning.
 - Mobilanpassad sökyta med neutrala vita/grå ytor och svart/vit text.
-  Den nya loggans blått, ljusblått och korall används endast på knappar:
-  blå primärknappar, ljusblå sekundärknappar och korall för radering/återkallelse.
+  Blått och korall används endast på knappar: blå primärknappar med vit text,
+  genomskinliga sekundärknappar med samma mörkblå färg på ram och text,
+  samt korall för radering/återkallelse. I mörkt läge anpassas konturknapparnas
+  blå nyans för läsbarhet, utan att lägga till bakgrundsfärg.
   Loggan och bakgrundsbilden behåller sina egna färger.
   Färgerna använder Clawpilot-variabler; rubriker har fetare vikt 700,
   Georgia används i huvudrubrik/logotyp och Segoe UI i formulär och navigation.
@@ -128,7 +130,8 @@ aldrig hemma i `VITE_*`, JavaScript-paket, git eller Actions-loggar.
   Det tidigare inspirationskortet är fortsatt borttaget, även i demo och äldre
   medlemsläge. Objektlistan ligger på en vanlig läsyta och visar källänkar och
   faktauppgifter, inga påhittade objektbilder. Historiska oanvända fotofiler behålls.
-- Den nya tillhandahållna blå hus-/radarloggan används i sidhuvud och favicon.
+- Den senaste tillhandahållna helblå husloggan med vit radar används i sidhuvud
+  och favicon.
   Små lokala PNG-filer behåller originalets färger och transparens.
   [Loggans ursprung och bearbetning](public/assets/BRAND.md) redovisas separat
   från fotografiernas licenser.

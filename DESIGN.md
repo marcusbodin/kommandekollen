@@ -29,13 +29,13 @@ progressively disclosed. The new background is decorative, not a property listin
 or a photo card. No inspiration image is rendered inside the public feed.
 
 The latest user-supplied logo palette supersedes the earlier mint/teal/pink:
-neutral white/gray surfaces and black/white typography, with blue, light blue
+neutral white/gray surfaces and black/white typography, with blue
 and coral confined to buttons. The supplied logo and interior image retain
 their original colors. Links, status copy, focus, inputs and disclosures stay
 neutral rather than distributing the accent colors across the page.
 Georgia gives the main heading and wordmark a readable native serif voice;
 headings now use the requested heavier weight 700.
-forms, navigation and supporting headings retain the compact Segoe UI stack.
+Forms, navigation and supporting headings retain the compact Segoe UI stack.
 The owner's subsequent liquid-glass request replaces the two opaque hero panels
 with translucent material: 66% white in light mode, 72% charcoal in dark mode,
 10px backdrop blur, slight saturation and restrained inset light edges over
@@ -50,8 +50,8 @@ No full-photo wash, text shadow, animation or pointer-following distortion is
 added. Empty states and the footer are neutral; blue is for primary actions.
 
 The user-supplied house/radar artwork is the pinned site mark, replacing the
-generic home-icon badge in both shared and legacy/demo headers. The latest blue
-outline/chimney, light-blue arc and coral wedge must not be redrawn, recolored,
+generic home-icon badge in both shared and legacy/demo headers. The latest solid
+blue house with white arc, center and wedge must not be redrawn, recolored,
 inverted or replaced with a generic icon. A lossless local 80px derivative
 renders at 40px, or 36px on narrow phones, beside the existing wordmark.
 Only transparent outer padding is trimmed; the artwork is centered on a
@@ -70,17 +70,20 @@ The `--cp-*` system has these stable roles:
 | Canvas / surface | White `#ffffff` | `#171717` / `#222222` |
 | Soft region / input | Gray `#f2f2f2` | `#2b2b2b` |
 | Primary action / hover | Blue `#0070ed` / `#005ec7` | Same blues |
-| Secondary button / hover | Ice `#a3d9fc` / `#8bcdf8` | Same light blues |
+| Secondary button | Transparent, matching `#005ec7` border/text | Transparent, matching `#4d9aff` border/text for contrast |
 | Destructive button / hover | Coral `#fc6761` / `#ed554f` | Same corals |
 | Quiet choice / disabled ink | Gray `#e8e8e8` / `#595959` | Same colors |
-| Primary / secondary foreground | White `#ffffff` / ink `#202020` | Same foregrounds |
+| Primary / destructive foreground | White `#ffffff` / ink `#202020` | Same foregrounds |
 | Text / muted | `#202020` / `#595959` | `#f5f5f5` / `#c2c2c2` |
 | Heading / link / focus | `#202020`; hover `#000000` | `#f5f5f5`; hover `#ffffff` |
 | Control elevation | `0 3px 10px rgba(0,0,0,.12)` | `0 3px 10px rgba(0,0,0,.22)` |
 | Menu / dialog elevation | `0 10px 28px rgba(0,0,0,.16)` | `0 10px 28px rgba(0,0,0,.36)` |
 
-Blue buttons use white text (4.62:1); ice and coral buttons use dark text.
-The colors never become small accent text on white. The user's borderless
+Blue primary buttons use white text (4.62:1); coral buttons use dark text.
+Secondary buttons use transparent backgrounds and a real 1px blue border with
+matching blue text. Hover underlines the label without adding a fill. Disabled
+secondary controls retain a neutral outline/label and native disabled semantics.
+The colors never become small accent text outside buttons. The user's earlier borderless
 refinement replaces persistent edges with filled controls and soft elevation:
 `--cp-shadow-control` groups the prompt, fields, factual cards and ordinary panels;
 `--cp-shadow-panel` raises menus and dialogs. There are no inset rings or
@@ -92,7 +95,8 @@ Primary buttons stay visibly blue with readable white ink when empty/busy/disabl
 Other disabled controls use neutral readable ink. Disabled controls retain their
 native semantics, no elevation
 and a not-allowed cursor; hover never makes them look enabled. Secondary/Meny
-buttons are light blue; quieter choices are gray. Selected property types also have
+buttons are now blue-outline actions; the old light-blue/gray button fills are
+superseded. Selected property types also have
 an underlined, heavier label, not just a different fill. Navigation links stay
 unshadowed text links. No shadows are attached to individual labels.
 
@@ -100,7 +104,8 @@ Native checkbox/radio/slider affordances and explicit keyboard/feedback focus
 outlines are retained. Text and placeholders meet their AA contrast thresholds;
 focus indicators meet 3:1. Visible labels, native semantics and focus identify
 fields and actions. Pastel fills and soft shadows are grouping cues, not a
-claim of 3:1 boundary contrast. Tests check the actual border widths are zero,
+claim of 3:1 boundary contrast. Tests check ordinary surface borders are zero,
+secondary buttons have the explicit 1px outline,
 ordinary elevation has offset/blur rather than an outline ring, labeled controls,
 button states and real text/focus contrast, not colors of removed borders.
 Success, warning and errors retain their explicit text and semantics, not

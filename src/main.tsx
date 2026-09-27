@@ -39,7 +39,7 @@ const date = (value: string) => new Intl.DateTimeFormat("sv-SE", { day: "numeric
 const stale = (value: string) => Date.now() - Date.parse(value) > 48 * 3600_000;
 
 function BrandMark() {
-  return <img className="brand-mark" src={`${import.meta.env.BASE_URL}assets/brand-mark-blue-80.png`}
+  return <img className="brand-mark" src={`${import.meta.env.BASE_URL}assets/brand-mark-solid-80.png`}
     width={40} height={40} alt="" decoding="async" />;
 }
 function Icon({ name }: { name: "home" | "bell" | "arrow" | "sun" | "moon" }) {

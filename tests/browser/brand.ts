@@ -15,7 +15,7 @@ export async function brandAssets(page: Page) {
     img.complete && img.naturalWidth === 80 && img.naturalHeight === 80)).toBe(true);
   const source = await image.evaluate((img: HTMLImageElement) => img.currentSrc);
   expect(new URL(source).origin).toBe(new URL(page.url()).origin);
-  expect(new URL(source).pathname).toMatch(/\/assets\/brand-mark-blue-80\.png$/);
+  expect(new URL(source).pathname).toMatch(/\/assets\/brand-mark-solid-80\.png$/);
   const logoResponse = await page.request.get(source);
   expect(logoResponse.status()).toBe(200);
   expect(logoResponse.headers()["content-type"]).toContain("image/png");
@@ -33,7 +33,7 @@ export async function brandAssets(page: Page) {
   await expect(favicon).toHaveAttribute("type", "image/png");
   const faviconUrl = new URL((await favicon.getAttribute("href"))!, page.url());
   expect(faviconUrl.origin).toBe(new URL(page.url()).origin);
-  expect(faviconUrl.pathname).toMatch(/\/assets\/favicon-blue-32\.png$/);
+  expect(faviconUrl.pathname).toMatch(/\/assets\/favicon-solid-32\.png$/);
   const faviconResponse = await page.request.get(faviconUrl.href);
   expect(faviconResponse.status()).toBe(200);
   expect(faviconResponse.headers()["content-type"]).toContain("image/png");

@@ -1,6 +1,24 @@
 # Supplied brand artwork
 
-## Current blue house/radar logo
+## Current solid blue-white house/radar logo
+
+The owner supplied the latest replacement on **2026-09-27**: a solid blue house
+with a white radar arc, center and wedge. This replaces the earlier outlined
+blue/light-blue/coral mark without redrawing or recoloring the attachment.
+
+- Source: user-attached RGBA PNG, 1313 x 1198 pixels, 752,665 bytes.
+- SHA-256: `ddd0425051648a2dfe1917a12887b2a73b1753c3aac07a6b092018b9decd53a4`.
+- Processing: trim only the nonzero-alpha bounds `(131, 85, 1167, 1125)`,
+  center on a transparent 1088 x 1088 square with 24px minimum padding,
+  resize with Lanczos and save optimized RGBA PNG without metadata.
+- `brand-mark-solid-80.png`: 80 x 80, 7,841 bytes.
+- `favicon-solid-32.png`: 32 x 32, 2,126 bytes.
+
+Transparency, original blue and white details are preserved. No authorship,
+ownership or public reuse license is asserted. These are the only logo files
+rendered by current shared/legacy/demo headers and the favicon.
+
+## Historical unused outlined blue house/radar logo
 
 The owner supplied this replacement on **2026-09-27** and explicitly requested
 its use with a neutral interface and color reserved for buttons. The supplied

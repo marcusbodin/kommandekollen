@@ -349,11 +349,12 @@ async function borderlessSurfaces(page: Page, selectors: string, elevated = fals
     .filter(el => el.getClientRects().length)
     .map(el => {
       const style = getComputedStyle(el);
-      return { element: el.className, borders: [style.borderTopWidth, style.borderRightWidth, style.borderBottomWidth, style.borderLeftWidth], shadow: style.boxShadow };
+      return { element: el.className, outlined: el.matches(":is(button,.button.secondary):not(.primary):not(.danger-button)"),
+        borders: [style.borderTopWidth, style.borderRightWidth, style.borderBottomWidth, style.borderLeftWidth], shadow: style.boxShadow };
     }));
   expect(surfaces.length).toBeGreaterThan(0);
   for (const surface of surfaces) {
-    expect(surface.borders, surface.element).toEqual(["0px", "0px", "0px", "0px"]);
+    expect(surface.borders, surface.element).toEqual(Array(4).fill(surface.outlined ? "1px" : "0px"));
     if (elevated) {
       expect(surface.shadow, surface.element).not.toBe("none");
       expect(surface.shadow).not.toContain("inset");
@@ -728,6 +729,22 @@ test("closing shared access removes disclosed owner data without erasing local t
   expect(calls).toBe(0);
 });
 
+async function outlinedButtons(page: Page, theme: "light" | "dark") {
+  const ink = theme === "light" ? "rgb(0, 94, 199)" : "rgb(77, 154, 255)";
+  const buttons = page.locator(":is(button,.button.secondary):not(.primary):not(.danger-button):visible");
+  expect(await buttons.count()).toBeGreaterThan(0);
+  for (const button of await buttons.all()) {
+    await expect(button).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+    await expect(button).toHaveCSS("border-top-width", "1px");
+    if (await button.isEnabled()) {
+      await expect(button).toHaveCSS("color", ink);
+      await expect(button).toHaveCSS("border-top-color", ink);
+    } else {
+      expect(await button.evaluate(el => getComputedStyle(el).color === getComputedStyle(el).borderTopColor)).toBe(true);
+    }
+  }
+}
+
 test("pinned logo palette stays on buttons with bold headings and neutral accessible surfaces", async ({ page }) => {
   env.ACCESS_MODE = "shared"; env.SHARED_ACCESS_PASSWORD = gatePassword;
   await page.context().clearCookies();
@@ -758,6 +775,7 @@ test("pinned logo palette stays on buttons with bold headings and neutral access
     await heroGeometry(page);
     await heroGlass(page, theme);
     await neutralOutsideButtons(page);
+    await outlinedButtons(page, theme);
     await page.evaluate(() => scrollTo(0, 0));
     await page.screenshot({ path: test.info().outputPath(`liquid-glass-${theme}.png`), animations: "disabled" });
     const primary = page.getByRole("button", { name: "Hitta bostad", exact: true });
@@ -789,8 +807,10 @@ test("pinned logo palette stays on buttons with bold headings and neutral access
     await borderlessSurfaces(page, ".prompt-shell .primary,.site-menu-toggle,.public-filters > summary", true);
     await borderlessSurfaces(page, ".prompt-form,.home-intro");
     await borderlessSurfaces(page, ".prompt-shell,#housing-prompt,.compact-header,.compact-footer");
-    await expect(page.locator(".site-menu-toggle")).toHaveCSS("background-color", "rgb(163, 217, 252)");
-    await expect(page.locator(".site-menu-toggle")).toHaveCSS("color", "rgb(32, 32, 32)");
+    await expect(page.locator(".site-menu-toggle")).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+    await expect(page.locator(".site-menu-toggle")).toHaveCSS("color", theme === "light" ? "rgb(0, 94, 199)" : "rgb(77, 154, 255)");
+    await expect(page.locator(".site-menu-toggle")).toHaveCSS("border-top-color", theme === "light" ? "rgb(0, 94, 199)" : "rgb(77, 154, 255)");
+    await expect(page.locator(".site-menu-toggle")).toHaveCSS("border-top-width", "1px");
     const text = await readableContrast(page, targets);
     const placeholder = await readableContrast(page, "#housing-prompt", "placeholder");
     await expect(prompt).toHaveCSS("outline-width", "3px");
@@ -815,6 +835,7 @@ test("pinned logo palette stays on buttons with bold headings and neutral access
     await page.getByRole("button", { name: "Meny", exact: true }).click();
     await borderlessSurfaces(page, page.viewportSize()!.width <= 800 ? ".compact-nav" : ".nav-advanced", true);
     await borderlessSurfaces(page, ".compact-nav button");
+    await outlinedButtons(page, theme);
     for (const link of await page.locator(".compact-nav a:visible").all()) await expect(link).toHaveCSS("box-shadow", "none");
     const menu = await readableContrast(page, ".compact-nav a,.compact-nav button,.compact-nav p");
     if (process.env.VISUAL_REVIEW === "1" && test.info().project.name === "desktop")
@@ -826,6 +847,7 @@ test("pinned logo palette stays on buttons with bold headings and neutral access
     await expect(page.getByLabel("Jag vill använda AI-texthjälpen")).toHaveCSS("appearance", "auto");
     await borderlessSurfaces(page, ".access-dialog,.access-dialog input[type=password]", true);
     await borderlessSurfaces(page, ".access-dialog button");
+    await outlinedButtons(page, theme);
     const dialog = await readableContrast(page, ".access-dialog h2,.access-dialog p,.access-dialog label,.access-dialog summary,.access-dialog a,.access-dialog button,.access-dialog input");
     const dialogFocus = await readableContrast(page, ".access-dialog input[type=password]", "focus");
     if (process.env.VISUAL_REVIEW === "1" && test.info().project.name === "mobile")
@@ -840,7 +862,8 @@ test("pinned logo palette stays on buttons with bold headings and neutral access
     const propertyType = page.locator(".manual-controls .type-buttons").getByRole("button", { pressed: true });
     await expect(propertyType).toHaveAttribute("aria-pressed", "true");
     await expect(propertyType).toHaveCSS("text-decoration-line", "underline");
-    await expect(propertyType).toHaveCSS("background-color", "rgb(163, 217, 252)");
+    await expect(propertyType).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+    await outlinedButtons(page, theme);
     const manual = await readableContrast(page);
     await page.getByRole("combobox", { name: "Kommun", exact: true }).focus();
     const manualFocus = await readableContrast(page, ".manual-controls select", "focus");
