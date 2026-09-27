@@ -68,14 +68,17 @@ aldrig hemma i `VITE_*`, JavaScript-paket, git eller Actions-loggar.
   Följdfrågor återanvänder samtycket inom samma utkast; ingen AI körs vid
   sidladdning eller återläsning. Denna frontendändring kräver bara Pages,
   inga nya hemligheter, Worker-inställningar eller migrationer.
-- Mobilanpassad, ljus sökyta med Clawpilot-tema; mörkt läge väljs uttryckligen.
+- Mobilanpassad, ljus sökyta med användarens valda vita/mintgröna färgtema,
+  teal-detaljer och ljusrosa primärknappar. Färgerna använder Clawpilot-variabler;
+  Georgia används i huvudrubrik/logotyp, Segoe UI i formulär och navigation.
+  Mörkt läge väljs uttryckligen.
   Manuella filter är alternativet utan AI: kommun och bostadstyper,
   reglage för pris/rum/boarea/avgift, valfri
   exakt inmatning och extra sökval under **Fler filter**. Ingen gräns är ett eget
   val; befintliga exakta sökvärden avrundas inte. Saknade uppgifter är inte noll.
 - En licensverifierad, lokalt optimerad interiörbild, tydligt märkt som
-  inspiration och aldrig kopplad till ett objekt. Den varmare startsidan
-  kombinerar ett rostonat sökområde med bilden; på mobil ligger en kort
+  inspiration och aldrig kopplad till ett objekt. Den luftiga startsidan
+  kombinerar vit bakgrund och mintgrön sökruta med bilden; på mobil ligger en kort
   bildbeskärning efter sökrutan. Bildtexten länkar till
   [bildkälla och licens](public/assets/ATTRIBUTION.md).
 - I medlemsläget: ansökan och lösenordsfri e-postverifiering. En verifierad ny användare stannar

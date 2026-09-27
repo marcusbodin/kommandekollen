@@ -309,7 +309,8 @@ test("shared password guest can try AI then verify email and explicitly confirm 
   expect(gatePosts).toBe(1);
   expect(submittedTexts).toEqual(["Lägenhet i Solna, högst 4 miljoner."]);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await page.locator(".preference-flow").screenshot({ path: test.info().outputPath("guest-saved.png") });
+  await readableContrast(page);
+  await page.locator(".preference-flow").screenshot({ path: test.info().outputPath("guest-saved.png"), animations: "disabled" });
 });
 test("wrong-password errors are visible and a separate browser cannot claim the verification", async ({ page, browser }) => {
   env.ACCESS_MODE = "shared"; env.SHARED_ACCESS_PASSWORD = gatePassword;
@@ -405,7 +406,7 @@ test("compact website shell explains the service, fits small screens and defers 
   await page.emulateMedia({ colorScheme: "dark" });
   await page.goto("/");
   await websiteSurface(page);
-  expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe("rgb(247, 244, 239)");
+  expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe("rgb(255, 255, 255)");
   const prompt = page.getByRole("textbox", { name: "Beskriv ditt nästa hem", exact: true });
   const original = "Villa i Nacka,\ngärna en trädgård.";
   await prompt.fill(original);
@@ -417,12 +418,13 @@ test("compact website shell explains the service, fits small screens and defers 
     await page.setViewportSize({ width, height: width === 1440 ? 1000 : 850 });
     await websiteSurface(page);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    if (width <= 430) expect((await page.locator(".compact-header").boundingBox())!.height).toBeLessThanOrEqual(84);
     expect(await prompt.evaluate(input => parseFloat(getComputedStyle(input).fontSize))).toBeGreaterThanOrEqual(16);
     for (const button of await page.locator("button:visible").all()) {
       const box = await button.boundingBox();
       expect(box!.width).toBeGreaterThanOrEqual(44); expect(box!.height).toBeGreaterThanOrEqual(44);
     }
-    if (process.env.VISUAL_REVIEW === "1") await page.screenshot({ path: test.info().outputPath(`compact-home-${width}.png`), fullPage: true });
+    if (process.env.VISUAL_REVIEW === "1") await page.screenshot({ path: test.info().outputPath(`compact-home-${width}.png`), fullPage: true, animations: "disabled" });
   }
   const normalViewport = page.viewportSize()!;
   await page.setViewportSize({ width: test.info().project.name === "mobile" ? 640 : 1280, height: 1000 });
@@ -432,7 +434,7 @@ test("compact website shell explains the service, fits small screens and defers 
   await page.getByRole("button", { name: "Meny", exact: true }).click();
   await expect(page.locator("#site-navigation").getByRole("link", { name: "Så fungerar det" })).toBeVisible();
   await page.keyboard.press("Escape");
-  if (process.env.VISUAL_REVIEW === "1") await page.screenshot({ path: test.info().outputPath("compact-home-200-percent.png"), fullPage: true });
+  if (process.env.VISUAL_REVIEW === "1") await page.screenshot({ path: test.info().outputPath("compact-home-200-percent.png"), fullPage: true, animations: "disabled" });
   await page.evaluate(() => { document.body.style.zoom = ""; });
   await page.setViewportSize(normalViewport);
   await more(page, "Så fungerar det");
@@ -470,7 +472,7 @@ test("compact website shell explains the service, fits small screens and defers 
   await expect(consent).toBeInViewport();
   await page.getByRole("button", { name: "Avbryt", exact: true }).scrollIntoViewIfNeeded();
   await expect(page.getByRole("button", { name: "Avbryt", exact: true })).toBeInViewport();
-  if (process.env.VISUAL_REVIEW === "1") await page.screenshot({ path: test.info().outputPath("contextual-access-keyboard.png") });
+  if (process.env.VISUAL_REVIEW === "1") await page.screenshot({ path: test.info().outputPath("contextual-access-keyboard.png"), animations: "disabled" });
   await page.keyboard.press("Escape");
   await expect(prompt).toBeFocused(); await expect(prompt).toHaveValue(original);
   await page.getByRole("button", { name: /^(Förfina min sökning|Tolka mitt svar)$/ }).click();
@@ -559,8 +561,12 @@ test("closing shared access removes disclosed owner data without erasing local t
   await sharedGuest(page, true);
   await more(page, "Min sökning");
   await expect(page.locator(".saved-profile")).toContainText("4 250 123 kr");
+  await readableContrast(page);
+  await more(page, "Mörkt tema");
+  await readableContrast(page);
   await page.locator("#housing-prompt").fill("Ett nytt önskemål som ännu inte skickats.");
   await more(page, "Konto & ägarverktyg");
+  await readableContrast(page);
   await page.getByRole("button", { name: "Stäng åtkomsten", exact: true }).click();
   await expect(page.locator(".preference-flow [role=status]")).toContainText("Åtkomsten behöver öppnas igen");
   await expect(page.locator("#housing-prompt")).toHaveValue("Ett nytt önskemål som ännu inte skickats.");
@@ -570,12 +576,21 @@ test("closing shared access removes disclosed owner data without erasing local t
   expect(calls).toBe(0);
 });
 
-test("warm home presentation uses local credited inspiration and readable light and dark surfaces", async ({ page }) => {
+test("pinned mint presentation uses exact palette, serif display and accessible light and dark surfaces", async ({ page }) => {
   env.ACCESS_MODE = "shared"; env.SHARED_ACCESS_PASSWORD = gatePassword;
   await page.context().clearCookies();
   await page.emulateMedia({ colorScheme: "dark" });
   await page.goto("/");
   await websiteSurface(page);
+  expect(await page.evaluate(() => {
+    const style = getComputedStyle(document.documentElement);
+    return ["--cp-pink", "--cp-brand", "--cp-mint"].map(token => style.getPropertyValue(token).trim());
+  })).toEqual(["#fbe3e8", "#5cbdb9", "#ebf6f5"]);
+  const heading = page.getByRole("heading", { name: "Vad är viktigt i ditt nästa hem?" });
+  await expect(heading).toHaveCSS("font-family", /Georgia/);
+  await expect(heading).toHaveCSS("font-weight", "400");
+  await expect(page.getByRole("button", { name: "Meny", exact: true })).toHaveCSS("font-family", /Segoe UI/);
+  await expect(page.locator(".compact-header .brand-mark")).toHaveCSS("background-color", "rgb(92, 189, 185)");
   const image = page.locator(".home-photo img"), prompt = page.locator("#housing-prompt");
   await expect.poll(() => image.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
   expect(await image.evaluate((img: HTMLImageElement) => new URL(img.currentSrc).origin)).toBe(frontend);
@@ -596,14 +611,18 @@ test("warm home presentation uses local credited inspiration and readable light 
     await prompt.fill("Lägenhet i Solna, gärna balkong.");
     await prompt.focus();
     const primary = page.getByRole("button", { name: "Förfina min sökning", exact: true });
-    await expect(primary).toHaveCSS("background-color", theme === "light" ? "rgb(177, 31, 75)" : "rgb(253, 142, 161)");
+    await expect(page.locator("body")).toHaveCSS("background-color", theme === "light" ? "rgb(255, 255, 255)" : "rgb(23, 41, 39)");
+    await expect(page.locator(".prompt-shell")).toHaveCSS("background-color", theme === "light" ? "rgb(235, 246, 245)" : "rgb(41, 67, 63)");
+    await expect(primary).toHaveCSS("background-color", "rgb(251, 227, 232)");
+    await expect(primary).toHaveCSS("color", "rgb(32, 58, 57)");
+    await expect(primary).toHaveCSS("border-radius", "999px");
     const text = await readableContrast(page, targets);
     const placeholder = await readableContrast(page, "#housing-prompt", "placeholder");
     const border = await readableContrast(page, ".prompt-shell", "border");
     await expect(prompt).toHaveCSS("outline-width", "3px");
     const focus = await readableContrast(page, "#housing-prompt", "focus");
     await primary.hover();
-    await expect(primary).toHaveCSS("background-color", theme === "light" ? "rgb(154, 26, 65)" : "rgb(251, 123, 145)");
+    await expect(primary).toHaveCSS("background-color", "rgb(247, 212, 222)");
     const hover = await readableContrast(page, ".prompt-shell .primary");
     reports.push({ theme, text, placeholder, border, focus, hover });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -613,11 +632,45 @@ test("warm home presentation uses local credited inspiration and readable light 
       expect(imageBox!.height).toBeLessThanOrEqual(160);
       expect(inputBox!.y + await page.evaluate(() => scrollY)).toBeLessThan(500);
     }
-    if (process.env.VISUAL_REVIEW === "1") await page.screenshot({ path: test.info().outputPath(`warm-home-${theme}.png`), fullPage: true });
+    await heading.click();
+    await expect(primary).toHaveCSS("background-color", "rgb(251, 227, 232)");
+    if (process.env.VISUAL_REVIEW === "1") await page.screenshot({ path: test.info().outputPath(`reference-home-${theme}.png`), fullPage: true, animations: "disabled" });
+    await page.getByRole("button", { name: "Meny", exact: true }).click();
+    const menu = await readableContrast(page, ".compact-nav a,.compact-nav button,.compact-nav p");
+    if (process.env.VISUAL_REVIEW === "1" && test.info().project.name === "desktop")
+      await page.screenshot({ path: test.info().outputPath(`reference-menu-${theme}.png`), fullPage: true, animations: "disabled" });
+    await page.keyboard.press("Escape");
+    await primary.click();
+    await expect(page.getByLabel("Gemensamt lösenord")).toBeFocused();
+    await expect(page.getByLabel("Jag vill använda AI-texthjälpen")).not.toBeChecked();
+    const dialog = await readableContrast(page, ".access-dialog h2,.access-dialog p,.access-dialog label,.access-dialog summary,.access-dialog a,.access-dialog button,.access-dialog input");
+    const dialogBorder = await readableContrast(page, ".access-dialog input[type=password]", "border");
+    const dialogFocus = await readableContrast(page, ".access-dialog input[type=password]", "focus");
+    if (process.env.VISUAL_REVIEW === "1" && test.info().project.name === "mobile")
+      await page.screenshot({ path: test.info().outputPath(`reference-dialog-${theme}.png`), animations: "disabled" });
+    await page.keyboard.press("Escape");
+    await expect(prompt).toHaveValue("Lägenhet i Solna, gärna balkong.");
+    await more(page, "Använd vanliga filter");
+    await expect(page.getByRole("combobox", { name: "Kommun", exact: true })).toBeVisible();
+    const manual = await readableContrast(page);
+    const manualBorder = await readableContrast(page, ".manual-controls select", "border");
+    await page.locator(".manual-search > summary").click();
+    reports.push({ theme, menu, dialog, dialogBorder, dialogFocus, manual, manualBorder });
   }
   await test.info().attach("theme-contrast", { body: JSON.stringify(reports, null, 2), contentType: "application/json" });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await expect(page.getByRole("button", { name: "Förfina min sökning", exact: true })).toHaveCSS("transition-duration", "0s");
   expect(await page.evaluate(() => document.getAnimations().filter(animation => animation.playState === "running").length)).toBe(0);
+  await more(page, "Ljust tema");
+  await page.getByRole("button", { name: "Meny", exact: true }).click();
+  const cdp = await page.context().newCDPSession(page);
+  for (const type of ["deuteranopia", "protanopia"] as const) {
+    await cdp.send("Emulation.setEmulatedVisionDeficiency", { type });
+    await websiteSurface(page);
+    if (process.env.VISUAL_REVIEW === "1" && type === "deuteranopia" && test.info().project.name === "desktop")
+      await page.screenshot({ path: test.info().outputPath("reference-deuteranopia.png"), fullPage: true, animations: "disabled" });
+  }
+  await cdp.send("Emulation.setEmulatedVisionDeficiency", { type: "none" });
+  await cdp.detach();
   expect(calls).toBe(0); expect(gatePosts).toBe(0);
 });

@@ -12,13 +12,34 @@ emails. Password, email, source panels, saved profiles and full legal text are
 not initial-page content. One clearly labeled home inspiration photograph is
 integrated with the intro/search, not a listing image or a giant photo hero.
 
-The warmer refinement uses the established rose as a deliberate atmospheric
-region: 14% `--cp-accent` mixed with `--cp-bg`, a rose heading and home-icon
-badge, white/dark elevated input surface and a softly tinted footer.
-Typography, exact purpose copy and navigation remain unchanged. Body copy on
-the colored region uses `--cp-text`; footer links retain rose underlines with
-high-contrast text, including in dark mode. Status colors are not decoration.
-The image supplies natural teal, wood and sunlight rather than a new UI palette.
+The user-pinned visual reference supersedes the former rose/cream palette:
+airy white, pale mint input regions, teal brand/details and pale-pink pill
+actions. It supplies a visual language, not finance content, copied artwork or
+a different product. Exact purpose copy, wordmark/home icon and navigation stay.
+Georgia gives the main heading and wordmark a readable native serif voice;
+forms, navigation and supporting headings retain the compact Segoe UI stack.
+The intro is on white rather than inside a tinted hero card. Mint groups the
+input, photo credit and footer; pink is reserved for primary actions.
+
+The `--cp-*` system has these stable roles:
+
+| Role | Light | Dark |
+| --- | --- | --- |
+| Pinned primitives | Pinky `#fbe3e8`, Blue Greeny `#5cbdb9`, Teeny Greeny `#ebf6f5` | Same primitives |
+| Canvas / surface | White `#ffffff` | `#172927` / `#203532` |
+| Soft region / input | Mint `#ebf6f5` | `#29433f` |
+| Primary action / hover | Pink `#fbe3e8` / derived `#f7d4de` | Same pinks |
+| Action / brand-fill foreground | Deep ink `#203a39` | Same deep ink |
+| Text / muted | `#203a39` / `#526b69` | Mint `#ebf6f5` / `#b5ccc7` |
+| Heading / link / selected control | Derived deep teal `#246d69`; hover `#195653` | Pinned teal `#5cbdb9`; hover `#8ed5ce` |
+| Focus | Deep teal `#246d69` | Light teal `#8ed5ce` |
+| Control border / separator | `#5b7c79` / `#d1e6e3` | `#8bb3ac` / `#385953` |
+
+The raw teal fill is never small text on white: deeper teal derivatives provide
+AA contrast. Pink actions use dark ink, not white, and a visible control edge.
+Success, warning and error tokens retain their semantic colors and text cues;
+they are not decoration. Dark mode uses layered green-dark surfaces, not a
+mechanical inversion. No gradients, glass, external fonts or large shadows.
 
 Desktop navigation exposes "Så fungerar det", "Konto"/"Min sökning" and
 "Integritet"; mobile uses the accessible "Meny" toggle. This same menu reveals
@@ -47,12 +68,14 @@ Provenance and modifications are documented in
 `public/assets/ATTRIBUTION.md`. No agency branding, fictional coverage claims,
 maps without map data or decorative listing thumbnails are used.
 
-Clawpilot light/dark variables in `src/style.css` are the color source of truth.
+The Clawpilot `--cp-*` light/dark variables in `src/style.css` remain the color source of truth.
 Light is the default even when the OS prefers dark; dark remains an explicit
-theme-button/query choice. All component colors use those tokens. The only accent is rose; status messages
-also have plain text, not color alone. Typography is Segoe UI, Aptos, Calibri,
-then platform fallbacks. Body is 16px, supporting copy 13–14px, fixed-scale
-headings 18–32px. Inputs remain at least 16px to avoid iOS focus zoom. Primary
+theme-button/query choice. All component colors use those tokens; raw brand
+values occur only in token definitions. Body typography is Segoe UI, Aptos,
+Calibri, then platform fallbacks; `--cp-font-display` is Georgia with native
+serif fallbacks. Body is 16px, supporting copy 13–14px, headings 18–44px
+(home display 32px on narrow phones). The wordmark reduces to 18px at 360px
+and below, keeping the logo and menu on one compact row. Inputs remain at least 16px to avoid iOS focus zoom. Primary
 targets and disclosure summaries are at least 44px high with visible keyboard
 focus; checkbox labels provide the larger touch target.
 
@@ -88,7 +111,8 @@ or save. Crossed bounds move the paired limit to maintain min <= max.
 The application form and privacy text similarly stack; approved account
 controls collapse, while pending approval and service errors stay explicit.
 No sticky controls obscure forms or the mobile keyboard.
-Use 4px spacing steps, 10px control corners and 16px card corners. Brief
+Use 4px spacing steps, 10px field corners, 16px image/panel corners and a
+20px prompt region. Primary actions and the menu toggle are gently pill-shaped. Brief
 hover transitions respect reduced motion; no looping or background animation. No
 drop-shadow-heavy nested panels, gradients, custom scrollbars or entrance effects.
 

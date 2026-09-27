@@ -34,8 +34,10 @@ saved drafts, account/login/logout/owner tools, quota and results/source status.
 The old input-level "Mer" is removed. Privacy/contact is also in the footer.
 Manual review and account login request the gate when needed but never AI
 consent or inference. The existing backend remains the authorization boundary.
-A bounded, locally hosted inspiration photo now accompanies the rose-tinted
-search region. It is explicitly not a listing, links to its credit/license and
+A bounded, locally hosted inspiration photo accompanies the white/mint search
+composition. The user's pinned palette supplies teal details and pale-pink
+actions; a native serif display complements the unchanged sans-serif controls.
+The photo is explicitly not a listing, links to its credit/license and
 follows the input on mobile. Legacy/demo imagery is unchanged. This presentation
 refinement changes no gate, inference, storage or save contract.
 

@@ -2,7 +2,10 @@ import { expect, type Page } from "@playwright/test";
 
 const defaultSelectors = "h1,h2,h3,label,.notice,.muted,.inspiration figcaption,.welcome-copy p,.numeric-heading output,.numeric-scale,.exact-value summary,.type-buttons button,.source-status,.property-location,.price,dt,dd,.badge,.property-bottom a";
 export async function readableContrast(page: Page, selectors = defaultSelectors, kind: "text" | "border" | "focus" | "placeholder" = "text") {
-  const measurements = await page.evaluate(({ selectors, kind }) => {
+  const measurements = await page.evaluate(async ({ selectors, kind }) => {
+    await Promise.allSettled(document.getAnimations()
+      .filter(animation => animation.effect?.getTiming().iterations !== Infinity)
+      .map(animation => animation.finished));
     const rgba = (color: string) => {
       const values = color.match(/[\d.]+/g)!.map(Number);
       return color.startsWith("color(srgb ") ? values.map((n, i) => i < 3 ? n * 255 : n) : values;
@@ -24,7 +27,7 @@ export async function readableContrast(page: Page, selectors = defaultSelectors,
         const a = luminance(foreground), b = luminance(background);
         const ratio = (Math.max(a, b) + .05) / (Math.min(a, b) + .05);
         const large = parseFloat(style.fontSize) >= 24 || (parseFloat(style.fontSize) >= 18.66 && Number(style.fontWeight) >= 700);
-        return { element: el.tagName, kind, ratio, minimum: kind === "border" || kind === "focus" || large ? 3 : 4.5 };
+        return { element: el.tagName, classes: el.className, kind, ratio, minimum: kind === "border" || kind === "focus" || large ? 3 : 4.5 };
       });
   }, { selectors, kind });
   expect(measurements.length).toBeGreaterThan(0);
