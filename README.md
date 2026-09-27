@@ -71,6 +71,9 @@ aldrig hemma i `VITE_*`, JavaScript-paket, git eller Actions-loggar.
 - Mobilanpassad, ljus sökyta med användarens valda vita/mintgröna färgtema,
   teal-detaljer och ljusrosa primärknappar. Färgerna använder Clawpilot-variabler;
   Georgia används i huvudrubrik/logotyp, Segoe UI i formulär och navigation.
+  Fyllda knappar och mjuka skuggor ersätter dekorativa kantlinjer;
+  tydliga tangentbordsmarkeringar och inbyggda formulärkontroller behålls.
+  Inaktiva primärknappar förblir rosa men går inte att skicka.
   Mörkt läge väljs uttryckligen.
   Manuella filter är alternativet utan AI: kommun och bostadstyper,
   reglage för pris/rum/boarea/avgift, valfri

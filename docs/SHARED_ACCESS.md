@@ -40,6 +40,10 @@ actions; a native serif display complements the unchanged sans-serif controls.
 The photo is explicitly not a listing, links to its credit/license and
 follows the input on mobile. Legacy/demo imagery is unchanged. This presentation
 refinement changes no gate, inference, storage or save contract.
+Decorative borders are replaced by soft shadows and filled pink/teal/mint
+controls. Keyboard focus and native control affordances remain. Disabled
+buttons retain their color but not elevation or submission ability; no
+validation, request locking or consent rule is changed by this presentation.
 
 Password success is not implicit consent. The unchecked processing checkbox and
 one explicit awaited continuation are required before inference. A synchronous

@@ -250,6 +250,27 @@ async function websiteSurface(page: Page) {
   await expect(page.locator(".privacy:visible, .results:visible, .saved-profile:visible, .draft-review:visible")).toHaveCount(0);
   await expect(page.getByRole("dialog")).toHaveCount(0);
 }
+async function borderlessSurfaces(page: Page, selectors: string, elevated = false) {
+  const surfaces = await page.locator(selectors).evaluateAll(elements => elements
+    .filter(el => el.getClientRects().length)
+    .map(el => {
+      const style = getComputedStyle(el);
+      return { element: el.className, borders: [style.borderTopWidth, style.borderRightWidth, style.borderBottomWidth, style.borderLeftWidth], shadow: style.boxShadow };
+    }));
+  expect(surfaces.length).toBeGreaterThan(0);
+  for (const surface of surfaces) {
+    expect(surface.borders, surface.element).toEqual(["0px", "0px", "0px", "0px"]);
+    if (elevated) {
+      expect(surface.shadow, surface.element).not.toBe("none");
+      expect(surface.shadow).not.toContain("inset");
+      const lengths = surface.shadow.replace(/rgba?\([^)]+\)/g, "").match(/-?[\d.]+px/g)?.map(parseFloat) ?? [];
+      expect(lengths).toHaveLength(4);
+      expect(lengths[1]).toBeGreaterThanOrEqual(2);
+      expect(lengths[2]).toBeGreaterThanOrEqual(8);
+      expect(lengths[3]).toBeLessThanOrEqual(0);
+    }
+  }
+}
 async function consentToInterpret(page: Page, password = false) {
   await page.getByRole("button", { name: /^(Förfina min sökning|Tolka mitt svar)$/ }).click();
   if (password) await page.getByLabel("Gemensamt lösenord").fill(gatePassword);
@@ -325,6 +346,7 @@ test("wrong-password errors are visible and a separate browser cannot claim the 
   await page.getByRole("button", { name: "Tolka min text", exact: true }).click();
   await expect(page.getByRole("alert")).toContainText("Lösenordet kunde inte godkännas");
   await expect(page.getByRole("alert")).toBeFocused();
+  await readableContrast(page, ".access-dialog [role=alert]");
   await expect(prompt).toHaveValue("Villa i Nacka. Gärna stor trädgård.");
   await page.keyboard.press("Escape");
   await expect(prompt).toBeFocused();
@@ -367,7 +389,10 @@ test("gate rotation blocks an existing owner session while keeping its saved pro
   await sharedGuest(page, true);
   await more(page, "Min sökning");
   await expect(page.locator(".saved-profile")).toContainText("4 250 123 kr");
+  await borderlessSurfaces(page, ".saved-profile");
   await more(page, "Konto & ägarverktyg");
+  await borderlessSurfaces(page, ".membership,.owner-panel", true);
+  await borderlessSurfaces(page, ".account-content button,.member-row,.member-actions button");
   await expect(page.getByRole("heading", { name: "Hantera medlemskap" })).toBeVisible();
   await page.getByRole("button", { name: "Tillbaka till texten" }).click();
   await page.locator("#housing-prompt").fill("Lägenhet i Solna, högst 4 miljoner.");
@@ -576,7 +601,7 @@ test("closing shared access removes disclosed owner data without erasing local t
   expect(calls).toBe(0);
 });
 
-test("pinned mint presentation uses exact palette, serif display and accessible light and dark surfaces", async ({ page }) => {
+test("pinned mint presentation uses borderless depth, filled states and accessible light and dark surfaces", async ({ page }) => {
   env.ACCESS_MODE = "shared"; env.SHARED_ACCESS_PASSWORD = gatePassword;
   await page.context().clearCookies();
   await page.emulateMedia({ colorScheme: "dark" });
@@ -608,23 +633,48 @@ test("pinned mint presentation uses exact palette, serif display and accessible 
       await page.getByRole("button", { name: "Meny", exact: true }).click();
     }
     await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+    const primary = page.getByRole("button", { name: "Förfina min sökning", exact: true });
+    await prompt.fill("");
+    await heading.click();
+    await expect(primary).toBeDisabled();
+    await expect(primary).toHaveCSS("opacity", "1");
+    await expect(primary).toHaveCSS("background-color", "rgb(251, 227, 232)");
+    await expect(primary).toHaveCSS("color", "rgb(82, 107, 105)");
+    await expect(primary).toHaveCSS("box-shadow", "none");
+    await expect(primary).toHaveCSS("cursor", "not-allowed");
+    await primary.hover();
+    await expect(primary).toHaveCSS("background-color", "rgb(251, 227, 232)");
+    const disabledText = await readableContrast(page, ".prompt-shell .primary", "text", true);
+    await primary.evaluate((button: HTMLButtonElement) => button.click());
+    await prompt.press("Enter");
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await prompt.fill("");
+    await heading.click();
+    if (process.env.VISUAL_REVIEW === "1") await page.screenshot({ path: test.info().outputPath(`borderless-empty-${theme}.png`), fullPage: true, animations: "disabled" });
     await prompt.fill("Lägenhet i Solna, gärna balkong.");
     await prompt.focus();
-    const primary = page.getByRole("button", { name: "Förfina min sökning", exact: true });
+    await expect(primary).toBeEnabled();
     await expect(page.locator("body")).toHaveCSS("background-color", theme === "light" ? "rgb(255, 255, 255)" : "rgb(23, 41, 39)");
     await expect(page.locator(".prompt-shell")).toHaveCSS("background-color", theme === "light" ? "rgb(235, 246, 245)" : "rgb(41, 67, 63)");
     await expect(primary).toHaveCSS("background-color", "rgb(251, 227, 232)");
     await expect(primary).toHaveCSS("color", "rgb(32, 58, 57)");
     await expect(primary).toHaveCSS("border-radius", "999px");
+    await borderlessSurfaces(page, ".prompt-shell,.home-photo,.prompt-shell .primary,.site-menu-toggle", true);
+    await borderlessSurfaces(page, "#housing-prompt,.compact-header,.compact-footer,.pilot-note");
+    await expect(page.locator(".site-menu-toggle")).toHaveCSS("background-color", "rgb(92, 189, 185)");
+    await expect(page.locator(".site-menu-toggle")).toHaveCSS("color", "rgb(32, 58, 57)");
     const text = await readableContrast(page, targets);
     const placeholder = await readableContrast(page, "#housing-prompt", "placeholder");
-    const border = await readableContrast(page, ".prompt-shell", "border");
     await expect(prompt).toHaveCSS("outline-width", "3px");
     const focus = await readableContrast(page, "#housing-prompt", "focus");
+    await page.keyboard.press("Tab");
+    await expect(primary).toBeFocused();
+    await expect(primary).toHaveCSS("outline-width", "3px");
+    const actionFocus = await readableContrast(page, ".prompt-shell .primary", "focus");
     await primary.hover();
     await expect(primary).toHaveCSS("background-color", "rgb(247, 212, 222)");
     const hover = await readableContrast(page, ".prompt-shell .primary");
-    reports.push({ theme, text, placeholder, border, focus, hover });
+    reports.push({ theme, text, disabledText, placeholder, focus, actionFocus, hover });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     if (page.viewportSize()!.width <= 960) {
       const inputBox = await prompt.boundingBox(), imageBox = await image.boundingBox();
@@ -634,28 +684,40 @@ test("pinned mint presentation uses exact palette, serif display and accessible 
     }
     await heading.click();
     await expect(primary).toHaveCSS("background-color", "rgb(251, 227, 232)");
-    if (process.env.VISUAL_REVIEW === "1") await page.screenshot({ path: test.info().outputPath(`reference-home-${theme}.png`), fullPage: true, animations: "disabled" });
+    if (process.env.VISUAL_REVIEW === "1") await page.screenshot({ path: test.info().outputPath(`borderless-home-${theme}.png`), fullPage: true, animations: "disabled" });
     await page.getByRole("button", { name: "Meny", exact: true }).click();
+    await borderlessSurfaces(page, page.viewportSize()!.width <= 800 ? ".compact-nav" : ".nav-advanced", true);
+    await borderlessSurfaces(page, ".compact-nav button");
+    for (const link of await page.locator(".compact-nav a:visible").all()) await expect(link).toHaveCSS("box-shadow", "none");
     const menu = await readableContrast(page, ".compact-nav a,.compact-nav button,.compact-nav p");
     if (process.env.VISUAL_REVIEW === "1" && test.info().project.name === "desktop")
-      await page.screenshot({ path: test.info().outputPath(`reference-menu-${theme}.png`), fullPage: true, animations: "disabled" });
+      await page.screenshot({ path: test.info().outputPath(`borderless-menu-${theme}.png`), fullPage: true, animations: "disabled" });
     await page.keyboard.press("Escape");
     await primary.click();
     await expect(page.getByLabel("Gemensamt lösenord")).toBeFocused();
     await expect(page.getByLabel("Jag vill använda AI-texthjälpen")).not.toBeChecked();
+    await expect(page.getByLabel("Jag vill använda AI-texthjälpen")).toHaveCSS("appearance", "auto");
+    await borderlessSurfaces(page, ".access-dialog,.access-dialog input[type=password]", true);
+    await borderlessSurfaces(page, ".access-dialog button");
     const dialog = await readableContrast(page, ".access-dialog h2,.access-dialog p,.access-dialog label,.access-dialog summary,.access-dialog a,.access-dialog button,.access-dialog input");
-    const dialogBorder = await readableContrast(page, ".access-dialog input[type=password]", "border");
     const dialogFocus = await readableContrast(page, ".access-dialog input[type=password]", "focus");
     if (process.env.VISUAL_REVIEW === "1" && test.info().project.name === "mobile")
-      await page.screenshot({ path: test.info().outputPath(`reference-dialog-${theme}.png`), animations: "disabled" });
+      await page.screenshot({ path: test.info().outputPath(`borderless-dialog-${theme}.png`), animations: "disabled" });
     await page.keyboard.press("Escape");
     await expect(prompt).toHaveValue("Lägenhet i Solna, gärna balkong.");
     await more(page, "Använd vanliga filter");
     await expect(page.getByRole("combobox", { name: "Kommun", exact: true })).toBeVisible();
+    await borderlessSurfaces(page, ".manual-controls select", true);
+    await borderlessSurfaces(page, ".manual-search,.manual-controls button");
+    const propertyType = page.locator(".manual-controls .type-buttons").getByRole("button", { pressed: true });
+    await expect(propertyType).toHaveAttribute("aria-pressed", "true");
+    await expect(propertyType).toHaveCSS("text-decoration-line", "underline");
+    await expect(propertyType).toHaveCSS("background-color", "rgb(92, 189, 185)");
     const manual = await readableContrast(page);
-    const manualBorder = await readableContrast(page, ".manual-controls select", "border");
+    await page.getByRole("combobox", { name: "Kommun", exact: true }).focus();
+    const manualFocus = await readableContrast(page, ".manual-controls select", "focus");
     await page.locator(".manual-search > summary").click();
-    reports.push({ theme, menu, dialog, dialogBorder, dialogFocus, manual, manualBorder });
+    reports.push({ theme, menu, dialog, dialogFocus, manual, manualFocus });
   }
   await test.info().attach("theme-contrast", { body: JSON.stringify(reports, null, 2), contentType: "application/json" });
   await page.emulateMedia({ reducedMotion: "reduce" });

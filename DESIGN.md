@@ -29,16 +29,39 @@ The `--cp-*` system has these stable roles:
 | Canvas / surface | White `#ffffff` | `#172927` / `#203532` |
 | Soft region / input | Mint `#ebf6f5` | `#29433f` |
 | Primary action / hover | Pink `#fbe3e8` / derived `#f7d4de` | Same pinks |
+| Secondary button / hover | Teal `#5cbdb9` / derived `#7ccdc8` | Same teals |
+| Quiet choice / disabled ink | Mint `#ebf6f5` / `#526b69` | Same colors |
 | Action / brand-fill foreground | Deep ink `#203a39` | Same deep ink |
 | Text / muted | `#203a39` / `#526b69` | Mint `#ebf6f5` / `#b5ccc7` |
 | Heading / link / selected control | Derived deep teal `#246d69`; hover `#195653` | Pinned teal `#5cbdb9`; hover `#8ed5ce` |
 | Focus | Deep teal `#246d69` | Light teal `#8ed5ce` |
-| Control border / separator | `#5b7c79` / `#d1e6e3` | `#8bb3ac` / `#385953` |
+| Control elevation | `0 3px 10px rgba(32,58,57,.12)` | `0 3px 10px rgba(0,0,0,.22)` |
+| Menu / dialog elevation | `0 10px 28px rgba(32,58,57,.16)` | `0 10px 28px rgba(0,0,0,.36)` |
 
 The raw teal fill is never small text on white: deeper teal derivatives provide
-AA contrast. Pink actions use dark ink, not white, and a visible control edge.
+AA text contrast. Pink actions use dark ink, not white. The user's borderless
+refinement replaces persistent edges with filled controls and soft elevation:
+`--cp-shadow-control` groups the prompt, photo, fields and ordinary panels;
+`--cp-shadow-panel` raises menus and dialogs. There are no inset rings or
+shadow stripes in place of separators. Header/footer and section separators
+have no borders; spacing and surface colors retain their hierarchy.
+Primary buttons stay visibly pink even when empty/busy/disabled. Disabled
+controls keep their native disabled semantics, muted readable ink, no elevation
+and a not-allowed cursor; hover never makes them look enabled. Secondary/Meny
+buttons are teal; quieter choices are mint. Selected property types also have
+an underlined, heavier label, not just a different fill. Navigation links stay
+unshadowed text links. No shadows are attached to individual labels.
+
+Native checkbox/radio/slider affordances and explicit keyboard/feedback focus
+outlines are retained. Text and placeholders meet their AA contrast thresholds;
+focus indicators meet 3:1. Visible labels, native semantics and focus identify
+fields and actions. Pastel fills and soft shadows are grouping cues, not a
+claim of 3:1 boundary contrast. Tests check the actual border widths are zero,
+the elevation has offset/blur rather than an outline ring, labeled controls,
+button states and real text/focus contrast, not colors of removed borders.
 Success, warning and error tokens retain their semantic colors and text cues;
-they are not decoration. Dark mode uses layered green-dark surfaces, not a
+errors use readable red text instead of a decorative underline. They are not
+decoration. Dark mode uses layered green-dark surfaces, not a
 mechanical inversion. No gradients, glass, external fonts or large shadows.
 
 Desktop navigation exposes "Så fungerar det", "Konto"/"Min sökning" and

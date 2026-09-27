@@ -1,8 +1,8 @@
 import { expect, type Page } from "@playwright/test";
 
-const defaultSelectors = "h1,h2,h3,label,.notice,.muted,.inspiration figcaption,.welcome-copy p,.numeric-heading output,.numeric-scale,.exact-value summary,.type-buttons button,.source-status,.property-location,.price,dt,dd,.badge,.property-bottom a";
-export async function readableContrast(page: Page, selectors = defaultSelectors, kind: "text" | "border" | "focus" | "placeholder" = "text") {
-  const measurements = await page.evaluate(async ({ selectors, kind }) => {
+const defaultSelectors = "h1,h2,h3,label,.notice,.error,.muted,.inspiration figcaption,.welcome-copy p,.numeric-heading output,.numeric-scale,.exact-value summary,.type-buttons button,.source-status,.property-location,.price,dt,dd,.badge,.property-bottom a";
+export async function readableContrast(page: Page, selectors = defaultSelectors, kind: "text" | "border" | "focus" | "placeholder" = "text", includeDisabled = false) {
+  const measurements = await page.evaluate(async ({ selectors, kind, includeDisabled }) => {
     await Promise.allSettled(document.getAnimations()
       .filter(animation => animation.effect?.getTiming().iterations !== Infinity)
       .map(animation => animation.finished));
@@ -18,7 +18,7 @@ export async function readableContrast(page: Page, selectors = defaultSelectors,
       .map(n => n <= .04045 ? n / 12.92 : ((n + .055) / 1.055) ** 2.4)
       .reduce((sum, n, i) => sum + n * [.2126, .7152, .0722][i], 0);
     return [...document.querySelectorAll<HTMLElement>(selectors)]
-      .filter(el => el.getClientRects().length && !el.closest("[disabled], .honeypot"))
+      .filter(el => el.getClientRects().length && !el.closest(".honeypot") && (includeDisabled || !el.closest("[disabled]")))
       .map(el => {
         const style = getComputedStyle(el, kind === "placeholder" ? "::placeholder" : null), ancestors: Element[] = [];
         for (let current: Element | null = kind === "focus" ? el.parentElement : el; current; current = current.parentElement) ancestors.unshift(current);
@@ -29,7 +29,7 @@ export async function readableContrast(page: Page, selectors = defaultSelectors,
         const large = parseFloat(style.fontSize) >= 24 || (parseFloat(style.fontSize) >= 18.66 && Number(style.fontWeight) >= 700);
         return { element: el.tagName, classes: el.className, kind, ratio, minimum: kind === "border" || kind === "focus" || large ? 3 : 4.5 };
       });
-  }, { selectors, kind });
+  }, { selectors, kind, includeDisabled });
   expect(measurements.length).toBeGreaterThan(0);
   expect(measurements.filter(item => item.ratio + .01 < item.minimum)).toEqual([]);
   return measurements;
