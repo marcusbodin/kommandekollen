@@ -147,6 +147,7 @@ nav a { min-height: 44px; color: var(--cp-text); text-decoration: none; font-wei
 .home-composition .preference-flow > * { grid-column: 1 / -1; margin: 0; padding: 24px; background: var(--cp-surface); border-radius: 20px; box-shadow: var(--cp-shadow-control); }
 .home-composition .preference-flow > :is(.home-intro, .prompt-form) {
   --cp-text-muted: var(--cp-text);
+  --cp-text-soft: var(--cp-text);
   --cp-focus: var(--cp-text);
   background: var(--cp-hero-panel);
   -webkit-backdrop-filter: var(--cp-hero-filter);

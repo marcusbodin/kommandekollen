@@ -374,6 +374,8 @@ async function heroGlass(page: Page, theme: "light" | "dark") {
   }
   for (const surface of [".prompt-shell", "#housing-prompt"])
     await expect(page.locator(surface)).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  await expect(page.locator("#prompt-helper")).toHaveCSS("color",
+    theme === "light" ? "rgb(32, 58, 57)" : "rgb(235, 246, 245)");
 }
 async function consentToInterpret(page: Page, password = false) {
   await page.getByRole("button", { name: /^(Hitta bostad|Uppdatera sökförslaget)$/ }).click();
