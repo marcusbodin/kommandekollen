@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useImperativeHandle, useRef, useState, type ReactNode, type Ref } from "react";
 import { z } from "zod";
 import { defaultFilters, municipalities, types, type Filters } from "../shared/model";
 import { describeFilters, draftSchema, hardDescription, manualProfile, profileSchema, type Draft, type Profile } from "../shared/preferences";
@@ -7,13 +7,14 @@ import type { Authorize, SearchAccess } from "./SharedAccess";
 type Account = { profile: Profile; searchVersion: number; aiReady: boolean; alertsEnabled: boolean };
 const receiptSchema = z.object({ message: z.string(), searchVersion: z.number().int().nonnegative(), profile: profileSchema, alertsEnabled: z.boolean() });
 type Receipt = z.infer<typeof receiptSchema>;
+export type PreferenceControls = { showManual: () => void; showSaved: () => void; restore: () => void; focusPrompt: () => void };
 type Props = {
   apiBase: string; demo: boolean; member: Account | null; ready: boolean; refresh: () => void;
   renderFilters: (filters: Filters, change: (filters: Filters) => void) => ReactNode;
   onDemoPreview: (profile: Profile) => void;
   guest?: { aiReady: boolean };
   onInference?: () => void;
-  minimal?: boolean; authorized?: boolean; authorize?: Authorize; secondary?: ReactNode;
+  minimal?: boolean; authorized?: boolean; authorize?: Authorize; controlsRef?: Ref<PreferenceControls>;
 };
 const intentSchema = z.object({ id: z.string().uuid(), verified: z.boolean(), enabled: z.boolean(), acceptUnverified: z.boolean() });
 export function ProfileSummary({ profile }: { profile: Profile }) {
@@ -26,7 +27,7 @@ export function ProfileSummary({ profile }: { profile: Profile }) {
 }
 const examples = ["Lägenhet i Solna eller Sundbyberg, minst 3 rum. Gärna 80 m².", "Villa i Nacka, högst 7 miljoner. Lugn gata är viktigt."];
 export function PreferenceFlow({ apiBase, demo, member, ready, refresh, renderFilters, onDemoPreview, guest, onInference,
-  minimal = false, authorized = true, authorize, secondary }: Props) {
+  minimal = false, authorized = true, authorize, controlsRef }: Props) {
   const [text, setText] = useState(""), [draft, setDraft] = useState<Draft | null>(null);
   const [profile, setProfile] = useState<Profile>(member?.profile ?? manualProfile());
   const [editing, setEditing] = useState(false), [dirty, setDirty] = useState(false);
@@ -36,7 +37,6 @@ export function PreferenceFlow({ apiBase, demo, member, ready, refresh, renderFi
   const busy = activity !== null;
   const [receipt, setReceipt] = useState<Receipt | null>(null), [availableDraft, setAvailableDraft] = useState(false);
   const [savedOpen, setSavedOpen] = useState(false);
-  const [moreOpen, setMoreOpen] = useState(false);
   const pendingSubmit = useRef(false), progressed = useRef(false);
   const [saveIntent, setSaveIntent] = useState<z.infer<typeof intentSchema> | null>(null);
   const [emailEntry, setEmailEntry] = useState(false), [email, setEmail] = useState("");
@@ -45,6 +45,7 @@ export function PreferenceFlow({ apiBase, demo, member, ready, refresh, renderFi
   const controller = useRef<AbortController | null>(null), operation = useRef<string | null>(null), sequence = useRef(0);
   const summary = useRef<HTMLHeadingElement>(null), input = useRef<HTMLTextAreaElement>(null);
   const feedback = useRef<HTMLDivElement>(null), savedHeading = useRef<HTMLHeadingElement>(null), manualHeading = useRef<HTMLElement>(null);
+  const savedSummary = useRef<HTMLElement>(null);
   const edits = useRef(0), focusOutcome = useRef<"feedback" | "draft" | "receipt" | null>(null);
   const version = guest ? 0 : member?.searchVersion ?? 0;
   const aiEnabled = guest?.aiReady ?? member?.aiReady;
@@ -276,17 +277,27 @@ export function PreferenceFlow({ apiBase, demo, member, ready, refresh, renderFi
     } catch (error) { setError(error instanceof Error ? error.message : "Mejlförfrågan kunde inte bekräftas."); }
     finally { setActivity(null); setConsent(false); }
   }
+  function showManual() {
+    setEditing(true);
+    requestAnimationFrame(() => { manualHeading.current?.focus(); manualHeading.current?.scrollIntoView({ block: "center", behavior: "instant" }); });
+  }
+  useImperativeHandle(controlsRef, () => ({
+    showManual,
+    showSaved: () => { setSavedOpen(true); requestAnimationFrame(() => savedSummary.current?.focus()); },
+    restore: () => { void restoreDraft(); },
+    focusPrompt: () => { setSavedOpen(false); if (!dirty) setEditing(false); input.current?.focus(); },
+  }));
   const valid = profileSchema.safeParse(profile).success;
   const blocking = !!draft?.question?.required || !!draft?.conflicts.length;
   return <section className={`preference-flow ${minimal ? "minimal-flow" : "surface"}`} id="bevakning" aria-label="Personlig sökning">
     <form className={minimal ? "prompt-form" : undefined} onSubmit={event => { event.preventDefault(); void generate(); }}>
       <div className={minimal ? "prompt-shell" : undefined}>
-      <label className={minimal && !draft?.question ? "visually-hidden" : undefined} htmlFor="housing-prompt">{draft?.question && !dirty ? draft.question.text : draft ? "Vill du rätta eller lägga till något?" : "Beskriv ditt nästa hem"}</label>
+      <label htmlFor="housing-prompt">{draft?.question && !dirty ? draft.question.text : draft ? "Vill du rätta eller lägga till något?" : "Beskriv ditt nästa hem"}</label>
       <textarea id="housing-prompt" ref={input} value={text} onChange={event => editText(event.target.value)} maxLength={1600} rows={3}
-        placeholder={minimal ? "Beskriv ditt nästa hem…" : "Var vill du bo, vad måste finnas och vad vore fint?"} disabled={busy} aria-describedby={minimal ? undefined : "prompt-privacy"} />
-      {minimal && <div className="prompt-tools"><button type="button" className="text-button" aria-expanded={moreOpen} aria-controls="search-more" onClick={() => setMoreOpen(value => !value)}>Mer</button>
-        <button className="primary" aria-label="Skicka bostadsönskemål" disabled={busy || dirty || text.trim().length < 3}>
-          {activity === "interpret" ? "Tolkar…" : "Skicka"}<span aria-hidden="true">↑</span></button></div>}
+        placeholder={minimal ? "Till exempel: en trea i Solna, högst 4 miljoner. Gärna balkong." : "Var vill du bo, vad måste finnas och vad vore fint?"} disabled={busy} aria-describedby={minimal ? "prompt-helper" : "prompt-privacy"} />
+      {minimal && <div className="prompt-tools"><p id="prompt-helper" className="small muted">{authorized ? "E-post först när du sparar." : "Lösenord i nästa steg. E-post först när du sparar."}</p>
+        <button className="primary" disabled={busy || dirty || text.trim().length < 3}>
+          {activity === "interpret" ? "Tolkar…" : draft ? "Tolka mitt svar" : "Förfina min sökning"}</button></div>}
       </div>
       {!minimal && <p className="small muted" id="prompt-privacy">Skriv inga namn, kontaktuppgifter eller känsliga uppgifter. {demo ? "Detta är ett fast, illustrativt exempel – inte AI. Din text tolkas inte." : "Din bostadstext och föregående utkast skickas till Cloudflare. Vi lägger inte till konto eller mejladress."}</p>}
       {!minimal && !draft && <><div className="example-chips">{examples.map((example, i) => <button type="button" key={example} disabled={busy}
@@ -305,25 +316,13 @@ export function PreferenceFlow({ apiBase, demo, member, ready, refresh, renderFi
           restore: "Läser in utkastet utan ett nytt AI-anrop.", pause: "Pausar bostadsmejlen. Vänta på bekräftelsen." }[activity] : message)}</p>
         {!demo && !busy && (error || availableDraft) && <div className="flow-actions">
           <button type="button" onClick={() => void restoreDraft()}>Läs in utkast</button>
-          <button type="button" onClick={() => { setEditing(true); requestAnimationFrame(() => {
-            manualHeading.current?.focus({ preventScroll: true }); manualHeading.current?.scrollIntoView({ block: "center", behavior: "instant" });
-          }); }}>Använd vanliga filter</button>
+          <button type="button" onClick={showManual}>Använd vanliga filter</button>
           <button type="button" onClick={() => { setSavedOpen(true); refresh(); }}>Kontrollera sparad sökning</button>
         </div>}
       </div>}
       {!minimal && !demo && <p className="small muted">Built with Llama · <a href="https://github.com/meta-llama/llama-models/blob/main/models/llama3_3/LICENSE" target="_blank" rel="noopener noreferrer">Modellvillkor</a>. Högst sex försök per medlem/IP och sex totalt i piloten per dygn (UTC). Granska alltid tolkningen.</p>}
     </form>
-    {minimal && <div id="search-more" className="search-more" hidden={!moreOpen}>
-      <div className="flow-actions">
-        <button onClick={() => { setEditing(true); setMoreOpen(false); requestAnimationFrame(() => manualHeading.current?.focus()); }}>Använd vanliga filter</button>
-        {authorized && <button onClick={() => { setMoreOpen(false); void restoreDraft(); }}>Fortsätt utkast</button>}
-        {member && <button onClick={() => { setSavedOpen(true); setMoreOpen(false); }}>Min sökning</button>}
-        {secondary}
-      </div>
-      <details><summary>Om texthjälpen</summary><p className="small">Built with Llama. Sex AI-försök delas av hela piloten per UTC-dygn. Filter använder inte AI. Skriv inga personliga uppgifter. Inget sparas utan ditt godkännande.</p>
-        <a href="https://github.com/meta-llama/llama-models/blob/main/models/llama3_3/LICENSE" target="_blank" rel="noopener noreferrer">Modellvillkor</a>
-      </details>
-    </div>}
+    {minimal && !ready && !draft && !receipt && <p className="pilot-note">Just nu sparas sökningar pausade – inga bostadsobjekt eller bostadsmejl ännu.</p>}
     {receipt && <section className="save-receipt">
       <h2 ref={savedHeading} tabIndex={-1}>{receipt.alertsEnabled ? "Sökningen är sparad och bevakningen startad" : "Sökningen är sparad pausad"}</h2>
       <p>{receipt.alertsEnabled ? "Bara nya objekt kan skickas i morgonbevakningen." : "Inga bostadsmejl har aktiverats."} Bekräftad version {receipt.searchVersion}.</p>
@@ -383,7 +382,7 @@ export function PreferenceFlow({ apiBase, demo, member, ready, refresh, renderFi
       <button disabled={busy || !valid} onClick={() => void review()}>{activity === "review" ? "Granskar ändringarna…" : "Granska ändringarna"}</button>
       </fieldset>
     </details>
-    {!demo && member && <details hidden={minimal && !savedOpen} className="saved-profile" open={savedOpen} onToggle={event => setSavedOpen(event.currentTarget.open)}><summary>Din sparade sökning · {member.alertsEnabled ? "bevakning startad" : "pausad"}</summary>
+    {!demo && member && <details hidden={minimal && !savedOpen} className="saved-profile" open={savedOpen} onToggle={event => setSavedOpen(event.currentTarget.open)}><summary ref={savedSummary}>Din sparade sökning · {member.alertsEnabled ? "bevakning startad" : "pausad"}</summary>
       <ProfileSummary profile={member.profile} /><p className="small">Version {version}. Den här sökningen används för resultaten och eventuella mejl, inte ditt osparade utkast.</p>
       <button disabled={busy} onClick={() => { edits.current++; setProfile(member.profile); setEditing(true); setDirty(true); setConsent(false); setAccept(false); }}>Ändra sparad sökning</button>
       {member.alertsEnabled && <button disabled={busy} onClick={async () => {

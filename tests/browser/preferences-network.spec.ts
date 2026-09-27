@@ -214,32 +214,41 @@ async function sharedGuest(page: Page, keepAccount = false) {
   env.ACCESS_MODE = "shared"; env.SHARED_ACCESS_PASSWORD = gatePassword;
   if (!keepAccount) await page.context().clearCookies();
   await page.goto("/");
-  await page.getByRole("button", { name: "Mer", exact: true }).click();
-  await page.getByRole("button", { name: /Konto/ }).click();
+  await more(page, "Konto");
   await page.getByLabel("Gemensamt lösenord").fill(gatePassword);
   await page.getByRole("button", { name: "Fortsätt utan AI", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Ditt konto", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Tillbaka till texten" }).click();
-  await page.getByRole("button", { name: "Mer", exact: true }).click();
   await expect(page.getByRole("textbox", { name: "Beskriv ditt nästa hem", exact: true })).toBeVisible();
 }
 async function more(page: Page, name: string) {
-  if (await page.getByRole("button", { name: "Mer", exact: true }).getAttribute("aria-expanded") !== "true")
-    await page.getByRole("button", { name: "Mer", exact: true }).click();
-  await page.getByRole("button", { name, exact: true }).click();
+  if (await page.getByRole("button", { name: "Meny", exact: true }).getAttribute("aria-expanded") !== "true")
+    await page.getByRole("button", { name: "Meny", exact: true }).click();
+  const nav = page.locator("#site-navigation");
+  const button = nav.getByRole("button", { name, exact: true });
+  if (await button.count()) await button.click();
+  else await nav.getByRole("link", { name, exact: true }).click();
 }
-async function minimalSurface(page: Page) {
+async function websiteSurface(page: Page) {
   await expect(page.getByRole("textbox", { name: "Beskriv ditt nästa hem", exact: true })).toBeVisible();
   await expect(page.locator("textarea:visible")).toHaveCount(1);
   await expect(page.locator("input:visible")).toHaveCount(0);
-  await expect(page.locator("button:visible")).toHaveCount(2);
-  await expect(page.locator("header")).toBeHidden();
-  await expect(page.locator("footer")).toBeHidden();
+  await expect(page.locator("main .primary:visible")).toHaveCount(1);
+  await expect(page.getByRole("button", { name: "Förfina min sökning", exact: true })).toBeVisible();
+  await expect(page.locator("header:visible")).toHaveCount(1);
+  await expect(page.locator("footer:visible")).toHaveCount(1);
+  await expect(page.getByRole("link", { name: "kommandekollen. – till sökningen" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Meny", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Vad är viktigt i ditt nästa hem?" })).toBeVisible();
+  await expect(page.locator(".home-intro")).toContainText("personlig bostadssökning för Stockholms län");
+  await expect(page.locator(".pilot-note")).toHaveText("Just nu sparas sökningar pausade – inga bostadsobjekt eller bostadsmejl ännu.");
+  await expect(page.locator("footer:visible").getByRole("link", { name: "Kontakt", exact: true })).toHaveAttribute("href", "mailto:kontakt@kommandekollen.se");
+  await expect(page.locator("footer:visible")).toContainText("©");
   await expect(page.locator(".inspiration:visible, .privacy:visible, .results:visible, .saved-profile:visible, .draft-review:visible")).toHaveCount(0);
   await expect(page.getByRole("dialog")).toHaveCount(0);
 }
 async function consentToInterpret(page: Page, password = false) {
-  await page.getByRole("button", { name: "Skicka bostadsönskemål" }).click();
+  await page.getByRole("button", { name: /^(Förfina min sökning|Tolka mitt svar)$/ }).click();
   if (password) await page.getByLabel("Gemensamt lösenord").fill(gatePassword);
   await page.getByLabel("Jag vill använda AI-texthjälpen").check();
   await page.getByRole("button", { name: "Tolka min text", exact: true }).click();
@@ -260,7 +269,7 @@ test("shared password guest can try AI then verify email and explicitly confirm 
   env.ACCESS_MODE = "shared"; env.SHARED_ACCESS_PASSWORD = gatePassword;
   await page.context().clearCookies();
   await page.goto("/");
-  await minimalSurface(page);
+  await websiteSurface(page);
   await expect(page.getByRole("heading", { name: "Ansök om medlemskap" })).toHaveCount(0);
   expect(await env.DB.prepare("SELECT count(*) AS n FROM subscriptions").first()).toEqual({ n: 1 });
   await page.getByRole("textbox", { name: "Beskriv ditt nästa hem", exact: true }).fill("Lägenhet i Solna, högst 4 miljoner.");
@@ -274,7 +283,7 @@ test("shared password guest can try AI then verify email and explicitly confirm 
   await expect(page.locator(".preference-flow [role=status]")).toContainText("Inget har sparats ännu");
   const link = await deliverVerification();
   await page.reload();
-  await minimalSurface(page);
+  await websiteSurface(page);
   await page.goto(link);
   await expect(page.getByRole("heading", { name: "Bekräfta och logga in" })).toBeVisible();
   expect(new URL(page.url()).hash).toBe("");
@@ -305,7 +314,7 @@ test("wrong-password errors are visible and a separate browser cannot claim the 
   await page.goto("/");
   const prompt = page.getByRole("textbox", { name: "Beskriv ditt nästa hem", exact: true });
   await prompt.fill("Villa i Nacka. Gärna stor trädgård.");
-  await page.getByRole("button", { name: "Skicka bostadsönskemål" }).click();
+  await page.getByRole("button", { name: /^(Förfina min sökning|Tolka mitt svar)$/ }).click();
   await expect(page.getByLabel("Gemensamt lösenord")).toBeFocused();
   await page.getByLabel("Gemensamt lösenord").fill("wrong");
   await page.getByLabel("Jag vill använda AI-texthjälpen").check();
@@ -342,7 +351,7 @@ test("wrong-password errors are visible and a separate browser cannot claim the 
     await expect(second.getByText("Om länken öppnades på en annan enhet:", { exact: false })).toBeVisible();
   } finally { await other.close(); }
   await page.reload();
-  await minimalSurface(page);
+  await websiteSurface(page);
   await more(page, "Fortsätt utkast");
   await expect(page.getByRole("heading", { name: "Stämmer det här?" })).toBeVisible();
   expect(await env.DB.prepare("SELECT verified,consumed FROM guest_saves").first()).toEqual({ verified: 0, consumed: 0 });
@@ -363,9 +372,9 @@ test("gate rotation blocks an existing owner session while keeping its saved pro
   expect(await env.DB.prepare("SELECT base_version FROM search_drafts").first()).toEqual({ base_version: 4 });
   env.SHARED_ACCESS_PASSWORD = "b".repeat(64);
   await page.reload();
-  await minimalSurface(page);
+  await websiteSurface(page);
   await page.getByRole("textbox", { name: "Beskriv ditt nästa hem", exact: true }).fill("Solna, gärna balkong");
-  await page.getByRole("button", { name: "Skicka bostadsönskemål" }).click();
+  await page.getByRole("button", { name: /^(Förfina min sökning|Tolka mitt svar)$/ }).click();
   await expect(page.getByLabel("Gemensamt lösenord")).toBeVisible();
   expect(await env.DB.prepare("SELECT preference_profile,search_version FROM subscriptions").first()).toEqual({ preference_profile: JSON.stringify(saved), search_version: 4 });
   expect(calls).toBe(1);
@@ -387,12 +396,12 @@ test("a guest with exhausted shared AI can still review manually without spendin
   expect(await env.DB.prepare("SELECT count(*) AS n FROM outbox").first()).toEqual({ n: 0 });
 });
 
-test("minimal shared homepage defers password and disclosure, fits small screens and keeps text on cancel", async ({ page }) => {
+test("compact website shell explains the service, fits small screens and defers password without losing text", async ({ page }) => {
   env.ACCESS_MODE = "shared"; env.SHARED_ACCESS_PASSWORD = gatePassword;
   await page.context().clearCookies();
   await page.emulateMedia({ colorScheme: "dark" });
   await page.goto("/");
-  await minimalSurface(page);
+  await websiteSurface(page);
   expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe("rgb(247, 244, 239)");
   const prompt = page.getByRole("textbox", { name: "Beskriv ditt nästa hem", exact: true });
   const original = "Villa i Nacka,\ngärna en trädgård.";
@@ -403,23 +412,49 @@ test("minimal shared homepage defers password and disclosure, fits small screens
   const widths = test.info().project.name === "mobile" ? [320, 360, 390, 430] : [1440];
   for (const width of widths) {
     await page.setViewportSize({ width, height: width === 1440 ? 1000 : 850 });
-    await minimalSurface(page);
+    await websiteSurface(page);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     expect(await prompt.evaluate(input => parseFloat(getComputedStyle(input).fontSize))).toBeGreaterThanOrEqual(16);
     for (const button of await page.locator("button:visible").all()) {
       const box = await button.boundingBox();
       expect(box!.width).toBeGreaterThanOrEqual(44); expect(box!.height).toBeGreaterThanOrEqual(44);
     }
-    await page.screenshot({ path: test.info().outputPath(`minimal-home-${width}.png`) });
+    if (process.env.VISUAL_REVIEW === "1") await page.screenshot({ path: test.info().outputPath(`compact-home-${width}.png`), fullPage: true });
   }
-  await more(page, "Integritet & radering");
+  const normalViewport = page.viewportSize()!;
+  await page.setViewportSize({ width: test.info().project.name === "mobile" ? 640 : 1280, height: 1000 });
+  await page.evaluate(() => { document.body.style.zoom = "2"; });
+  await websiteSurface(page);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.getByRole("button", { name: "Meny", exact: true }).click();
+  await expect(page.locator("#site-navigation").getByRole("link", { name: "Så fungerar det" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  if (process.env.VISUAL_REVIEW === "1") await page.screenshot({ path: test.info().outputPath("compact-home-200-percent.png"), fullPage: true });
+  await page.evaluate(() => { document.body.style.zoom = ""; });
+  await page.setViewportSize(normalViewport);
+  await more(page, "Så fungerar det");
+  await expect(page.getByRole("heading", { name: "Så fungerar det", exact: true })).toBeFocused();
+  await expect(page.getByRole("region", { name: "Så skapar du en sökning" })).toContainText("samma webbläsare");
+  await expect(page.getByRole("region", { name: "Så skapar du en sökning" })).toContainText("bekräftar du exakt den sökningen igen");
+  await expect(prompt).toHaveValue(original);
+  await page.getByRole("link", { name: "kommandekollen. – till sökningen" }).click();
+  await expect(prompt).toBeFocused();
+  await expect(prompt).toHaveValue(original);
+  await more(page, "Integritet");
   await expect(page.getByRole("heading", { name: "Din bevakning, dina uppgifter" })).toBeFocused();
   await expect(page.getByRole("link", { name: "kontakt@kommandekollen.se" })).toBeVisible();
   expect(gatePosts).toBe(0); expect(calls).toBe(0);
   await page.getByRole("button", { name: "Tillbaka till texten" }).click();
   await expect(prompt).toBeFocused();
-  await page.getByRole("button", { name: "Mer", exact: true }).click();
-  await page.getByRole("button", { name: "Skicka bostadsönskemål" }).click();
+  await page.locator("footer:visible").getByRole("link", { name: "Integritet & radering" }).click();
+  await expect(page.getByRole("heading", { name: "Din bevakning, dina uppgifter" })).toBeFocused();
+  await page.getByRole("button", { name: "Tillbaka till texten" }).click();
+  await page.getByRole("button", { name: "Meny", exact: true }).click();
+  await page.locator("#site-navigation").getByRole("button", { name: "Använd vanliga filter" }).focus();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("button", { name: "Meny", exact: true })).toBeFocused();
+  await expect(page.getByRole("button", { name: "Meny", exact: true })).toHaveAttribute("aria-expanded", "false");
+  await page.getByRole("button", { name: /^(Förfina min sökning|Tolka mitt svar)$/ }).click();
   await expect(page.getByLabel("Gemensamt lösenord")).toBeFocused();
   const consent = page.getByLabel("Jag vill använda AI-texthjälpen");
   await expect(consent).not.toBeChecked();
@@ -432,10 +467,10 @@ test("minimal shared homepage defers password and disclosure, fits small screens
   await expect(consent).toBeInViewport();
   await page.getByRole("button", { name: "Avbryt", exact: true }).scrollIntoViewIfNeeded();
   await expect(page.getByRole("button", { name: "Avbryt", exact: true })).toBeInViewport();
-  await page.screenshot({ path: test.info().outputPath("contextual-access-keyboard.png") });
+  if (process.env.VISUAL_REVIEW === "1") await page.screenshot({ path: test.info().outputPath("contextual-access-keyboard.png") });
   await page.keyboard.press("Escape");
   await expect(prompt).toBeFocused(); await expect(prompt).toHaveValue(original);
-  await page.getByRole("button", { name: "Skicka bostadsönskemål" }).click();
+  await page.getByRole("button", { name: /^(Förfina min sökning|Tolka mitt svar)$/ }).click();
   await expect(consent).not.toBeChecked();
   await page.getByRole("button", { name: "Avbryt", exact: true }).click();
   await expect(prompt).toHaveValue(original);
@@ -448,7 +483,7 @@ test("one consented submit cannot duplicate inference and followups reuse only t
   output = { ...interpretation, question: { text: "Hur stor boarea vill du ha?", choices: ["Gärna minst 70 m²"], required: false } };
   await page.goto("/");
   await page.getByRole("textbox", { name: "Beskriv ditt nästa hem", exact: true }).fill("Lägenhet i Solna, högst 4 miljoner.");
-  await page.getByRole("button", { name: "Skicka bostadsönskemål" }).click();
+  await page.getByRole("button", { name: /^(Förfina min sökning|Tolka mitt svar)$/ }).click();
   await page.getByLabel("Gemensamt lösenord").fill(gatePassword);
   await page.getByLabel("Jag vill använda AI-texthjälpen").check();
   await page.getByRole("button", { name: "Tolka min text", exact: true }).evaluate((button: HTMLButtonElement) => { button.click(); button.click(); });
@@ -456,18 +491,18 @@ test("one consented submit cannot duplicate inference and followups reuse only t
   expect(calls).toBe(1); expect(gatePosts).toBe(1);
   output = interpretation;
   await page.getByRole("button", { name: "Gärna minst 70 m²", exact: true }).click();
-  await page.getByRole("button", { name: "Skicka bostadsönskemål" }).evaluate((button: HTMLButtonElement) => { button.click(); button.click(); });
+  await page.getByRole("button", { name: /^(Förfina min sökning|Tolka mitt svar)$/ }).evaluate((button: HTMLButtonElement) => { button.click(); button.click(); });
   await expect(page.getByRole("heading", { name: "Stämmer det här?" })).toBeFocused();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   expect(calls).toBe(2); expect(gatePosts).toBe(1);
   expect(submittedTexts).toEqual(["Lägenhet i Solna, högst 4 miljoner.", "Gärna minst 70 m²"]);
   expect(await env.DB.prepare("SELECT count(*) AS n,sum(reserved) AS total FROM ai_attempts").first()).toEqual({ n: 2, total: 2000 });
   await page.reload();
-  await minimalSurface(page);
+  await websiteSurface(page);
   await more(page, "Fortsätt utkast");
   await expect(page.getByRole("heading", { name: "Stämmer det här?" })).toBeVisible();
   await page.locator("#housing-prompt").fill("Gärna balkong också.");
-  await page.getByRole("button", { name: "Skicka bostadsönskemål" }).click();
+  await page.getByRole("button", { name: /^(Förfina min sökning|Tolka mitt svar)$/ }).click();
   await expect(page.getByLabel("Gemensamt lösenord")).toHaveCount(0);
   await expect(page.getByLabel("Jag vill använda AI-texthjälpen")).not.toBeChecked();
   await page.getByRole("button", { name: "Avbryt", exact: true }).click();
@@ -495,7 +530,7 @@ test("cancelling an in-flight password check never interprets after its delayed 
   await expect(prompt).toBeFocused();
   await expect(prompt).toHaveValue("Lägenhet i Solna med balkong.");
   await page.reload();
-  await minimalSurface(page);
+  await websiteSurface(page);
   expect(calls).toBe(0); expect(gatePosts).toBe(1);
   expect(await env.DB.prepare("SELECT count(*) AS n FROM ai_attempts").first()).toEqual({ n: 0 });
 });

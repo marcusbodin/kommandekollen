@@ -16,8 +16,10 @@ Optional shared-password mode adds guest drafting before email. Its gated
 guest endpoints, explicit email save intent and second confirmation are
 documented in [SHARED_ACCESS.md](SHARED_ACCESS.md). Existing member endpoints
 also require the shared gate when that mode is active; they are not a bypass.
-Its input-first homepage defers the password and unchecked AI consent until
-explicit send, retaining text across cancel/error. Followups reuse consent only
+Its compact website shell adds wordmark/menu, purpose copy and privacy/contact
+footer around the public input. It defers password and unchecked AI consent until
+explicit "Förfina min sökning", retaining text across cancel/error and information
+navigation. Followups use "Tolka mitt svar" and reuse consent only
 within the current in-memory draft. Existing server drafts and saved searches
 stay behind explicit disclosure on arrival; the email return opens review, never
 confirmation or inference. The API/matching/quotas below are unchanged.

@@ -33,14 +33,19 @@ Rejected/revoked accounts remain blocked. Membership mode retains the former
 application -> verification -> manual approval process. Every email permits
 signed deletion. The public demo is synthetic and never calls AI.
 
-The user explicitly chose an input-only homepage, asking for the password at
-the first search rather than on arrival. Other features remain under "Mer":
-privacy before authentication, manual filters without AI, own search/draft,
-account/login/logout/owner tools and source/result information on request.
+The user's latest correction requires a recognizable lightweight website:
+existing wordmark, clear menu, short purpose explanation, dominant housing
+input and a footer with privacy/contact/copyright. This supersedes the literal
+input-only surface, not the decision to ask for the password at first search
+rather than on arrival. A calm note states the paused-only, no-listings pilot.
+The site menu exposes privacy before authentication, manual filters without AI,
+own search/draft, account/login/logout/owner tools and source/result information.
 An already-open gate skips password entry, not AI consent. In-memory consent
 covers followups in the current draft only; no inference is triggered on load,
 restore, typing or email verification. Existing searches are never silently
-replaced. There is no hero photo or navigation competing with the input.
+replaced. There is no large hero photo, always-open account/source panel or
+marketing claim competing with the input. Information and home navigation keep
+unsent text in place.
 
 ## Capabilities and Constraints
 

@@ -66,8 +66,8 @@ function AccessDialog({ apiBase, gate, purpose, finish }: {
         catch (error) { setNeedsPassword(true); throw error; }
         if (purpose === "ai" && (!currentGate.aiReady || currentGate.quota.remaining === 0)) {
           setUnavailable(true);
-          throw new Error(currentGate.quota.remaining === 0 ? "Dagens gemensamma AI-kvot är slut. Din text finns kvar. Använd vanliga filter via Mer – inga AI-försök behövs."
-            : "Texthjälpen är inte tillgänglig. Din text finns kvar; använd vanliga filter via Mer.");
+          throw new Error(currentGate.quota.remaining === 0 ? "Dagens gemensamma AI-kvot är slut. Din text finns kvar. Välj vanliga filter i menyn – inga AI-försök behövs."
+            : "Texthjälpen är inte tillgänglig. Din text finns kvar; välj vanliga filter i menyn.");
         }
         const response = await fetch(`${apiBase}/api/me`, { credentials: "include", signal: controller.signal });
         if (response.status !== 401 && !response.ok) throw new Error("Kontot kunde inte kontrolleras. Inget AI-anrop har gjorts.");

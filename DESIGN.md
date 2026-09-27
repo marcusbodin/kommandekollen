@@ -1,12 +1,22 @@
 # Kommandekollen design
 
 The search surface is Operate mode: one housing task, not a marketing landing
-page. In shared-password mode the initial surface is only a free-text textarea,
-integrated "Skicka" and small "Mer" control, surrounded by warm light space.
-There is no initial header, hero, photo, password/email form, source panel,
-saved profile, footer or legal essay. This also applies to returning owners.
-"Mer" reveals privacy, manual filters, existing drafts/searches, account/owner
-tools, results/source status, quota, the synthetic demo and theme choice.
+page. The user's correction replaces the isolated-input design with a compact,
+recognizable website shell: existing "kommandekollen." wordmark/home identity,
+real navigation, short purpose copy, dominant search and a tidy footer.
+The heading is "Vad är viktigt i ditt nästa hem?" and the introduction explains
+personal housing searches for Stockholms län without claiming live inventory.
+"Förfina min sökning" describes the first action; followups use "Tolka mitt svar".
+A calm pilot note says searches currently save paused, without homes or housing
+emails. Password, email, source panels, saved profiles and full legal text are
+not initial-page content. There is no decorative hero photograph.
+
+Desktop navigation exposes "Så fungerar det", "Konto"/"Min sökning" and
+"Integritet"; mobile uses the accessible "Meny" toggle. This same menu reveals
+manual filters, drafts, account/owner tools, results/source status, quota,
+the synthetic demo and theme choice. There is no competing input-level "Mer".
+The footer contains copyright/service identity, privacy/deletion and the public
+contact link. The logo and inline information panes retain unsent text.
 Private functions still require server authorization; disclosure is not access.
 
 The first explicit send opens a compact native dialog protecting password and
@@ -40,10 +50,13 @@ one material followup and an editable
 summary separating requirements, wishes and manual checks. One explicit
 confirmation saves the reviewed profile; with no ready sources it saves paused.
 No endless chat transcript or fake AI in the deterministic public demo.
-The minimal homepage uses a central panel no wider than 760px, with a scrollable
-native dialog and no fixed controls over the keyboard. At 320px, 16px side
-gutters preserve input and 44px action targets. Results/source sections are
-requested separately, not populated onto the initial surface.
+The compact homepage uses a central search column no wider than 760px within
+an 1120px header/footer shell. Natural spacing and a minimum-height page put
+the footer after the content, not over the keyboard. The public textarea has a
+persistent visible label, a factual example placeholder and a short next-step
+helper. Native dialogs remain scrollable. At 320px, 16px side gutters preserve
+16px input text and 44px action targets; navigation and controls reflow at 200%
+zoom. Results/source sections are requested separately, not initial content.
 Legacy/demo desktop uses an 880px input/review panel and flexible
 two-column factual property cards. Below 1050px,
 properties become one column. Below 700px, content stacks, with

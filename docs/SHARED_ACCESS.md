@@ -12,10 +12,12 @@ Migrations 0001-0003 are immutable.
 
 ## Visitor flow
 
-The input-first frontend revision shows only the free-text input, integrated
-send and small "Mer" control at rest, including for returning owners. It was
-published on 2026-09-27 through Pages run `36299417326`; no Worker, secret,
-configuration or migration was changed.
+The isolated input-first frontend was published on 2026-09-27 through Pages
+run `36299417326`; no Worker, secret, configuration or migration changed.
+The user's subsequent correction restores a lightweight website shell around
+that public input: existing wordmark, navigation, purpose copy and footer with
+privacy/contact/copyright. Search remains dominant. This new frontend revision
+also needs only Pages deployment; it does not change the backend or access flow.
 
 Describe a home locally -> explicitly send -> enter the shared password if
 needed and explicitly consent to Cloudflare processing -> interpret -> review
@@ -26,11 +28,13 @@ No ready sources means paused saving only. Existing approved email sessions
 can manage their own search after passing the shared gate; they do not need to
 verify again for every edit. The owner keeps the existing saved search and role.
 
-"Mer" exposes privacy before gate entry, manual filters without AI, saved
-searches/drafts, account/login/logout/owner tools, quota and results/source status.
+Site navigation exposes "Så fungerar det", "Konto"/"Min sökning" and "Integritet".
+On mobile these are under "Meny", together with manual filters without AI,
+saved drafts, account/login/logout/owner tools, quota and results/source status.
+The old input-level "Mer" is removed. Privacy/contact is also in the footer.
 Manual review and account login request the gate when needed but never AI
 consent or inference. The existing backend remains the authorization boundary.
-There is no photo on the minimal home; licensed imagery remains in legacy/demo.
+There is no hero photo on the compact home; licensed imagery remains in legacy/demo.
 
 Password success is not implicit consent. The unchecked processing checkbox and
 one explicit awaited continuation are required before inference. A synchronous
@@ -41,11 +45,15 @@ reload/new draft requires it again. There are no automatic AI retries.
 Text is not persisted in browser storage. Gate/password is never stored in JS
 storage; only the existing server cookie persists.
 
-Reload starts minimal; "Fortsätt utkast" explicitly retrieves the existing
+Reload shows the compact website shell, not previous private panels;
+"Fortsätt utkast" explicitly retrieves the existing
 server draft without inference. The email action's return link uses client-only
 `?review=1` to show that draft for the required second review. `?info=privacy`
 opens public privacy details, also reachable from inside the consent dialog.
-Neither query parameter changes authorization, consent or any backend contract.
+`?info=help` explains the real describe/clarify/review flow and same-browser email
+verification plus second confirmation. Logo/menu/information interactions keep
+the textarea mounted and retain its text. None of these client query parameters
+changes authorization, consent or any backend contract.
 Model/provider errors, exhausted quota and save receipts stay visible and
 focused. No-source paused-only saving and old saved-profile versions are intact.
 

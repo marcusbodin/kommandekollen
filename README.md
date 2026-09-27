@@ -58,10 +58,13 @@ aldrig hemma i `VITE_*`, JavaScript-paket, git eller Actions-loggar.
   I medlemsläget krävs godkänt konto; i det nya delade lösenordsläget räcker en
   serververifierad gästsession. Migration `0002` och det matchande
   gränssnittet/backend är driftsatta. Lokal standardkonfiguration håller AI avstängd.
-- Den nya startsidan i delat lösenordsläge visar bara fritextrutan, **Skicka**
-  och **Mer**. Lösenord och uttryckligt AI-godkännande efterfrågas vid första
-  sökningen, inte när sidan öppnas. Texten behålls vid avbrott eller fel.
-  **Mer** öppnar integritet, vanliga filter, sparad sökning/utkast och konto.
+- Startsidan i delat lösenordsläge har logotyp, meny, en kort förklaring av
+  tjänsten och en sidfot med integritet och kontakt. Fritextrutan och
+  **Förfina min sökning** är i fokus; en lugn pilotnotis förklarar att inga
+  bostadsobjekt eller bostadsmejl finns ännu. Lösenord och uttryckligt
+  AI-godkännande efterfrågas vid första sökningen, inte när sidan öppnas.
+  Texten behålls vid avbrott, fel och navigation till information.
+  **Meny** öppnar vanliga filter, sparad sökning/utkast och konto.
   Följdfrågor återanvänder samtycket inom samma utkast; ingen AI körs vid
   sidladdning eller återläsning. Denna frontendändring kräver bara Pages,
   inga nya hemligheter, Worker-inställningar eller migrationer.

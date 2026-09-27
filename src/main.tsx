@@ -1,4 +1,4 @@
-import { StrictMode, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { StrictMode, useEffect, useMemo, useRef, useState, type FormEvent, type MouseEvent } from "react";
 import { createRoot } from "react-dom/client";
 import { z } from "zod";
 import { defaultFilters, filterSchema, listingSchema, municipalities, sourceIds, types, type Filters, type Listing } from "../shared/model";
@@ -6,7 +6,7 @@ import { assess, manualProfile, profileSchema, ranked, type Profile } from "../s
 import { sources, type Source } from "../shared/sources";
 import { demoListings } from "./demo";
 import { NumericFilter } from "./NumericFilter";
-import { PreferenceFlow } from "./PreferenceFlow";
+import { PreferenceFlow, type PreferenceControls } from "./PreferenceFlow";
 import { gateSchema, GateStatus, useSearchAccess, type Gate } from "./SharedAccess";
 import "./style.css";
 
@@ -275,7 +275,12 @@ function App() {
   const [member, setMember] = useState<Member | null>(null);
   const [shared, setShared] = useState<boolean | null>(null), [gate, setGate] = useState<Gate | null>(null);
   const minimal = !demo && shared !== false && !action;
-  const [panel, setPanel] = useState(new URLSearchParams(location.search).get("info") === "privacy" ? "privacy" : "");
+  const [panel, setPanel] = useState(() => {
+    const info = new URLSearchParams(location.search).get("info");
+    return info === "privacy" || info === "help" ? info : "";
+  });
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuButton = useRef<HTMLButtonElement>(null), preferenceControls = useRef<PreferenceControls>(null);
   const panelHeading = useRef<HTMLHeadingElement>(null), privacyHeading = useRef<HTMLHeadingElement>(null);
   const { authorize, dialog } = useSearchAccess(apiBase, gate);
   const [ready, setReady] = useState(false), [accepting, setAccepting] = useState(false);
@@ -285,13 +290,22 @@ function App() {
   const refresh = () => setAccountReload(value => value + 1);
   const canSearch = demo || (shared ? !!gate : member?.state === "approved");
   const guestFlow = shared && !!gate && (!member || member.state !== "approved" || gate.pendingSave || gate.hasDraft);
+  const canShowSaved = !!member && !!gate && !guestFlow;
   async function openPanel(next: string) {
+    setMenuOpen(false);
     if (next === "account" && !gate) {
-      if (!await authorize("account")) return;
+      if (!await authorize("account")) { menuButton.current?.focus(); return; }
       refresh();
     }
     setPanel(next);
     requestAnimationFrame(() => (next === "privacy" ? privacyHeading.current : panelHeading.current)?.focus());
+  }
+  function showSearch(part: keyof PreferenceControls = "focusPrompt") {
+    setMenuOpen(false); setPanel(""); preferenceControls.current?.[part]();
+  }
+  function openInfo(event: MouseEvent<HTMLAnchorElement>, next: "help" | "privacy") {
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    event.preventDefault(); void openPanel(next);
   }
   useEffect(() => {
     if (demo || !apiBase) return;
@@ -363,33 +377,71 @@ function App() {
   }), [profile, catalog.listings, sort]);
   const enabledSources = catalog.sources.filter(source => source.authorized).length;
   const changeTheme = () => { const next = theme === "dark" ? "light" : "dark"; setTheme(next); document.documentElement.dataset.theme = next; };
-  return <>
+  return <div className={minimal ? "website-shell" : undefined}>
     <a className="skip" href="#main">Hoppa till innehåll</a>
+    {minimal && <header className="site-header compact-header" onKeyDown={event => {
+      if (event.key === "Escape" && menuOpen) { setMenuOpen(false); menuButton.current?.focus(); }
+    }} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setMenuOpen(false); }}>
+      <div className="header-inner">
+        <a className="brand" href="#main" onClick={event => { event.preventDefault(); showSearch(); }} aria-label="kommandekollen. – till sökningen">
+          <span className="brand-mark"><Icon name="home" /></span>kommandekollen<span className="brand-dot">.</span>
+        </a>
+        <nav id="site-navigation" className="compact-nav" data-expanded={menuOpen} aria-label="Huvudmeny">
+          <div className="nav-essential">
+            <a href="?info=help" onClick={event => openInfo(event, "help")}>Så fungerar det</a>
+            {canShowSaved ? <button onClick={() => showSearch("showSaved")}>Min sökning</button>
+              : <button onClick={() => void openPanel("account")}>Konto</button>}
+            <a href="?info=privacy" onClick={event => openInfo(event, "privacy")}>Integritet</a>
+          </div>
+          {menuOpen && <div className="nav-advanced">
+            <button onClick={() => showSearch("showManual")}>Använd vanliga filter</button>
+            {gate && <button onClick={() => showSearch("restore")}>Fortsätt utkast</button>}
+            {member && <button onClick={() => void openPanel("account")}>{member.owner ? "Konto & ägarverktyg" : "Konto / logga in"}</button>}
+            {gate && <button onClick={() => void openPanel("results")}>Resultat & källstatus</button>}
+            <a href="?demo=1" target="_blank" rel="noopener noreferrer">Visa fiktivt exempel</a>
+            <button onClick={changeTheme}>{theme === "dark" ? "Ljust tema" : "Mörkt tema"}</button>
+            {gate && <p className="small muted">{gate.quota.remaining} av {gate.quota.limit} AI-försök återstår för hela tjänsten idag (UTC). Andra kan använda dem före dig.</p>}
+          </div>}
+        </nav>
+        <button ref={menuButton} className="site-menu-toggle" aria-expanded={menuOpen} aria-controls="site-navigation" onClick={() => setMenuOpen(value => !value)}>Meny</button>
+      </div>
+    </header>}
     <header hidden={minimal} className="site-header"><div className="header-inner">
       <a className="brand" href={location.pathname}><span className="brand-mark"><Icon name="home" /></span>kommandekollen<span className="brand-dot">.</span></a>
       <nav aria-label="Huvudmeny"><a href="#main">{canSearch ? "Sök bostad" : "Medlemskap"}</a><a href={canSearch ? "#kallor" : "#integritet"}>{canSearch ? "Källstatus" : "Integritet"}</a>{member?.owner && <a href="#medlemmar">Medlemmar</a>}</nav>
       <button className="theme-button" aria-label={theme === "dark" ? "Byt till ljust tema" : "Byt till mörkt tema"} onClick={changeTheme}><Icon name={theme === "dark" ? "sun" : "moon"} /></button>
     </div></header>
     {demo && <div className="demo-bar"><strong>Demonstrationsläge</strong><span>Alla bostäder är påhittade. Inga mejl skickas.</span></div>}
-    <main id="main" className={`container${minimal ? " minimal-home" : ""}`}>
+    <main id="main" className={`container${minimal ? " compact-home" : ""}`}>
       {action ? <ActionPage key={action[2]} shared={!!shared} action={action} /> : <>
         {minimal && <>
+          <section className="home-intro" aria-labelledby="home-title">
+            <h1 id="home-title">Vad är viktigt i ditt nästa hem?</h1>
+            <p>Beskriv var och hur du vill bo. Kommandekollen hjälper dig att förtydliga dina önskemål och skapa en personlig bostadssökning för Stockholms län.</p>
+          </section>
           <PreferenceFlow apiBase={apiBase} demo={false} minimal authorized={!!gate} authorize={authorize}
+            controlsRef={preferenceControls}
             member={guestFlow || !gate ? null : member} guest={guestFlow || !gate ? { aiReady: gate?.aiReady ?? false } : undefined}
             ready={catalog.serviceReady && !error && !loading} refresh={refresh} onInference={refresh}
-            renderFilters={(filters, change) => <FilterPanel filters={filters} onChange={change} />} onDemoPreview={setDemoProfile}
-            secondary={<>
-              <button onClick={() => void openPanel("privacy")}>Integritet & radering</button>
-              <button onClick={() => void openPanel("account")}>{member?.owner ? "Konto & ägarverktyg" : "Konto / logga in"}</button>
-              {gate && <button onClick={() => void openPanel("results")}>Resultat & källstatus</button>}
-              <a className="button" href="?demo=1">Visa fiktivt exempel</a>
-              <button onClick={changeTheme}>{theme === "dark" ? "Ljust tema" : "Mörkt tema"}</button>
-              {gate && <p className="small muted">{gate.quota.remaining} av {gate.quota.limit} AI-försök återstår för hela tjänsten idag (UTC). Andra kan använda dem före dig.</p>}
-            </>} />
+            renderFilters={(filters, change) => <FilterPanel filters={filters} onChange={change} />} onDemoPreview={setDemoProfile} />
           {accountError && <div className="notice" role="alert"><p>{accountError} Din text finns kvar.</p><button onClick={refresh}>Kontrollera åtkomst igen</button></div>}
-          {!apiBase && <p role="status" className="notice">Tjänsten är inte ansluten. Ingen text kan skickas. Ett fiktivt exempel finns under Mer.</p>}
-          {panel && <div className="secondary-heading"><h2 ref={panelHeading} tabIndex={-1}>{panel === "account" ? "Ditt konto" : panel === "results" ? "Resultat & källor" : "Integritet"}</h2>
-            <button onClick={() => { setPanel(""); document.getElementById("housing-prompt")?.focus(); }}>Tillbaka till texten</button></div>}
+          {!apiBase && <p role="status" className="notice">Tjänsten är inte ansluten. Ingen text kan skickas. Ett fiktivt exempel finns i menyn.</p>}
+          {panel && <div className="secondary-heading"><h2 ref={panelHeading} tabIndex={-1}>{panel === "account" ? "Ditt konto" : panel === "results" ? "Resultat & källor" : panel === "help" ? "Så fungerar det" : "Integritet"}</h2>
+            <button onClick={() => showSearch()}>Tillbaka till texten</button></div>}
+          {panel === "help" && <section className="how-it-works" aria-label="Så skapar du en sökning">
+            <ol>
+              <li><strong>Beskriv.</strong> Berätta var och hur du vill bo. Du öppnar texthjälpen med det gemensamma lösenordet och väljer om din text får behandlas av AI.</li>
+              <li><strong>Förtydliga.</strong> Svara på en fråga i taget när något behöver förklaras. Du kan också använda vanliga filter, utan AI.</li>
+              <li><strong>Granska och spara.</strong> Skilj på krav, önskemål och sådant du behöver kontrollera själv. Du godkänner sammanfattningen innan du sparar.</li>
+            </ol>
+            <p>När du sparar första gången verifierar du din e-post i samma webbläsare. Sedan granskar och bekräftar du exakt den sökningen igen. Verifieringen ensam sparar ingenting.</p>
+            <details><summary>Om AI, integritet och gränser</summary>
+              <p>Built with Llama. Med ditt godkännande skickas bostadstexten och föregående utkast till Cloudflare, utan tillagd konto- eller e-postinformation. Skriv inga personliga eller känsliga uppgifter. Granska alltid tolkningen.</p>
+              <p>Hela piloten delar på högst sex AI-försök per UTC-dygn, även misslyckade anrop räknas. Vanliga filter använder inte AI. Ingen rå prompt eller chatthistorik sparas i appen; tolkade utkast gäller i 30 minuter.</p>
+              <a href="?info=privacy" onClick={event => openInfo(event, "privacy")}>Fullständig integritetsinformation</a>{" · "}
+              <a href="https://github.com/meta-llama/llama-models/blob/main/models/llama3_3/LICENSE" target="_blank" rel="noopener noreferrer">Modellvillkor</a>
+            </details>
+          </section>}
           {panel === "account" && gate && <>
             <Membership member={member} ready={ready} accepting={false} refresh={refresh} shared />
             <GateStatus gate={gate} apiBase={apiBase} refresh={refresh} />
@@ -440,7 +492,12 @@ function App() {
       </section>
     </main>
     {dialog}
+    {minimal && <footer className="site-footer compact-footer">
+      <span>© {new Date().getFullYear()} kommandekollen.</span>
+      <a href="?info=privacy" onClick={event => openInfo(event, "privacy")}>Integritet & radering</a>
+      <a href="mailto:kontakt@kommandekollen.se">Kontakt</a>
+    </footer>}
     <footer hidden={minimal} className="site-footer"><span>kommandekollen.</span><a href="#integritet">Integritet & radering</a><a href={`${import.meta.env.BASE_URL}assets/ATTRIBUTION.md`}>Bild & licens</a>{canSearch && <a href="#kallor">Källstatus</a>}<span className="small">{shared ? "Delat lösenord · e-post när du sparar" : "Privat tjänst · medlemskap efter godkännande"}</span></footer>
-  </>;
+  </div>;
 }
 createRoot(document.getElementById("root")!).render(<StrictMode><App /></StrictMode>);
