@@ -27,8 +27,8 @@ to the owner's inbox succeeded.
 Frontend HTTPS is valid and enforced; HTTP redirects to the canonical HTTPS URL.
 The public controller/contact and provider-location disclosures are published.
 The owner separately confirmed the account's **Workers Free** plan, not only
-the zone's Free DNS plan. The minimal input-first frontend is published by Pages run
-`36299417326` from feature commit `47b3c2a`; the unchanged active Worker version is
+the zone's Free DNS plan. The compact website frontend is published by Pages run
+`36300358201` from feature commit `c4f76f5`; the unchanged active Worker version is
 `b4da83e5-c887-49cb-a194-d2b292160f67`. `SHARED_ACCESS_PASSWORD` was generated in a
 private local terminal and stored as a Worker secret; its value is not in the
 repository, chat or deployment output. The owner saved their copy.
@@ -45,12 +45,21 @@ The existing owner profile/version and all four prior AI reservations survived.
 The user subsequently confirmed correct-password access without email and the
 guest email-verification/save flow.
 
-On 2026-09-27, a frontend-only rollout removed the initial header, hero, photo,
-password form and secondary panels. The public first view is the textarea with
-integrated send and "Mer". Explicit send opens the password/unchecked AI-consent
-dialog; no AI request occurs before authorization. Actual desktop/mobile browser
-checks confirmed that typing, opening/cancelling the dialog and reading privacy
-made no POST requests. Cancellation retained the exact typed text. Backend,
+On 2026-09-27, an initial input-only release was replaced at the owner's request
+with a compact website: the existing wordmark, desktop navigation/mobile menu,
+purpose heading and introduction, prominent text input, and privacy/contact
+footer. Secondary account, help, privacy and source panels remain on request.
+The public note explicitly says searches are paused and property listings and
+property emails are not yet available.
+
+The published bundle is `index-CxgUKFPP.js`. Actual live browser checks at
+320, 360, 390, 430 and 1440 pixels confirmed the website shell, light default,
+no horizontal overflow and button targets of at least 44 pixels. Menu, help,
+privacy and the home link retained the exact synthetic input. "Förfina min
+sökning" still opens the password/unchecked AI-consent dialog; cancellation
+retains the text. Direct `?info=help` and `?info=privacy` links also worked.
+These checks attempted no POST or other mutation, consumed no AI calls and
+reported no browser runtime errors or insecure subresource requests. Backend,
 secrets, migrations, budgets and saved records were not changed by this release.
 
 Still required during the pilot: broader guest/account revocation and
