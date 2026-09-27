@@ -3,7 +3,8 @@
 The operator activated `ACCESS_MODE=shared` on 2026-09-26 after applying additive
 0004 and deploying the matching backend/frontend. Incorrect-password and
 unauthenticated API guards were checked in production; the correct-password
-guest email-save path still needs user confirmation. Missing `ACCESS_MODE` or the value
+guest email-save path was subsequently confirmed working by the user. This is
+not production capacity certification. Missing `ACCESS_MODE` or the value
 `membership` retains the previous owner-approved membership mode. Other values
 fail closed. Existing accounts, saved profiles, consent, seen IDs, sessions and
 all prior AI reservations are preserved by migration `0004_shared_access.sql`.
@@ -11,13 +12,41 @@ Migrations 0001-0003 are immutable.
 
 ## Visitor flow
 
-Enter the shared password -> describe a home or use manual filters -> review
+The input-first frontend revision shows only the free-text input, integrated
+send and small "Mer" control at rest, including for returning owners. It needs
+only a Pages rollout, not a Worker, secret, configuration or migration change.
+
+Describe a home locally -> explicitly send -> enter the shared password if
+needed and explicitly consent to Cloudflare processing -> interpret -> review
 the draft -> explicitly choose saving -> enter email -> open its link in the
 same browser -> explicitly verify -> review again and explicitly confirm saving.
 Email verification creates account identity, **not a saved profile or alerts**.
 No ready sources means paused saving only. Existing approved email sessions
 can manage their own search after passing the shared gate; they do not need to
 verify again for every edit. The owner keeps the existing saved search and role.
+
+"Mer" exposes privacy before gate entry, manual filters without AI, saved
+searches/drafts, account/login/logout/owner tools, quota and results/source status.
+Manual review and account login request the gate when needed but never AI
+consent or inference. The existing backend remains the authorization boundary.
+There is no photo on the minimal home; licensed imagery remains in legacy/demo.
+
+Password success is not implicit consent. The unchecked processing checkbox and
+one explicit awaited continuation are required before inference. A synchronous
+submission lock prevents double-click/Enter duplication; cancellation aborts
+the check and settles the pending intent without submitting the retained text.
+The current draft's ordinary followups reuse its explicit in-memory consent;
+reload/new draft requires it again. There are no automatic AI retries.
+Text is not persisted in browser storage. Gate/password is never stored in JS
+storage; only the existing server cookie persists.
+
+Reload starts minimal; "Fortsätt utkast" explicitly retrieves the existing
+server draft without inference. The email action's return link uses client-only
+`?review=1` to show that draft for the required second review. `?info=privacy`
+opens public privacy details, also reachable from inside the consent dialog.
+Neither query parameter changes authorization, consent or any backend contract.
+Model/provider errors, exhausted quota and save receipts stay visible and
+focused. No-source paused-only saving and old saved-profile versions are intact.
 
 The gate is shared access, not proof of personal identity or an unlimited
 public service. Anyone who knows it may create a guest session. A revoked

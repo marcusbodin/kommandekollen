@@ -1,10 +1,28 @@
 # Kommandekollen design
 
-The search surface operates a familiar property-search workflow. The public
-surface is a closed-membership application, not a claim of public inventory.
-One freely licensed, locally optimized interior photograph supplies a compact
-welcoming background, always labeled "Inspirationsbild · inte ett bostadsobjekt".
-It never represents a listing. Provenance and modifications are documented in
+The search surface is Operate mode: one housing task, not a marketing landing
+page. In shared-password mode the initial surface is only a free-text textarea,
+integrated "Skicka" and small "Mer" control, surrounded by warm light space.
+There is no initial header, hero, photo, password/email form, source panel,
+saved profile, footer or legal essay. This also applies to returning owners.
+"Mer" reveals privacy, manual filters, existing drafts/searches, account/owner
+tools, results/source status, quota, the synthetic demo and theme choice.
+Private functions still require server authorization; disclosure is not access.
+
+The first explicit send opens a compact native dialog protecting password and
+AI-consent entry. The text stays in place. Password is not consent: an unchecked
+Cloudflare processing checkbox and explicit continuation are required before
+one inference. Followups in that same consented draft stay inline; a reload or
+new draft requires consent again. Cancel/Escape/error preserves the text.
+No mount, gate restore, input edit or GET submits or saves anything.
+Questions, review, relevant no-source notice and focused outcomes appear only
+after progression. Draft restore is explicit, except return from email review.
+Email-at-save verification and the second explicit confirmation stay separate.
+
+The legacy membership mode and synthetic demo retain their existing layout.
+Their freely licensed local interior photograph is always labeled
+"Inspirationsbild · inte ett bostadsobjekt". It never represents a listing.
+Provenance and modifications are documented in
 `public/assets/ATTRIBUTION.md`. No agency branding, fictional coverage claims,
 maps without map data or decorative listing thumbnails are used.
 
@@ -18,12 +36,16 @@ targets and disclosure summaries are at least 44px high with visible keyboard
 focus; checkbox labels provide the larger touch target.
 
 The primary search interaction is a compact housing-description textarea,
-optional explicitly selected examples, one material followup and an editable
+one material followup and an editable
 summary separating requirements, wishes and manual checks. One explicit
 confirmation saves the reviewed profile; with no ready sources it saves paused.
 No endless chat transcript or fake AI in the deterministic public demo.
-Desktop uses a readable 880px central input/review panel, then flexible
-two-column factual property cards and source transparency. Below 1050px,
+The minimal homepage uses a central panel no wider than 760px, with a scrollable
+native dialog and no fixed controls over the keyboard. At 320px, 16px side
+gutters preserve input and 44px action targets. Results/source sections are
+requested separately, not populated onto the initial surface.
+Legacy/demo desktop uses an 880px input/review panel and flexible
+two-column factual property cards. Below 1050px,
 properties become one column. Below 700px, content stacks, with
 112px inspiration bands rather than a full-screen hero. Opaque light panels
 keep text readable; no copy is drawn directly on photography.

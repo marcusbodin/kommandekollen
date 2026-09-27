@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { z } from "zod";
 import { defaultFilters, municipalities, types, type Filters } from "../shared/model";
 import { describeFilters, draftSchema, hardDescription, manualProfile, profileSchema, type Draft, type Profile } from "../shared/preferences";
+import type { Authorize, SearchAccess } from "./SharedAccess";
 
 type Account = { profile: Profile; searchVersion: number; aiReady: boolean; alertsEnabled: boolean };
 const receiptSchema = z.object({ message: z.string(), searchVersion: z.number().int().nonnegative(), profile: profileSchema, alertsEnabled: z.boolean() });
@@ -12,6 +13,7 @@ type Props = {
   onDemoPreview: (profile: Profile) => void;
   guest?: { aiReady: boolean };
   onInference?: () => void;
+  minimal?: boolean; authorized?: boolean; authorize?: Authorize; secondary?: ReactNode;
 };
 const intentSchema = z.object({ id: z.string().uuid(), verified: z.boolean(), enabled: z.boolean(), acceptUnverified: z.boolean() });
 export function ProfileSummary({ profile }: { profile: Profile }) {
@@ -23,7 +25,8 @@ export function ProfileSummary({ profile }: { profile: Profile }) {
   </div>;
 }
 const examples = ["Lägenhet i Solna eller Sundbyberg, minst 3 rum. Gärna 80 m².", "Villa i Nacka, högst 7 miljoner. Lugn gata är viktigt."];
-export function PreferenceFlow({ apiBase, demo, member, ready, refresh, renderFilters, onDemoPreview, guest, onInference }: Props) {
+export function PreferenceFlow({ apiBase, demo, member, ready, refresh, renderFilters, onDemoPreview, guest, onInference,
+  minimal = false, authorized = true, authorize, secondary }: Props) {
   const [text, setText] = useState(""), [draft, setDraft] = useState<Draft | null>(null);
   const [profile, setProfile] = useState<Profile>(member?.profile ?? manualProfile());
   const [editing, setEditing] = useState(false), [dirty, setDirty] = useState(false);
@@ -33,6 +36,8 @@ export function PreferenceFlow({ apiBase, demo, member, ready, refresh, renderFi
   const busy = activity !== null;
   const [receipt, setReceipt] = useState<Receipt | null>(null), [availableDraft, setAvailableDraft] = useState(false);
   const [savedOpen, setSavedOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const pendingSubmit = useRef(false), progressed = useRef(false);
   const [saveIntent, setSaveIntent] = useState<z.infer<typeof intentSchema> | null>(null);
   const [emailEntry, setEmailEntry] = useState(false), [email, setEmail] = useState("");
   const emailHeading = useRef<HTMLHeadingElement>(null);
@@ -43,12 +48,13 @@ export function PreferenceFlow({ apiBase, demo, member, ready, refresh, renderFi
   const edits = useRef(0), focusOutcome = useRef<"feedback" | "draft" | "receipt" | null>(null);
   const version = guest ? 0 : member?.searchVersion ?? 0;
   const aiEnabled = guest?.aiReady ?? member?.aiReady;
-  const savedVersion = useRef(version);
-  async function call(path: string, body?: unknown, signal?: AbortSignal): Promise<unknown> {
+  const savedVersion = useRef<number | null>(member || !minimal ? version : null);
+  const hadAccess = useRef(authorized);
+  async function call(path: string, body?: unknown, signal?: AbortSignal, access?: SearchAccess): Promise<unknown> {
     if (!apiBase) throw new Error("API-adressen saknas. Inget har skickats.");
     let response: Response;
     try {
-      response = await fetch(`${apiBase}/api/${guest ? "guest/" : ""}preferences/${path}`, { method: body ? "POST" : "GET",
+      response = await fetch(`${apiBase}/api/${(access?.guest ?? !!guest) ? "guest/" : ""}preferences/${path}`, { method: body ? "POST" : "GET",
         credentials: "include", headers: body ? { "Content-Type": "application/json" } : undefined,
         body: body ? JSON.stringify(body) : undefined, signal: signal ?? AbortSignal.timeout(25000) });
     } catch {
@@ -64,7 +70,7 @@ export function PreferenceFlow({ apiBase, demo, member, ready, refresh, renderFi
     return result;
   }
   useEffect(() => {
-    if (demo) return;
+    if (demo || (minimal && (!authorized || progressed.current))) return;
     const abort = new AbortController();
     const initialEdits = edits.current, initialSequence = sequence.current;
     void call("draft", undefined, abort.signal).then(result => {
@@ -72,14 +78,16 @@ export function PreferenceFlow({ apiBase, demo, member, ready, refresh, renderFi
       const restored = data.draft;
       if (abort.signal.aborted || sequence.current !== initialSequence) return;
       setSaveIntent(data.saveIntent ?? null);
-      if (restored && edits.current !== initialEdits) {
+      if (minimal && restored && new URLSearchParams(location.search).get("review") !== "1") {
+        setAvailableDraft(true);
+      } else if (restored && edits.current !== initialEdits) {
         setAvailableDraft(true); setMessage("Ett tidigare utkast finns. Dina påbörjade ändringar har behållits. Du kan läsa in utkastet utan ett nytt AI-försök.");
       } else if (restored) { setDraft(restored); setProfile(restored.profile); setMessage("Ditt osparade utkast är återläst. Ingen bevakning ändrades."); }
     }).catch(error => { if (!abort.signal.aborted && sequence.current === initialSequence) setError(error instanceof z.ZodError ? "Det sparade utkastets svar kunde inte kontrolleras. Använd filter eller läs in igen." : error instanceof Error ? error.message : "Utkastet kunde inte läsas."); });
     return () => { abort.abort(); controller.current?.abort(); };
-  }, []);
+  }, [minimal, authorized]);
   useEffect(() => {
-    if (!guest) return;
+    if (!guest || !authorized) return;
     const check = () => {
       void call("draft").then(result => {
         const state = z.object({ saveIntent: intentSchema.nullable() }).parse(result);
@@ -88,8 +96,24 @@ export function PreferenceFlow({ apiBase, demo, member, ready, refresh, renderFi
     };
     window.addEventListener("focus", check);
     return () => window.removeEventListener("focus", check);
-  }, [!!guest]);
+  }, [!!guest, authorized]);
   useEffect(() => {
+    if (minimal && hadAccess.current && !authorized) {
+      sequence.current++; controller.current?.abort(); setActivity(null);
+      setDraft(null); setSaveIntent(null); setReceipt(null); setProfile(manualProfile());
+      setSavedOpen(false); setEditing(false); setDirty(false); setAvailableDraft(false);
+      setAiConsent(false); setConsent(false); setAccept(false); setEmailEntry(false); setEmail("");
+      progressed.current = false; savedVersion.current = null;
+      setMessage("Åtkomsten behöver öppnas igen. Din text finns kvar; dina sparade uppgifter visas först när åtkomsten har kontrollerats.");
+      focusOutcome.current = "feedback";
+    }
+    hadAccess.current = authorized;
+  }, [minimal, authorized]);
+  useEffect(() => {
+    if (savedVersion.current === null) {
+      if (member) { savedVersion.current = version; if (!dirty && !draft) setProfile(member.profile); }
+      return;
+    }
     if (savedVersion.current !== version) {
       savedVersion.current = version;
       sequence.current++; controller.current?.abort(); setActivity(null); setConsent(false); setAccept(false);
@@ -122,6 +146,7 @@ export function PreferenceFlow({ apiBase, demo, member, ready, refresh, renderFi
     if (demo && profileSchema.safeParse(next).success) onDemoPreview(next);
   };
   function receive(next: Draft) {
+    progressed.current = true;
     setDraft(next); setProfile(next.profile); setDirty(false); setText(""); setConsent(false); setAccept(false); setEditing(false); setResolveQuestions(false);
     setReceipt(null); setAvailableDraft(false);
     setSaveIntent(null); setEmailEntry(false);
@@ -137,14 +162,22 @@ export function PreferenceFlow({ apiBase, demo, member, ready, refresh, renderFi
       conflicts: [], question: draft ? null : { text: "Är 5 miljoner ett fast pristak?", choices: ["Ja, högst 5 miljoner"], required: true }, expiresAt: Date.now() + 1800000 };
   }
   async function generate() {
-    if (busy) return;
+    if (busy || pendingSubmit.current) return;
+    pendingSubmit.current = true;
     setError(""); setMessage("");
-    if (demo) { receive(demoDraft()); return; }
+    if (demo) { receive(demoDraft()); pendingSubmit.current = false; return; }
+    let access: SearchAccess | undefined;
+    if (minimal) {
+      const result = draft && aiConsent && authorized ? { guest: !!guest, searchVersion: version } : await authorize!("ai");
+      if (!result) { pendingSubmit.current = false; input.current?.focus(); return; }
+      access = result; savedVersion.current = access.searchVersion; setAiConsent(true);
+    }
     const id = crypto.randomUUID(), current = ++sequence.current, abort = new AbortController();
     controller.current = abort; operation.current = id; setActivity("interpret");
     const timer = setTimeout(() => abort.abort(), 25000);
     try {
-      const result = await call("interpret", { id, expectedVersion: version, previousId: draft?.id ?? null, text, aiConsent }, abort.signal);
+      const result = await call("interpret", { id, expectedVersion: access?.searchVersion ?? version, previousId: draft?.id ?? null, text,
+        aiConsent: minimal ? true : aiConsent }, abort.signal, access);
       if (current === sequence.current) receive(z.object({ draft: draftSchema }).parse(result).draft);
     } catch (error) {
       if (current === sequence.current) {
@@ -155,13 +188,14 @@ export function PreferenceFlow({ apiBase, demo, member, ready, refresh, renderFi
       }
     } finally {
       clearTimeout(timer);
+      pendingSubmit.current = false;
       if (current === sequence.current) { setActivity(null); operation.current = null; }
       onInference?.();
     }
   }
   async function cancel() {
     const id = operation.current ?? draft?.id;
-    sequence.current++; controller.current?.abort(); setActivity(null); setError(""); setConsent(false); setAccept(false);
+    sequence.current++; controller.current?.abort(); setActivity(null); setError(""); setConsent(false); setAccept(false); setAiConsent(false);
     if (demo) { focusOutcome.current = "feedback"; setDraft(null); setMessage("Demo avbruten; ingenting sparades."); return; }
     if (id) {
       try { await call("cancel", { id }); setDraft(null); setProfile(member?.profile ?? manualProfile()); setDirty(false); setEditing(false);
@@ -171,7 +205,15 @@ export function PreferenceFlow({ apiBase, demo, member, ready, refresh, renderFi
     }
   }
   async function review(skipOptional = false) {
-    if (busy) return;
+    if (busy || pendingSubmit.current) return;
+    let access: SearchAccess | undefined;
+    if (minimal && !authorized) {
+      pendingSubmit.current = true;
+      const result = await authorize!("manual");
+      pendingSubmit.current = false;
+      if (!result) return;
+      access = result; savedVersion.current = access.searchVersion;
+    }
     const current = ++sequence.current;
     setActivity("review"); setError(""); setMessage(""); setConsent(false); setAccept(false);
     try {
@@ -179,11 +221,11 @@ export function PreferenceFlow({ apiBase, demo, member, ready, refresh, renderFi
       const id = crypto.randomUUID();
       if (demo) receive({ id, revision: (draft?.revision ?? 0) + 1, baseVersion: 0, profile: checked, turns: 0, expiresAt: Date.now() + 1800000, question: null, conflicts: [] });
       else {
-        const result = await call("draft", { id, expectedVersion: version, profile: checked, previousId: draft?.id ?? null, resolveQuestions: resolveQuestions || skipOptional });
+        const result = await call("draft", { id, expectedVersion: access?.searchVersion ?? version, profile: checked, previousId: draft?.id ?? null, resolveQuestions: resolveQuestions || skipOptional }, undefined, access);
         if (current === sequence.current) receive(z.object({ draft: draftSchema }).parse(result).draft);
       }
     } catch (error) { if (current === sequence.current) { focusOutcome.current = "feedback"; setError(error instanceof z.ZodError ? "Kontrollera intervall och alternativ. Utkastet kunde inte bekräftas; dina ändringar finns kvar." : error instanceof Error ? error.message : "Kunde inte granska ändringarna."); } }
-    finally { if (current === sequence.current) setActivity(null); }
+    finally { if (current === sequence.current) setActivity(null); if (access) refresh(); }
   }
   async function restoreDraft() {
     if (busy) return;
@@ -196,6 +238,7 @@ export function PreferenceFlow({ apiBase, demo, member, ready, refresh, renderFi
       setSaveIntent(result.saveIntent ?? null);
       if (!result.draft) setMessage("Inget färdigt utkast kunde läsas in. Din text och dina ändringar finns kvar. Använd vanliga filter eller försök med AI senare; inget nytt AI-anrop har gjorts.");
       else {
+        progressed.current = true;
         setDraft(result.draft);
         if (!dirty) setProfile(result.draft.profile);
         setMessage(dirty ? "Utkastet är återläst. Dina lokala filterändringar finns kvar och behöver granskas innan de sparas."
@@ -235,19 +278,24 @@ export function PreferenceFlow({ apiBase, demo, member, ready, refresh, renderFi
   }
   const valid = profileSchema.safeParse(profile).success;
   const blocking = !!draft?.question?.required || !!draft?.conflicts.length;
-  return <section className="preference-flow surface" id="bevakning" aria-label="Personlig sökning">
-    <form onSubmit={event => { event.preventDefault(); void generate(); }}>
-      <label htmlFor="housing-prompt">{draft?.question && !dirty ? draft.question.text : draft ? "Vill du rätta eller lägga till något?" : "Beskriv ditt nästa hem"}</label>
+  return <section className={`preference-flow ${minimal ? "minimal-flow" : "surface"}`} id="bevakning" aria-label="Personlig sökning">
+    <form className={minimal ? "prompt-form" : undefined} onSubmit={event => { event.preventDefault(); void generate(); }}>
+      <div className={minimal ? "prompt-shell" : undefined}>
+      <label className={minimal && !draft?.question ? "visually-hidden" : undefined} htmlFor="housing-prompt">{draft?.question && !dirty ? draft.question.text : draft ? "Vill du rätta eller lägga till något?" : "Beskriv ditt nästa hem"}</label>
       <textarea id="housing-prompt" ref={input} value={text} onChange={event => editText(event.target.value)} maxLength={1600} rows={3}
-        placeholder="Var vill du bo, vad måste finnas och vad vore fint?" disabled={busy} aria-describedby="prompt-privacy" />
-      <p className="small muted" id="prompt-privacy">Skriv inga namn, kontaktuppgifter eller känsliga uppgifter. {demo ? "Detta är ett fast, illustrativt exempel – inte AI. Din text tolkas inte." : "Din bostadstext och föregående utkast skickas till Cloudflare. Vi lägger inte till konto eller mejladress."}</p>
-      {!draft && <><div className="example-chips">{examples.map((example, i) => <button type="button" key={example} disabled={busy}
+        placeholder={minimal ? "Beskriv ditt nästa hem…" : "Var vill du bo, vad måste finnas och vad vore fint?"} disabled={busy} aria-describedby={minimal ? undefined : "prompt-privacy"} />
+      {minimal && <div className="prompt-tools"><button type="button" className="text-button" aria-expanded={moreOpen} aria-controls="search-more" onClick={() => setMoreOpen(value => !value)}>Mer</button>
+        <button className="primary" aria-label="Skicka bostadsönskemål" disabled={busy || dirty || text.trim().length < 3}>
+          {activity === "interpret" ? "Tolkar…" : "Skicka"}<span aria-hidden="true">↑</span></button></div>}
+      </div>
+      {!minimal && <p className="small muted" id="prompt-privacy">Skriv inga namn, kontaktuppgifter eller känsliga uppgifter. {demo ? "Detta är ett fast, illustrativt exempel – inte AI. Din text tolkas inte." : "Din bostadstext och föregående utkast skickas till Cloudflare. Vi lägger inte till konto eller mejladress."}</p>}
+      {!minimal && !draft && <><div className="example-chips">{examples.map((example, i) => <button type="button" key={example} disabled={busy}
         onClick={() => { editText(example); input.current?.focus(); }}>Använd exempel: {i === 0 ? "lägenhet" : "villa"}</button>)}</div><p className="small muted">Exemplen fyller i texten men skickas inte.</p></>}
       {draft?.question && !dirty && <div className="example-chips">{draft.question.choices.map(choice => <button type="button" key={choice} disabled={busy} onClick={() => { editText(choice); input.current?.focus(); }}>{choice}</button>)}</div>}
-      {!demo && <label className="check"><input type="checkbox" checked={aiConsent} onChange={event => setAiConsent(event.target.checked)} /><span>Jag vill använda AI-texthjälpen hos Cloudflare.</span></label>}
-      {!demo && !aiEnabled && <p className="notice">AI-texthjälpen är inte aktiverad. Du kan skapa samma sparade sökning med vanliga filter nedan.</p>}
-      <div className="flow-actions"><button className="primary" disabled={busy || dirty || (!demo && (!aiEnabled || !aiConsent || text.trim().length < 3))}>
-        {activity === "interpret" ? "Tolkar dina önskemål…" : demo ? draft ? "Visa exemplets svar" : "Visa exempelutkast" : draft ? "Tolka mitt svar" : "Hjälp mig att precisera"}</button>
+      {!minimal && !demo && <label className="check"><input type="checkbox" checked={aiConsent} onChange={event => setAiConsent(event.target.checked)} /><span>Jag vill använda AI-texthjälpen hos Cloudflare.</span></label>}
+      {!minimal && !demo && !aiEnabled && <p className="notice">AI-texthjälpen är inte aktiverad. Du kan skapa samma sparade sökning med vanliga filter nedan.</p>}
+      <div className="flow-actions">{!minimal && <button className="primary" disabled={busy || dirty || (!demo && (!aiEnabled || !aiConsent || text.trim().length < 3))}>
+        {activity === "interpret" ? "Tolkar dina önskemål…" : demo ? draft ? "Visa exemplets svar" : "Visa exempelutkast" : draft ? "Tolka mitt svar" : "Hjälp mig att precisera"}</button>}
         {(activity === "interpret" || (draft && !busy)) && <button type="button" onClick={() => void cancel()}>{activity === "interpret" ? "Avbryt" : "Börja om"}</button>}
         {draft?.question && !draft.question.required && !dirty && <button type="button" disabled={busy} onClick={() => void review(true)}>Hoppa över frågan</button>}</div>
       {(busy || error || message) && <div ref={feedback} tabIndex={-1} className={`flow-feedback ${error ? "error" : "notice"}`} role={error ? "alert" : "status"} aria-atomic="true">
@@ -263,8 +311,19 @@ export function PreferenceFlow({ apiBase, demo, member, ready, refresh, renderFi
           <button type="button" onClick={() => { setSavedOpen(true); refresh(); }}>Kontrollera sparad sökning</button>
         </div>}
       </div>}
-      {!demo && <p className="small muted">Built with Llama · <a href="https://github.com/meta-llama/llama-models/blob/main/models/llama3_3/LICENSE" target="_blank" rel="noopener noreferrer">Modellvillkor</a>. Högst sex försök per medlem/IP och sex totalt i piloten per dygn (UTC). Granska alltid tolkningen.</p>}
+      {!minimal && !demo && <p className="small muted">Built with Llama · <a href="https://github.com/meta-llama/llama-models/blob/main/models/llama3_3/LICENSE" target="_blank" rel="noopener noreferrer">Modellvillkor</a>. Högst sex försök per medlem/IP och sex totalt i piloten per dygn (UTC). Granska alltid tolkningen.</p>}
     </form>
+    {minimal && <div id="search-more" className="search-more" hidden={!moreOpen}>
+      <div className="flow-actions">
+        <button onClick={() => { setEditing(true); setMoreOpen(false); requestAnimationFrame(() => manualHeading.current?.focus()); }}>Använd vanliga filter</button>
+        {authorized && <button onClick={() => { setMoreOpen(false); void restoreDraft(); }}>Fortsätt utkast</button>}
+        {member && <button onClick={() => { setSavedOpen(true); setMoreOpen(false); }}>Min sökning</button>}
+        {secondary}
+      </div>
+      <details><summary>Om texthjälpen</summary><p className="small">Built with Llama. Sex AI-försök delas av hela piloten per UTC-dygn. Filter använder inte AI. Skriv inga personliga uppgifter. Inget sparas utan ditt godkännande.</p>
+        <a href="https://github.com/meta-llama/llama-models/blob/main/models/llama3_3/LICENSE" target="_blank" rel="noopener noreferrer">Modellvillkor</a>
+      </details>
+    </div>}
     {receipt && <section className="save-receipt">
       <h2 ref={savedHeading} tabIndex={-1}>{receipt.alertsEnabled ? "Sökningen är sparad och bevakningen startad" : "Sökningen är sparad pausad"}</h2>
       <p>{receipt.alertsEnabled ? "Bara nya objekt kan skickas i morgonbevakningen." : "Inga bostadsmejl har aktiverats."} Bekräftad version {receipt.searchVersion}.</p>
@@ -292,7 +351,7 @@ export function PreferenceFlow({ apiBase, demo, member, ready, refresh, renderFi
         <button className="primary" disabled={busy || !consent || dirty || !!text.trim()}>Skicka verifieringslänk</button>
       </form>}
     </div>}
-    <details className="manual-search" open={editing} onToggle={event => setEditing(event.currentTarget.open)}>
+    <details hidden={minimal && !editing && !draft && !error} className="manual-search" open={editing} onToggle={event => setEditing(event.currentTarget.open)}>
       <summary ref={manualHeading}>{draft ? "Ändra själv med filter" : "Använd vanliga filter"}</summary>
       <fieldset className="manual-controls" disabled={busy}>
       <p className="small muted">Manuella ändringar behöver granskas och godkännas innan de ersätter din sparade sökning. Tomma gränser betyder ingen gräns, inte noll.</p>
@@ -324,7 +383,7 @@ export function PreferenceFlow({ apiBase, demo, member, ready, refresh, renderFi
       <button disabled={busy || !valid} onClick={() => void review()}>{activity === "review" ? "Granskar ändringarna…" : "Granska ändringarna"}</button>
       </fieldset>
     </details>
-    {!demo && member && <details className="saved-profile" open={savedOpen} onToggle={event => setSavedOpen(event.currentTarget.open)}><summary>Din sparade sökning · {member.alertsEnabled ? "bevakning startad" : "pausad"}</summary>
+    {!demo && member && <details hidden={minimal && !savedOpen} className="saved-profile" open={savedOpen} onToggle={event => setSavedOpen(event.currentTarget.open)}><summary>Din sparade sökning · {member.alertsEnabled ? "bevakning startad" : "pausad"}</summary>
       <ProfileSummary profile={member.profile} /><p className="small">Version {version}. Den här sökningen används för resultaten och eventuella mejl, inte ditt osparade utkast.</p>
       <button disabled={busy} onClick={() => { edits.current++; setProfile(member.profile); setEditing(true); setDirty(true); setConsent(false); setAccept(false); }}>Ändra sparad sökning</button>
       {member.alertsEnabled && <button disabled={busy} onClick={async () => {

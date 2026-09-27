@@ -7,7 +7,7 @@ import { sources, type Source } from "../shared/sources";
 import { demoListings } from "./demo";
 import { NumericFilter } from "./NumericFilter";
 import { PreferenceFlow } from "./PreferenceFlow";
-import { gateSchema, GatePanel, GateStatus, type Gate } from "./SharedAccess";
+import { gateSchema, GateStatus, useSearchAccess, type Gate } from "./SharedAccess";
 import "./style.css";
 
 const apiBase = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
@@ -96,7 +96,7 @@ function ActionPage({ shared, action }: { shared: boolean; action: RegExpExecArr
     {message ? <p role="status" className="notice" tabIndex={-1} ref={outcome}>{message}</p> : <button className="primary" disabled={busy || demo || !apiBase} onClick={submit}>{busy ? "Arbetar…" : confirm ? "Fortsätt" : "Avsluta och radera"}</button>}
     {(demo || !apiBase) && <p className="notice">Länken kan inte behandlas i demo eller utan konfigurerat API. Öppna mejlets länk på den riktiga tjänsten.</p>}
     {error && (shared || guestConfirm) && <p>Om länken öppnades på en annan enhet: öppna mejlet i ursprungliga webbläsaren. Om lösenordsåtkomsten har gått ut behöver du öppna tjänsten och begära en ny länk. Skriv inte token eller lösenord i ett supportmeddelande.</p>}
-    <a href={location.pathname + location.search}>{shared || guestConfirm ? "Till sökningen och granskningen" : "Till medlemskapet"}</a>
+    <a href={guestConfirm ? `${location.pathname}?review=1` : location.pathname + location.search}>{shared || guestConfirm ? "Till sökningen och granskningen" : "Till medlemskapet"}</a>
   </section>;
 }
 const memberSchema = z.object({
@@ -273,7 +273,11 @@ function App() {
   const [reload, setReload] = useState(0);
   const [sort, setSort] = useState("personal");
   const [member, setMember] = useState<Member | null>(null);
-  const [shared, setShared] = useState(false), [gate, setGate] = useState<Gate | null>(null);
+  const [shared, setShared] = useState<boolean | null>(null), [gate, setGate] = useState<Gate | null>(null);
+  const minimal = !demo && shared !== false && !action;
+  const [panel, setPanel] = useState(new URLSearchParams(location.search).get("info") === "privacy" ? "privacy" : "");
+  const panelHeading = useRef<HTMLHeadingElement>(null), privacyHeading = useRef<HTMLHeadingElement>(null);
+  const { authorize, dialog } = useSearchAccess(apiBase, gate);
   const [ready, setReady] = useState(false), [accepting, setAccepting] = useState(false);
   const [accountLoading, setAccountLoading] = useState(!demo && !!apiBase && !action);
   const [accountError, setAccountError] = useState("");
@@ -281,6 +285,14 @@ function App() {
   const refresh = () => setAccountReload(value => value + 1);
   const canSearch = demo || (shared ? !!gate : member?.state === "approved");
   const guestFlow = shared && !!gate && (!member || member.state !== "approved" || gate.pendingSave || gate.hasDraft);
+  async function openPanel(next: string) {
+    if (next === "account" && !gate) {
+      if (!await authorize("account")) return;
+      refresh();
+    }
+    setPanel(next);
+    requestAnimationFrame(() => (next === "privacy" ? privacyHeading.current : panelHeading.current)?.focus());
+  }
   useEffect(() => {
     if (demo || !apiBase) return;
     let active = true;
@@ -353,26 +365,46 @@ function App() {
   const changeTheme = () => { const next = theme === "dark" ? "light" : "dark"; setTheme(next); document.documentElement.dataset.theme = next; };
   return <>
     <a className="skip" href="#main">Hoppa till innehåll</a>
-    <header className="site-header"><div className="header-inner">
+    <header hidden={minimal} className="site-header"><div className="header-inner">
       <a className="brand" href={location.pathname}><span className="brand-mark"><Icon name="home" /></span>kommandekollen<span className="brand-dot">.</span></a>
       <nav aria-label="Huvudmeny"><a href="#main">{canSearch ? "Sök bostad" : "Medlemskap"}</a><a href={canSearch ? "#kallor" : "#integritet"}>{canSearch ? "Källstatus" : "Integritet"}</a>{member?.owner && <a href="#medlemmar">Medlemmar</a>}</nav>
       <button className="theme-button" aria-label={theme === "dark" ? "Byt till ljust tema" : "Byt till mörkt tema"} onClick={changeTheme}><Icon name={theme === "dark" ? "sun" : "moon"} /></button>
     </div></header>
     {demo && <div className="demo-bar"><strong>Demonstrationsläge</strong><span>Alla bostäder är påhittade. Inga mejl skickas.</span></div>}
-    <main id="main" className="container">
-      {action ? <ActionPage key={action[2]} shared={shared} action={action} /> : <>
-        {!demo && <>
+    <main id="main" className={`container${minimal ? " minimal-home" : ""}`}>
+      {action ? <ActionPage key={action[2]} shared={!!shared} action={action} /> : <>
+        {minimal && <>
+          <PreferenceFlow apiBase={apiBase} demo={false} minimal authorized={!!gate} authorize={authorize}
+            member={guestFlow || !gate ? null : member} guest={guestFlow || !gate ? { aiReady: gate?.aiReady ?? false } : undefined}
+            ready={catalog.serviceReady && !error && !loading} refresh={refresh} onInference={refresh}
+            renderFilters={(filters, change) => <FilterPanel filters={filters} onChange={change} />} onDemoPreview={setDemoProfile}
+            secondary={<>
+              <button onClick={() => void openPanel("privacy")}>Integritet & radering</button>
+              <button onClick={() => void openPanel("account")}>{member?.owner ? "Konto & ägarverktyg" : "Konto / logga in"}</button>
+              {gate && <button onClick={() => void openPanel("results")}>Resultat & källstatus</button>}
+              <a className="button" href="?demo=1">Visa fiktivt exempel</a>
+              <button onClick={changeTheme}>{theme === "dark" ? "Ljust tema" : "Mörkt tema"}</button>
+              {gate && <p className="small muted">{gate.quota.remaining} av {gate.quota.limit} AI-försök återstår för hela tjänsten idag (UTC). Andra kan använda dem före dig.</p>}
+            </>} />
+          {accountError && <div className="notice" role="alert"><p>{accountError} Din text finns kvar.</p><button onClick={refresh}>Kontrollera åtkomst igen</button></div>}
+          {!apiBase && <p role="status" className="notice">Tjänsten är inte ansluten. Ingen text kan skickas. Ett fiktivt exempel finns under Mer.</p>}
+          {panel && <div className="secondary-heading"><h2 ref={panelHeading} tabIndex={-1}>{panel === "account" ? "Ditt konto" : panel === "results" ? "Resultat & källor" : "Integritet"}</h2>
+            <button onClick={() => { setPanel(""); document.getElementById("housing-prompt")?.focus(); }}>Tillbaka till texten</button></div>}
+          {panel === "account" && gate && <>
+            <Membership member={member} ready={ready} accepting={false} refresh={refresh} shared />
+            <GateStatus gate={gate} apiBase={apiBase} refresh={refresh} />
+            {member?.owner && <OwnerPanel ownerId={member.id} shared />}
+          </>}
+        </>}
+        {!demo && !minimal && <>
           {accountLoading && <p role="status" className="notice">Kontrollerar medlemskap…</p>}
           {accountError && <div className="notice" role="alert"><p>{accountError}</p><button onClick={refresh}>Försök igen</button></div>}
-          {shared ? !gate ? !accountLoading && <GatePanel apiBase={apiBase} refresh={refresh} inspiration={<Inspiration />} />
-            : <>{member && <Membership member={member} ready={ready} accepting={false} refresh={refresh} shared />}
-              <GateStatus gate={gate} apiBase={apiBase} refresh={refresh} /></>
-            : <Membership member={member} ready={ready} accepting={accepting} refresh={refresh} />}
+          <Membership member={member} ready={ready} accepting={accepting} refresh={refresh} />
         </>}
-        {canSearch && <>
-        <section className="search-heading"><Inspiration /><div className="search-heading-copy"><h1>Beskriv ditt nästa hem.</h1><p>Dina krav. Dina önskemål. Du godkänner innan något sparas.</p></div></section>
+        {canSearch && (!minimal || panel === "results") && <>
+        {!minimal && <><section className="search-heading"><Inspiration /><div className="search-heading-copy"><h1>Beskriv ditt nästa hem.</h1><p>Dina krav. Dina önskemål. Du godkänner innan något sparas.</p></div></section>
         <PreferenceFlow apiBase={apiBase} demo={demo} member={guestFlow ? null : member} guest={guestFlow ? { aiReady: gate!.aiReady } : undefined} ready={catalog.serviceReady && !error && !loading} refresh={refresh}
-          renderFilters={(filters, change) => <FilterPanel filters={filters} onChange={change} />} onDemoPreview={setDemoProfile} onInference={shared ? refresh : undefined} />
+          renderFilters={(filters, change) => <FilterPanel filters={filters} onChange={change} />} onDemoPreview={setDemoProfile} onInference={shared ? refresh : undefined} /></>}
         {shared && !member && <details className="surface"><summary>Har du redan en sparad sökning? Logga in</summary>
           <Membership member={null} ready={ready} accepting={false} refresh={refresh} shared /></details>}
         <div className="coverage-strip"><span className="status-dot" aria-hidden="true" /><span>{demo ? "6 exempelbostäder · 0 anslutna livekällor" : `${enabledSources} tillåtna källor · begränsad täckning`}</span><a href="#kallor">Se källstatus<Icon name="arrow" /></a></div>
@@ -392,11 +424,11 @@ function App() {
           </section>
         </div>
         <Sources data={catalog.sources} />
-        {member?.owner && <OwnerPanel ownerId={member.id} shared={shared} />}
+        {!minimal && member?.owner && <OwnerPanel ownerId={member.id} shared={!!shared} />}
         </>}
       </>}
-      <section id="integritet" className="privacy">
-        <h2>Din bevakning, dina uppgifter</h2>
+      <section hidden={minimal && panel !== "privacy"} id="integritet" className="privacy">
+        <h2 ref={privacyHeading} tabIndex={-1}>Din bevakning, dina uppgifter</h2>
         {shared && <p>Med det gemensamma lösenordet kan du prova utan e-post. En separat nödvändig säker gästkaka gäller i högst 12 timmar. Högst 200 gästsessioner och 40 konton ryms i piloten. Gästutkast och verifieringsavsikter gäller i 30 minuter. Först när du sparar frågar vi efter e-post. Ny verifiering ersätter ägarprövning; du granskar och bekräftar sökningen separat. Tidigare avslagna eller återkallade konton återaktiveras inte automatiskt.</p>}
         <div className="privacy-columns"><div><h3>Det här sparas</h3><p>{shared ? "Gästens slumpmässiga sessionsidentifierare och tolkade utkast. När du vill spara lagras e-postadress, verifieringsavsikt, sökfilter, godkänd profil, samtyckesversion och vilka objekt som skickats. Befintliga medlemsbeslut bevaras; ingen ny ansökningstext behövs."
           : "Din e-postadress, ansökan, medlemsbeslut, sökfilter, godkänd preferensprofil, samtyckesversion och vilka objekt som skickats."} Uppgifterna används för kontot och din valda bevakning. Inga reklamspårare eller analyskakor används. En nödvändig säker sessionskaka håller dig inloggad i högst 12 timmar.</p><p>Overifierade konton raderas efter 48 timmar. Väntande, avslagna och återkallade medlemskap sparas högst 30 dagar, godkända högst 180 dagar. Mejllänkar gäller i 30 minuter.</p></div>
@@ -407,7 +439,8 @@ function App() {
         <p>Vi sparar inte din råa prompt eller en chatthistorik. Utkast med tolkade önskemål och aktuell fråga gäller i 30 minuter och rensas vid underhåll; radering eller återkallat medlemskap tar bort dem direkt. Slutförda AI-kvotposter är pseudonymiserade och rensas efter två dagar, osäkra anrop behålls tills de utretts. En godkänd profil sparas med medlemskapet. AI kan feltolka: granska innan du sparar, eller använd vanliga filter utan AI.</p>
       </section>
     </main>
-    <footer className="site-footer"><span>kommandekollen.</span><a href="#integritet">Integritet & radering</a><a href={`${import.meta.env.BASE_URL}assets/ATTRIBUTION.md`}>Bild & licens</a>{canSearch && <a href="#kallor">Källstatus</a>}<span className="small">{shared ? "Delat lösenord · e-post när du sparar" : "Privat tjänst · medlemskap efter godkännande"}</span></footer>
+    {dialog}
+    <footer hidden={minimal} className="site-footer"><span>kommandekollen.</span><a href="#integritet">Integritet & radering</a><a href={`${import.meta.env.BASE_URL}assets/ATTRIBUTION.md`}>Bild & licens</a>{canSearch && <a href="#kallor">Källstatus</a>}<span className="small">{shared ? "Delat lösenord · e-post när du sparar" : "Privat tjänst · medlemskap efter godkännande"}</span></footer>
   </>;
 }
 createRoot(document.getElementById("root")!).render(<StrictMode><App /></StrictMode>);

@@ -25,12 +25,22 @@ and source readiness; with no ready sources, save paused.
 
 ## Operating Context
 
-Shared mode: password -> guest draft -> reviewed save intent -> email verification
+Shared mode: free-text input -> explicit send -> contextual shared password
+and optional AI-processing consent -> guest draft -> reviewed save intent -> email verification
 in the same browser -> second explicit confirmation. Verification alone never
 saves or activates alerts. Existing owners retain their saved searches and role.
 Rejected/revoked accounts remain blocked. Membership mode retains the former
 application -> verification -> manual approval process. Every email permits
 signed deletion. The public demo is synthetic and never calls AI.
+
+The user explicitly chose an input-only homepage, asking for the password at
+the first search rather than on arrival. Other features remain under "Mer":
+privacy before authentication, manual filters without AI, own search/draft,
+account/login/logout/owner tools and source/result information on request.
+An already-open gate skips password entry, not AI consent. In-memory consent
+covers followups in the current draft only; no inference is triggered on load,
+restore, typing or email verification. Existing searches are never silently
+replaced. There is no hero photo or navigation competing with the input.
 
 ## Capabilities and Constraints
 

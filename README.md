@@ -58,6 +58,13 @@ aldrig hemma i `VITE_*`, JavaScript-paket, git eller Actions-loggar.
   I medlemsläget krävs godkänt konto; i det nya delade lösenordsläget räcker en
   serververifierad gästsession. Migration `0002` och det matchande
   gränssnittet/backend är driftsatta. Lokal standardkonfiguration håller AI avstängd.
+- Den nya startsidan i delat lösenordsläge visar bara fritextrutan, **Skicka**
+  och **Mer**. Lösenord och uttryckligt AI-godkännande efterfrågas vid första
+  sökningen, inte när sidan öppnas. Texten behålls vid avbrott eller fel.
+  **Mer** öppnar integritet, vanliga filter, sparad sökning/utkast och konto.
+  Följdfrågor återanvänder samtycket inom samma utkast; ingen AI körs vid
+  sidladdning eller återläsning. Denna frontendändring kräver bara Pages,
+  inga nya hemligheter, Worker-inställningar eller migrationer.
 - Mobilanpassad, ljus sökyta med Clawpilot-tema; mörkt läge väljs uttryckligen.
   Manuella filter är alternativet utan AI: kommun och bostadstyper,
   reglage för pris/rum/boarea/avgift, valfri
