@@ -323,7 +323,6 @@ export function PreferenceFlow({ apiBase, demo, member, ready, refresh, renderFi
         </div>}
       </div>}
       {!minimal && !demo && <p className="small muted">Built with Llama · <a href="https://github.com/meta-llama/llama-models/blob/main/models/llama3_3/LICENSE" target="_blank" rel="noopener noreferrer">Modellvillkor</a>. Högst sex försök per medlem/IP och sex totalt i piloten per dygn (UTC). Granska alltid tolkningen.</p>}
-      {minimal && !ready && !draft && !receipt && <p className="pilot-note">Just nu sparas sökningar pausade – inga bostadsmejl ännu.</p>}
     </form>
     {receipt && <section className="save-receipt">
       <h2 ref={savedHeading} tabIndex={-1}>{receipt.alertsEnabled ? "Din sökning är sparad och bevakningen startad" : "Din sökning är sparad och pausad"}</h2>

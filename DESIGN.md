@@ -10,14 +10,14 @@ It supplies composition only, not another site's branding, ads, tabs or copy.
 The initial primary action remains exactly "Hitta bostad".
 "Hitta kommande bostäder före andra." is a short secondary value statement below
 the main heading, not a competing headline. Supporting copy qualifies the
-aspiration: "Vi bygger en samlad koll direkt från mäklarna. Målet: hitta ditt
-nästa hem innan annonsen når de stora bostadssajterna."
+aspiration: "Vi bygger en samlad koll direkt från mäklarna."
 It does not claim connected sources, complete coverage, measured speed or buying
 priority. Early source-direct discovery is the core value; AI is optional help.
 The input label remains "Beskriv ditt nästa hem". Its helper says the AI creates
 a proposal, needs a password and asks for email only at saving. Followups use
 "Uppdatera sökförslaget". The public feed follows the prompt/review immediately.
-A calm pilot note says searches currently save paused without housing emails.
+The user removed the goal sentence, global pause note and public-feed subtitle
+without replacement. Paused-only disclosures remain in review, saving and receipts.
 Password, email, private source panels, saved profiles and full legal text stay
 progressively disclosed. The new background is decorative, not a property listing
 or a photo card. No inspiration image is rendered inside the public feed.

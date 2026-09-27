@@ -73,8 +73,8 @@ aldrig hemma i `VITE_*`, JavaScript-paket, git eller Actions-loggar.
   gränssnittet/backend är driftsatta. Lokal standardkonfiguration håller AI avstängd.
 - Startsidan i delat lösenordsläge har logotyp, meny, en kort förklaring av
   tjänsten och en sidfot med integritet och kontakt. Fritextrutan och
-  **Hitta bostad** står ovanför objektlistan; en lugn pilotnotis förklarar
-  att sökningar sparas pausade utan bostadsmejl. Lösenord och uttryckligt
+  **Hitta bostad** står ovanför objektlistan. Pausat sparande förklaras
+  vid granskning och sparande, inte i en global pilotnotis. Lösenord och uttryckligt
   AI-godkännande efterfrågas vid första sökningen, inte när sidan öppnas.
   Texten behålls vid avbrott, fel och navigation till information.
   **Meny** öppnar vanliga filter, sparad sökning/utkast och konto.

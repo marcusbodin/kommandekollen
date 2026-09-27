@@ -246,8 +246,13 @@ async function websiteSurface(page: Page) {
   await expect(page.getByRole("button", { name: "Meny", exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Vad är viktigt i ditt nästa hem?" })).toBeVisible();
   await expect(page.locator(".home-value")).toHaveText("Hitta kommande bostäder före andra.");
-  await expect(page.locator(".home-intro p:not(.home-value)")).toHaveText("Vi bygger en samlad koll direkt från mäklarna. Målet: hitta ditt nästa hem innan annonsen når de stora bostadssajterna.");
-  await expect(page.locator(".pilot-note")).toHaveText("Just nu sparas sökningar pausade – inga bostadsmejl ännu.");
+  await expect(page.locator(".home-intro p:not(.home-value)")).toHaveText("Vi bygger en samlad koll direkt från mäklarna.");
+  await expect(page.locator(".pilot-note,.public-listings-heading p")).toHaveCount(0);
+  for (const removed of [
+    "Målet: hitta ditt nästa hem innan annonsen når de stora bostadssajterna.",
+    "Just nu sparas sökningar pausade – inga bostadsmejl ännu.",
+    "Kommande bostäder i Stockholms län. Bläddra och filtrera utan lösenord eller AI.",
+  ]) await expect(page.getByText(removed, { exact: false })).toHaveCount(0);
   await expect(page.locator("footer:visible").getByRole("link", { name: "Kontakt", exact: true })).toHaveAttribute("href", "mailto:kontakt@kommandekollen.se");
   await expect(page.locator("footer:visible")).toContainText("©");
   await expect(page.locator(".home-photo,.inspiration")).toHaveCount(0);
@@ -707,7 +712,7 @@ test("pinned mint presentation uses borderless depth, filled states and accessib
   const prompt = page.locator("#housing-prompt");
   await expect(page.locator(".home-photo,.inspiration")).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Foto: Francesca Tosolini · bild & licens" })).toHaveCount(0);
-  const targets = ".home-intro h1,.home-intro p,.prompt-shell label,#housing-prompt,#prompt-helper,.prompt-shell .primary,.pilot-note,.public-listings h2,.public-listings p,.public-listings summary,.compact-header .brand,.compact-nav a,.nav-essential button,.site-menu-toggle,.compact-footer span,.compact-footer a";
+  const targets = ".home-intro h1,.home-intro p,.prompt-shell label,#housing-prompt,#prompt-helper,.prompt-shell .primary,.public-listings h2,.public-listings p,.public-listings summary,.compact-header .brand,.compact-nav a,.nav-essential button,.site-menu-toggle,.compact-footer span,.compact-footer a";
   const reports = [];
   for (const theme of ["light", "dark"] as const) {
     if (theme === "dark") {
@@ -747,7 +752,7 @@ test("pinned mint presentation uses borderless depth, filled states and accessib
     await expect(primary).toHaveCSS("color", "rgb(32, 58, 57)");
     await expect(primary).toHaveCSS("border-radius", "999px");
     await borderlessSurfaces(page, ".prompt-form,.home-intro,.prompt-shell .primary,.site-menu-toggle,.public-filters > summary", true);
-    await borderlessSurfaces(page, ".prompt-shell,#housing-prompt,.compact-header,.compact-footer,.pilot-note");
+    await borderlessSurfaces(page, ".prompt-shell,#housing-prompt,.compact-header,.compact-footer");
     await expect(page.locator(".site-menu-toggle")).toHaveCSS("background-color", "rgb(92, 189, 185)");
     await expect(page.locator(".site-menu-toggle")).toHaveCSS("color", "rgb(32, 58, 57)");
     const text = await readableContrast(page, targets);

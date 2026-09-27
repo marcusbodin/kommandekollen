@@ -137,8 +137,10 @@ then input. It does not authorize reference-site branding, ads or photos.
 The earlier inspiration card remains removed; listings have no image field.
 "Hitta kommande bostäder före andra." stays as supporting value copy and the
 initial primary CTA remains exactly "Hitta bostad".
-Its introduction explicitly says "Vi bygger" and "Målet:", distinguishing the
+Its introduction explicitly says "Vi bygger", distinguishing the
 source-direct discovery goal from the zero-source pilot actually operating.
+The user removed the goal sentence, global pause note and public-feed subtitle;
+paused-only review/save/receipt information and backend guards remain.
 The adjacent helper explains that the protected AI step makes a search proposal,
 not a saved profile. Public browsing/filtering is separate and needs no AI.
 

@@ -24,7 +24,7 @@ configuration, secret or migration.
 The product goal is early discovery directly at brokers, before larger portals,
 not an all-source or first-buyer guarantee. Optional AI clarifies wishes; public
 reading/filtering uses none. The homepage explicitly frames that discovery goal
-as "Vi bygger"/"Målet:". The supporting statement "Hitta kommande bostäder före andra"
+as "Vi bygger". The supporting statement "Hitta kommande bostäder före andra"
 and initial "Hitta bostad" action do not change that goal into proven coverage.
 Zero connected sources remains an honest empty state; the prompt helper explains
 that the gated AI action creates a search proposal, not a saved profile.

@@ -65,7 +65,6 @@ export function PublicListings({ apiBase, renderFilters, renderListing }: {
   return <section className="public-listings" aria-labelledby="public-listings-title">
     <div className="public-listings-heading">
       <h2 id="public-listings-title" ref={heading} tabIndex={-1}>Senaste kommande bostäder</h2>
-      <p className="muted">Kommande bostäder i Stockholms län. Bläddra och filtrera utan lösenord eller AI.</p>
     </div>
     <details ref={filterDetails} className="public-filters">
       <summary>Filtrera objekt</summary>

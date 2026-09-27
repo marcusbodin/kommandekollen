@@ -429,7 +429,7 @@ function App() {
             intro={<section className="home-intro" aria-labelledby="home-title">
               <h1 id="home-title">Vad är viktigt i ditt nästa hem?</h1>
               <p className="home-value">Hitta kommande bostäder före andra.</p>
-              <p>Vi bygger en samlad koll direkt från mäklarna. Målet: hitta ditt nästa hem innan annonsen når de stora bostadssajterna.</p>
+              <p>Vi bygger en samlad koll direkt från mäklarna.</p>
             </section>}
             controlsRef={preferenceControls}
             member={guestFlow || !gate ? null : member} guest={guestFlow || !gate ? { aiReady: gate?.aiReady ?? false } : undefined}
