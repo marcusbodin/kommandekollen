@@ -92,6 +92,10 @@ preflight are allowed. The tool never constructs these requests, changes the
 page's parameters, reads API response bodies itself, or replays an endpoint.
 Images/media/fonts, trackers/ads (including Adfenix and Google Tag Manager),
 unrelated origins and contact/account/write operations are blocked.
+An unclassified data-host operation (including a newly added search parameter)
+also fails the entire preview explicitly. Blocking it is not evidence that
+retained cards are current; no automatic allowlist expansion or request replay
+occurs.
 `data.notar.se/robots.txt` returned **403**: no usable data-host policy or reuse
 grant was established. This differs from an actual application access denial:
 the page's public data requests returned 200 anonymously. The local tool records
@@ -151,8 +155,11 @@ This command launches one fresh browser at the fixed official index, selects
 Separate local-browser caps: 100 allowed / 200 attempted requests, 12 MB decoded
 traffic, 30-second browser-phase deadline, 15-second launch/navigation deadlines,
 10-second readiness deadlines, 500 KB rendered DOM and 50 cards. Fresh robots
-checks use the existing 12-second/64 KB bounds, followed by at least two seconds
-(or the published crawl delay, capped at 60 seconds) before the page load.
+checks use the existing 12-second/64 KB bounds, followed by a two-second
+initial wait before the page load. A positive published `Crawl-delay` on either
+the page or data host is rejected as incompatible with this browser mode:
+a one-time startup sleep does not enforce per-request spacing. No browser is
+launched in that case. Zero or absent delay retains the initial two-second wait.
 The website's own functional requests run normally within that explicit browser
 budget; this is not the production collector's two-request budget.
 

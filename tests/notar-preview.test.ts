@@ -101,11 +101,17 @@ describe("bounded normal-browser preview policy", () => {
       .mockResolvedValueOnce(new Response("", { status: 403 }));
     expect(await notarRobots(missingData)).toMatchObject({ dataStatus: 403, data: null, delay: 2000 });
   });
-  it("honors published delays and rejects unavailable or over-budget robot policies", async () => {
-    const delayed = vi.fn<typeof fetch>().mockImplementation(async () => new Response("User-agent: *\nAllow: /\nCrawl-delay: 3"));
-    expect((await notarRobots(delayed)).delay).toBe(3000);
-    const excessive = vi.fn<typeof fetch>().mockImplementation(async () => new Response("User-agent: *\nAllow: /\nCrawl-delay: 61"));
-    await expect(notarRobots(excessive)).rejects.toThrow("delay");
+  it.each([
+    ["www.notar.se", 1], ["www.notar.se", 3],
+    ["data.notar.se", 1], ["data.notar.se", 3],
+  ])("rejects positive per-request crawl delay on %s (%s seconds)", async (host, delay) => {
+    const delayed = vi.fn<typeof fetch>().mockImplementation(async input => new Response(
+      `User-agent: *\nAllow: /\nCrawl-delay: ${new URL(String(input)).hostname === host ? delay : 0}`));
+    await expect(notarRobots(delayed)).rejects.toMatchObject({ code: "robots" });
+  });
+  it("keeps the initial two-second wait for zero delay and rejects unavailable policies", async () => {
+    const zero = vi.fn<typeof fetch>().mockImplementation(async () => new Response("User-agent: *\nAllow: /\nCrawl-delay: 0"));
+    expect((await notarRobots(zero)).delay).toBe(2000);
     const failed = vi.fn<typeof fetch>().mockResolvedValue(new Response("", { status: 500 }));
     await expect(notarRobots(failed)).rejects.toThrow("500");
   });
@@ -160,6 +166,14 @@ describe("actual Chromium with intercepted synthetic pages only", () => {
   }, 15_000);
   it("does not return retained cards when the public search request fails", async () => {
     await syntheticBrowser(fixture.replace("</body>", '<script>fetch("https://data.notar.se/objects?limit=24").catch(()=>{})</script></body>'), 503);
+    await expect(renderNotarPreview()).rejects.toMatchObject({ code: "not_ready" });
+  }, 15_000);
+  it.each([
+    "/objects?limit=24&newParameter=synthetic",
+    "/areas?country=synthetic&newParameter=synthetic",
+    "/changed-search?newParameter=synthetic",
+  ])("fails closed on unclassified data-host operations with retained cards: %s", async path => {
+    await syntheticBrowser(fixture.replace("</body>", `<script>fetch("https://data.notar.se${path}").catch(()=>{})</script></body>`));
     await expect(renderNotarPreview()).rejects.toMatchObject({ code: "not_ready" });
   }, 15_000);
   it("honors a published data-host robots exclusion", async () => {

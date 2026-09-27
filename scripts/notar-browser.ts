@@ -42,9 +42,9 @@ export async function notarRobots(fetcher: typeof fetch = fetch) {
     if (!(error instanceof CollectionError) || ![403, 404].includes(dataStatus)) throw error;
   }
   const data = dataText === null ? null : robotsParser(dataUrl, dataText);
-  const delay = Math.max(LIMITS.delayMs, (page.getCrawlDelay(USER_AGENT) || 0) * 1000, (data?.getCrawlDelay(USER_AGENT) || 0) * 1000);
-  if (delay > 60_000) throw new NotarPreviewError("robots", "Crawl delay exceeds the local preview budget");
-  return { data, dataStatus, delay };
+  if ((page.getCrawlDelay(USER_AGENT) || 0) > 0 || (data?.getCrawlDelay(USER_AGENT) || 0) > 0)
+    throw new NotarPreviewError("robots", "Positive per-request crawl delay is incompatible with this bounded browser mode");
+  return { data, dataStatus, delay: LIMITS.delayMs };
 }
 
 export async function renderNotarPreview() {
@@ -100,7 +100,13 @@ export async function renderNotarPreview() {
           method: request.method(), parameterNames: [...new Set(url.searchParams.keys())].slice(0, 20), role,
         });
       }
-      if (!role) { metrics.blockedRequests++; await abort(); return; }
+      if (!role) {
+        metrics.blockedRequests++;
+        await abort();
+        if (url.hostname === "data.notar.se")
+          stop("not_ready", "Unsupported data-host operation was blocked; retained cards are not a fresh preview");
+        return;
+      }
       if ((role === "areas" || role === "objects") && policy.data && policy.data.isAllowed(url.toString(), USER_AGENT) !== true) {
         await abort(); stop("robots", "Data-host robots excludes the page's public operation"); return;
       }
