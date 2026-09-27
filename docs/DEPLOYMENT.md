@@ -29,9 +29,10 @@ to the owner's inbox succeeded.
 Frontend HTTPS is valid and enforced; HTTP redirects to the canonical HTTPS URL.
 The public controller/contact and provider-location disclosures are published.
 The owner separately confirmed the account's **Workers Free** plan, not only
-the zone's Free DNS plan. The logo/public-feed website is published by Pages run
-`36305751767` from feature commit `b2dbb5f`, including the separate supplied-logo
-commit `ec1bf12`. The matching Worker was deployed first; its active version is
+the zone's Free DNS plan. The photographic-hero website is published by Pages run
+`36307458728` from feature commit `44dff88`, retaining the public-feed commit
+`b2dbb5f` and separate supplied-logo commit `ec1bf12`. This latest release changed
+Pages only. The Worker deployed for the preceding public-feed release remains
 `88c17650-e6e9-4b9c-8074-11972ba86570`. `SHARED_ACCESS_PASSWORD` was generated in a
 private local terminal and stored as a Worker secret; its value is not in the
 repository, chat or deployment output. The owner saved their copy.
@@ -53,10 +54,26 @@ the housing prompt, with explicit "Ladda fler" pagination. Browsing does not
 require a password, email or AI. The supplied house/radar logo is now used in
 both headers and as a local favicon. All inspiration-photo components and their
 visible credits have been removed; the historical licensed files remain unused.
-The owner's exact headline is "Hitta kommande bostäder före andra" and the main
-button is "Hitta bostad". Supporting copy distinguishes the service's intended
+The initial headline was "Hitta kommande bostäder före andra" and the main
+button remains "Hitta bostad". Supporting copy distinguishes the service's intended
 early-discovery value from actual source coverage; no coverage, latency or
 purchase guarantee is made. Searches still save paused and send no property mail.
+
+The owner's subsequent photographic reference adds a full-width decorative
+background below the header. On desktop, the search card is on the left and
+"Vad är viktigt i ditt nästa hem?" is the H1 on the right; the previous sales
+headline remains supporting text. At 960 pixels and below, the question precedes
+the input. Opaque surfaces protect text readability in both themes. Expanded
+review/manual/save content spans below both columns without replacing the mounted
+preference flow; the public feed stays outside the hero on a plain surface.
+
+The background is Holger Ellgaard's photograph of Sodra Angby, served locally as
+`stockholm-hero-800.webp` (800 by 500 pixels, 104,498 bytes) on mobile and
+`stockholm-hero-1600.webp` (1600 by 1000 pixels, 295,120 bytes) on desktop.
+Both cropped/resized WebP derivatives retain the original CC BY-SA 3.0 license.
+"Bakgrundsfoto & licens" links to `assets/ATTRIBUTION.md` with the photographer,
+source, license and modifications. The image is decorative, not a property
+listing or endorsement; its license does not relicense the application or logo.
 
 The owner's supplied visual reference now defines the palette: pink `#fbe3e8`,
 blue-green `#5cbdb9` and mint `#ebf6f5`. White open surfaces, Georgia display
@@ -74,19 +91,25 @@ Native control affordances and visible keyboard/feedback focus remain intact.
 The new public feed has separate request/filter state; existing private
 consent, draft revision and explicit-save guards remain in place.
 
-The published bundle is `index-CIsGmyhL.js`, with `index-CQmU8vwY.css`.
+The published bundle is `index-CPamyJS0.js`, with `index-DKSx1UPc.css`.
 Anonymous production `GET /api/listings` returned HTTP 200 with exactly
 `{"availability":"no_sources","items":[],"total":0,"hasMore":false,"nextCursor":null}`.
-Malformed cursors and unsupported limit parameters returned 400. Existing
+At the preceding Worker rollout, malformed cursors and unsupported limit
+parameters returned 400. Existing
 `/api/me`, `/api/catalog` and guest draft routes returned 401 without the gate.
 The public response excludes accounts, drafts, private source metadata and
 license references. Query work remains bounded by the existing 200-object cap;
 no source or capacity increase was enabled.
 
 Actual live browser checks at 320, 360, 390, 430 and 1440 pixels confirmed the
-new logo/favicon, pinned copy, public section below the prompt, absent inspiration
-images, single-row mobile header, 16-pixel fields, 44-pixel buttons and no
-horizontal overflow. Anonymous filter application and refresh returned the
+unchanged logo/favicon, new question, full-width hero, public section below the
+hero, absent old inspiration images, single-row mobile header, 16-pixel fields,
+44-pixel buttons and no horizontal overflow. At 1440 pixels, the actual input
+and right-hand H1 overlap vertically by about 88 pixels. On mobile, the question
+precedes the input and the input starts before 500 pixels. The expected local
+responsive image loaded at every checked width, and the attribution URL returned
+the complete notice. No third-party image or font requests were made.
+Anonymous filter application and refresh returned the
 truthful no-sources state without cookies and preserved the typed synthetic
 housing text. "Ladda fler" stays hidden for an empty feed. Populated pagination
 and filter races were exercised only with local synthetic Worker/D1 fixtures,
@@ -99,8 +122,9 @@ light/dark surfaces. A bounded desktop/mobile visual batch was inspected.
 Soft shadows are not claimed as 3:1 boundaries or full WCAG certification.
 Browser checks attempted no POST, consumed no AI calls and reported no runtime
 errors or insecure subresource requests. Only normal traffic-rate counters are
-updated by anonymous browsing. No migrations, secrets, quotas or source
-authorizations changed during this Worker-and-Pages release.
+updated by anonymous browsing. No Worker deployment, API/configuration change,
+migration, secret, quota or source authorization changed during this Pages-only
+hero release.
 
 Still required during the pilot: broader guest/account revocation and
 withdrawal scenarios, continued provider/privacy review, and
