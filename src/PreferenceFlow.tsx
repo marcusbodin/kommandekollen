@@ -3,6 +3,7 @@ import { z } from "zod";
 import { defaultFilters, municipalities, types, type Filters } from "../shared/model";
 import { describeFilters, draftSchema, hardDescription, manualProfile, profileSchema, type Draft, type Profile } from "../shared/preferences";
 import type { Authorize, SearchAccess } from "./SharedAccess";
+import { privateFetch } from "./access";
 
 type Account = { profile: Profile; searchVersion: number; aiReady: boolean; alertsEnabled: boolean };
 const receiptSchema = z.object({ message: z.string(), searchVersion: z.number().int().nonnegative(), profile: profileSchema, alertsEnabled: z.boolean() });
@@ -56,7 +57,7 @@ export function PreferenceFlow({ apiBase, demo, member, ready, refresh, renderFi
     if (!apiBase) throw new Error("API-adressen saknas. Inget har skickats.");
     let response: Response;
     try {
-      response = await fetch(`${apiBase}/api/${(access?.guest ?? !!guest) ? "guest/" : ""}preferences/${path}`, { method: body ? "POST" : "GET",
+      response = await privateFetch(`${apiBase}/api/${(access?.guest ?? !!guest) ? "guest/" : ""}preferences/${path}`, { method: body ? "POST" : "GET",
         credentials: "include", headers: body ? { "Content-Type": "application/json" } : undefined,
         body: body ? JSON.stringify(body) : undefined, signal: signal ?? AbortSignal.timeout(25000) });
     } catch {

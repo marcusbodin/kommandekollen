@@ -10,17 +10,20 @@ and operator-only secret/rotation steps are in [SHARED_ACCESS.md](SHARED_ACCESS.
 The operator deployed this mode on 2026-09-26 after the additive migration.
 The previous owner search and historical reservations were preserved.
 
-## Public listings
+## Private listings
 
-The user approved public upcoming facts while retaining password protection for
-AI and personal searches. The core goal is early source-direct discovery, not a
+The latest user decision supersedes public upcoming facts: only the owner and
+invited password holders may browse. Email and AI consent are not required to
+browse; they retain separate roles for personal searches. The core goal is early source-direct discovery, not a
 promise of complete coverage, arrival before every portal or purchase priority.
 No new source authorization accompanies this decision. Current source count is
 zero, and no fixture/demo data is automatically substituted.
 
-`GET /api/listings` runs after existing public/IP rate checks and before the
-shared guest guard. It requires `serviceReady` and valid access configuration;
-disabled/unconfigured service returns explicit HTTP 503 `not_ready`, not empty
+`GET /api/listings` runs after existing public/IP rate checks and the shared
+guest guard (or approved-member authentication in legacy mode), before parsing
+queries or returning any facts/counts/cursors. It requires `serviceReady` and
+valid access configuration; disabled/unconfigured service returns explicit
+HTTP 503 `gate_unavailable` in shared mode or `not_ready` in legacy mode, not empty
 success. CORS, `no-store`, allowed origins, 180/IP/hour and 10,000/day remain
 unchanged. No cache, migration, index, secret or configuration is added.
 
@@ -40,7 +43,7 @@ Response contract is strict `PublicListingsPage` in `shared/public-listings.ts`:
 | `total` | Current matching count, at most 200; this may change between requests. |
 | `hasMore`, `nextCursor` | More current matching facts follow this page; otherwise false and null. |
 
-Public item fields are exactly `id`, `sourceId`, `status`, `county`,
+Private item fields are exactly `id`, `sourceId`, `status`, `county`,
 `municipality`, `area`, `address`, `type`, nullable `price/rooms/size/fee`, `url`,
 `firstSeen` and `lastSeen`. There are no source runs, license references, feed
 URLs, account/profile/draft/consent fields or internal source error codes.
@@ -60,12 +63,12 @@ refresh starts at the newest item. This is a changing feed, not a frozen snapsho
 First seen is this service's observation, **not original publication time**.
 Last checked is preserved; facts older than 48 hours remain visibly marked.
 
-The browser sends `credentials:"omit"`, displays only its loaded count, and
-keeps public filters independent of the personal draft. An explicit "Använd filter"
+The browser sends `credentials:"include"` with `cache:"no-store"`, displays only
+its loaded count, and keeps browse filters independent of the personal draft. An explicit "Använd filter"
 applies editing controls; changing applied filters resets results/cursor and
 aborts obsolete requests. Request generations reject late responses, and a
 synchronous guard rejects duplicate load-more clicks. Failed load-more retains
-cards with an explicit retry. Public reads never create sessions, infer, save
+cards with an explicit retry, except access loss clears them. Private reads never create sessions, infer, save
 or enqueue mail; only existing traffic-rate counters can change.
 The old catalog, private source-run view and all personal/owner APIs stay gated.
 The 12-card UI is **not** unlimited collection or Free CPU capacity certification.
@@ -76,7 +79,7 @@ The following application/approval behavior applies when `ACCESS_MODE=membership
 which remains the local default, not the active production mode.
 
 The public Pages bundle contains code and an explicitly synthetic demo, never
-real inventory. Real public facts are fetched through the separate bounded API.
+real inventory. Real facts require the separate authenticated bounded API.
 `GET /api/status` exposes configuration readiness and capacity, never owner
 identity, real listings, source-run results or member data.
 
@@ -119,8 +122,8 @@ an explicit POST to avoid scanner side effects.
 approved Cloudflare Free authoritative DNS while retaining Inleed as registrar,
 so an active Cloudflare zone can support the API Worker Custom Domain. Preserve
 host-only `__Host-kk_session` cookies on the API: do not add a `Domain` attribute.
-Private frontend fetches still require `credentials: "include"`; public-listings
-fetches explicitly omit credentials. The API allows only
+All private frontend fetches, including listing pages, require
+`credentials: "include"` and no-store. The API allows only
 the exact `https://kommandekollen.se` origin with credentialed CORS. SameSite
 does not replace these Origin checks. No bearer-token redesign is needed.
 Cloudflare DNS and the API custom domain are active with API TLS verified.

@@ -43,8 +43,12 @@ async function route(request: Request, env: Env): Promise<Response> {
       accessMode: sharedAccess(env) ? "shared" : "membership", privacyContact: env.PRIVACY_CONTACT || null });
   }
   if (path === "/api/gate" || path === "/api/gate/logout") return gateRoute(request, env, ipHash);
-  if (request.method === "GET" && path === "/api/listings") return publicListings(request, env);
   const guest = path !== "/api/unsubscribe" && sharedAccess(env) ? await authenticateGuest(request, env) : null;
+  if (path === "/api/listings") {
+    if (!guest) await authenticate(request, env);
+    if (request.method === "GET") return publicListings(request, env);
+    throw new ApiError(404, "not_found", "Sidan finns inte.");
+  }
   if (path.startsWith("/api/guest/preferences/")) {
     if (!guest) throw new ApiError(404, "not_found", "Sidan finns inte.");
     return guestPreferenceRoute(request, env, ipHash, guest);

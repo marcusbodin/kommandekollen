@@ -72,8 +72,7 @@ test.beforeEach(async ({ page }) => {
   await page.context().addCookies([{ name: "kk_session", value: token, domain: "127.0.0.1", path: "/", httpOnly: true, sameSite: "Strict" }]);
   await page.route(`${api}/**`, async route => {
     const url = new URL(route.request().url());
-    const response = await route.fetch({ url: `${base}${url.pathname}${url.search}`,
-      ...(url.pathname === "/api/listings" ? { headers: { ...route.request().headers(), cookie: "" } } : {}) });
+    const response = await route.fetch({ url: `${base}${url.pathname}${url.search}` });
     await route.fulfill({ response });
   });
 });
@@ -883,12 +882,20 @@ async function browsingState() {
   return Promise.all(["subscriptions", "sessions", "guest_sessions", "guest_drafts", "guest_saves", "search_drafts", "ai_attempts", "outbox", "quotas", "gate_logins"]
     .map(async table => ({ table, rows: (await env.DB.prepare(`SELECT * FROM ${table}`).all()).results })));
 }
-test("public feed reads real HTTP/D1 pages anonymously and filters all objects without changing the personal search", async ({ page }) => {
+async function browseWithPassword(page: Page) {
+  await page.getByRole("button", { name: "Öppna bostadslistan", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByRole("checkbox")).toHaveCount(0);
+  await expect(dialog.locator('input[type="email"]')).toHaveCount(0);
+  await dialog.getByLabel("Gemensamt lösenord").fill(gatePassword);
+  await dialog.getByRole("button", { name: "Visa bostäder", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+}
+test("private feed reads real HTTP/D1 pages after password only and filters without changing the personal search", async ({ page }) => {
   env.ACCESS_MODE = "shared"; env.SHARED_ACCESS_PASSWORD = gatePassword;
   await seedPublicInventory();
   await env.DB.prepare("UPDATE subscriptions SET preference_profile=?,search_version=4").bind(JSON.stringify(manualProfile({ ...defaultFilters, maxPrice: 4250123 }))).run();
   await page.context().clearCookies();
-  const before = await browsingState();
   const reads: { url: string; credentials: RequestCredentials }[] = [];
   await page.exposeFunction("capturePublicRead", (url: string, credentials: RequestCredentials) => { reads.push({ url, credentials }); });
   await page.addInitScript(() => {
@@ -905,6 +912,9 @@ test("public feed reads real HTTP/D1 pages anonymously and filters all objects w
   page.on("pageerror", error => errors.push(error.message));
   await page.goto("/");
   const feed = page.locator(".public-listings"), cards = feed.locator(".property"), prompt = page.locator("#housing-prompt");
+  await expect(cards).toHaveCount(0);
+  await browseWithPassword(page);
+  const before = await browsingState();
   await expect(cards).toHaveCount(12);
   await expect(cards.first()).toContainText("Syntetiska gatan 29");
   await websiteSurface(page);
@@ -917,6 +927,8 @@ test("public feed reads real HTTP/D1 pages anonymously and filters all objects w
     contrast.push(await readableContrast(page, ".public-listings h2,.public-listings h3,.public-listings p,.public-listings a,.public-listings dt,.public-listings dd,.public-listings span,.public-listings summary,.public-listings button"));
     await borderlessSurfaces(page, ".public-listings .property,.public-filters > summary,.public-load-more button", true);
     await page.locator(".public-filters > summary").focus();
+    await page.keyboard.press("Tab");
+    await page.keyboard.press("Shift+Tab");
     await expect(page.locator(".public-filters > summary")).toHaveCSS("outline-width", "3px");
     contrast.push(await readableContrast(page, ".public-filters > summary", "focus"));
     if (process.env.VISUAL_REVIEW === "1") {
@@ -968,12 +980,12 @@ test("public feed reads real HTTP/D1 pages anonymously and filters all objects w
   await expect(prompt).toHaveValue("Villa i Nacka, gärna en trädgård.");
   await expect(cards).toHaveCount(1);
   await page.getByRole("button", { name: "Hitta bostad", exact: true }).click();
-  await expect(page.getByLabel("Gemensamt lösenord")).toBeFocused();
+  await expect(page.getByLabel("Gemensamt lösenord")).toHaveCount(0);
   await expect(page.getByLabel("Jag vill använda AI-texthjälpen")).not.toBeChecked();
   await page.keyboard.press("Escape");
-  expect(reads.every(read => read.credentials === "omit")).toBe(true);
+  expect(reads.every(read => read.credentials === "include")).toBe(true);
   expect(await browsingState()).toEqual(before);
-  expect(calls).toBe(0); expect(gatePosts).toBe(0); expect(errors).toEqual([]);
+  expect(calls).toBe(0); expect(gatePosts).toBe(1); expect(errors).toEqual([]);
   await test.info().attach("public-feed-contrast", { body: JSON.stringify(contrast), contentType: "application/json" });
 });
 
@@ -987,16 +999,17 @@ async function holdPublicResponse(page: Page, match: (url: URL) => boolean) {
     const url = new URL(route.request().url());
     if (!once || !match(url)) { await route.fallback(); return; }
     once = false;
-    const response = await route.fetch({ url: `${base}${url.pathname}${url.search}`, headers: { ...route.request().headers(), cookie: "" } });
+    const response = await route.fetch({ url: `${base}${url.pathname}${url.search}` });
     reached(); await held;
     await route.fulfill({ response }); done();
   });
   return { release, received, completed };
 }
-test("public feed retains cards on failed load more and ignores late pages and old filter responses", async ({ page }) => {
+test("private feed retains cards on failed load more and ignores late pages and old filter responses", async ({ page }) => {
   env.ACCESS_MODE = "shared"; env.SHARED_ACCESS_PASSWORD = gatePassword;
   await seedPublicInventory(); await page.context().clearCookies();
   await page.goto("/");
+  await browseWithPassword(page);
   const feed = page.locator(".public-listings"), cards = feed.locator(".property");
   await expect(cards).toHaveCount(12);
   await page.locator("#housing-prompt").fill("Min oskickade bostadstext.");
@@ -1032,24 +1045,20 @@ test("public feed retains cards on failed load more and ignores late pages and o
   await feed.getByRole("button", { name: "Ladda fler", exact: true }).click();
   await expect(cards).toHaveCount(14);
   await expect(page.locator("#housing-prompt")).toHaveValue("Min oskickade bostadstext.");
-  expect(calls).toBe(0); expect(gatePosts).toBe(0);
+  expect(calls).toBe(0); expect(gatePosts).toBe(1);
 });
 
-test("public feed distinguishes no sources, unready service, empty inventory and no filter matches", async ({ page }) => {
+test("private feed distinguishes no sources, empty inventory and no filter matches", async ({ page }) => {
   env.ACCESS_MODE = "shared"; env.SHARED_ACCESS_PASSWORD = gatePassword;
   await page.context().clearCookies();
   await page.goto("/");
+  await browseWithPassword(page);
   const feed = page.locator(".public-listings");
   await expect(feed).toContainText("Inga bostadskällor är anslutna ännu. Därför visas inga bostäder just nu.");
   await expect(feed.locator(".property")).toHaveCount(0);
-  env.SERVICE_ENABLED = "false";
-  await feed.getByRole("button", { name: "Uppdatera listan" }).click();
-  await expect(feed.getByRole("alert")).toContainText("Objektlistan är inte aktiverad");
-  await expect(feed).not.toContainText("Inga bostadskällor är anslutna ännu");
-  env.SERVICE_ENABLED = "true";
   await seedPublicInventory();
   await env.DB.prepare("UPDATE listings SET active=0").run();
-  await feed.getByRole("button", { name: "Försök igen", exact: true }).click();
+  await feed.getByRole("button", { name: "Uppdatera listan" }).click();
   await expect(feed.getByRole("heading", { name: "Inga kommande objekt just nu" })).toBeVisible();
   await env.DB.prepare("UPDATE listings SET active=1").run();
   await feed.locator(":scope > details > summary").click();
@@ -1059,5 +1068,36 @@ test("public feed distinguishes no sources, unready service, empty inventory and
   await feed.getByRole("button", { name: "Rensa filter", exact: true }).click();
   await expect(feed.locator(".property")).toHaveCount(12);
   await expect(feed.getByRole("button", { name: "Ladda fler", exact: true })).toBeVisible();
-  expect(calls).toBe(0); expect(gatePosts).toBe(0);
+  expect(calls).toBe(0); expect(gatePosts).toBe(1);
+});
+
+test("private feed clears facts and late pages on logout and rejects rotated access without losing housing text", async ({ page }) => {
+  env.ACCESS_MODE = "shared"; env.SHARED_ACCESS_PASSWORD = gatePassword;
+  await seedPublicInventory(); await page.context().clearCookies();
+  const reads: string[] = [];
+  page.on("request", request => { if (new URL(request.url()).origin === api) reads.push(new URL(request.url()).pathname); });
+  await page.goto("/");
+  const feed = page.locator(".public-listings"), cards = feed.locator(".property");
+  await page.locator("#housing-prompt").fill("Texten ska vara kvar efter stängd åtkomst.");
+  await browseWithPassword(page);
+  await expect(cards).toHaveCount(12);
+  expect(reads).not.toContain("/api/me");
+  const oldPage = await holdPublicResponse(page, url => url.searchParams.has("cursor"));
+  await feed.getByRole("button", { name: "Ladda fler", exact: true }).click();
+  await oldPage.received;
+  await more(page, "Konto");
+  await page.getByRole("button", { name: "Stäng åtkomsten", exact: true }).click();
+  await expect(cards).toHaveCount(0);
+  oldPage.release(); await oldPage.completed;
+  await expect(cards).toHaveCount(0);
+  await expect(feed).not.toContainText("inlästa objekt");
+  await expect(page.locator("#housing-prompt")).toHaveValue("Texten ska vara kvar efter stängd åtkomst.");
+  await browseWithPassword(page);
+  await expect(cards).toHaveCount(12);
+  env.SHARED_ACCESS_PASSWORD = "d".repeat(64);
+  await feed.getByRole("button", { name: "Uppdatera listan", exact: true }).click();
+  await expect(cards).toHaveCount(0);
+  await expect(feed.getByRole("button", { name: "Öppna bostadslistan", exact: true })).toBeVisible();
+  await expect(page.locator("#housing-prompt")).toHaveValue("Texten ska vara kvar efter stängd åtkomst.");
+  expect(calls).toBe(0);
 });

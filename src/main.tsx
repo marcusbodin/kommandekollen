@@ -10,6 +10,7 @@ import { PreferenceFlow, type PreferenceControls } from "./PreferenceFlow";
 import { gateSchema, GateStatus, useSearchAccess, type Gate } from "./SharedAccess";
 import { PublicListings } from "./PublicListings";
 import type { PublicListing } from "../shared/public-listings";
+import { accessGeneration, closePrivateAccess, onAccessClosed, privateFetch } from "./access";
 import "./style.css";
 
 const apiBase = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
@@ -56,7 +57,7 @@ async function post(path: string, body: unknown): Promise<string> {
   if (!apiBase) throw new Error("API-adressen är inte konfigurerad. Ingen begäran har skickats.");
   let response: Response;
   try {
-    response = await fetch(`${apiBase}${path}`, {
+    response = await privateFetch(`${apiBase}${path}`, {
       method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), signal: AbortSignal.timeout(20_000),
     });
   } catch { throw new Error("Kunde inte nå tjänsten. Kontrollera anslutningen och försök igen. Begäran kan ha nått servern."); }
@@ -65,6 +66,7 @@ async function post(path: string, body: unknown): Promise<string> {
   catch { throw new Error("Tjänsten svarade oväntat. Försök igen senare."); }
   if (!response.ok) throw new Error(result.message || "Begäran misslyckades. Försök igen senare.");
   if (typeof result.message !== "string") throw new Error("Bekräftelse saknas i serverns svar.");
+  if (path === "/api/logout" || path === "/api/delete-account") closePrivateAccess(true);
   return result.message;
 }
 function ActionPage({ shared, action }: { shared: boolean; action: RegExpExecArray }) {
@@ -107,7 +109,7 @@ function OwnerPanel({ ownerId, shared = false }: { ownerId: string; shared?: boo
   const [members, setMembers] = useState<Application[]>([]), [error, setError] = useState(""), [message, setMessage] = useState(""), [busy, setBusy] = useState(false);
   async function load() {
     try {
-      const response = await fetch(`${apiBase}/api/admin/members`, { credentials: "include", signal: AbortSignal.timeout(20_000) });
+      const response = await privateFetch(`${apiBase}/api/admin/members`, { signal: AbortSignal.timeout(20_000) });
       if (!response.ok) throw new Error("Kunde inte hämta medlemslistan. Logga in igen som ägare.");
       const data = z.object({ members: z.array(z.object({ id: z.string().uuid(), email: z.string(), application: z.string(), state: z.string() })) }).parse(await response.json());
       setMembers(data.members);
@@ -172,7 +174,7 @@ function Membership({ member, ready, accepting, refresh, shared = false }: { mem
         <div className="honeypot" aria-hidden="true"><label>Lämna tomt<input name="website" tabIndex={-1} autoComplete="off" /></label></div>
         <button className="primary" disabled={busy || !ready || (!login && !accepting)}>{busy ? "Skickar begäran…" : login ? "Begär inloggningslänk" : "Skicka medlemsansökan"}</button>
         {!shared && <><button type="button" className="text-button" onClick={() => { setLogin(value => !value); setMessage(""); setError(""); }}>{login ? "Ny här? Ansök om medlemskap" : "Har du redan ansökt? Logga in"}</button>
-          <details className="membership-info"><summary>Så fungerar medlemskapet</summary><p className="small muted">Högst 40 medlemskap inklusive väntande ansökningar. E-postverifiering är inte ett medlemsbeslut. Sparade sökningar och bevakningar är bara för godkända medlemmar. Den offentliga objektlistan kan läsas utan medlemskap. Vi samlar inte in objekt från källor där användningen är förbjuden eller oklar.</p></details>
+          <details className="membership-info"><summary>Så fungerar medlemskapet</summary><p className="small muted">Högst 40 medlemskap inklusive väntande ansökningar. E-postverifiering är inte ett medlemsbeslut. Bostäder, sparade sökningar och bevakningar är bara för godkända medlemmar. Vi samlar inte in objekt från källor där användningen är förbjuden eller oklar.</p></details>
           <a className="demo-link" href="?demo=1">Prova sökningen med fiktiva exempel<Icon name="arrow" /></a></>}
       </form></div>}
     {error && <p className="error" role="alert">{error}</p>}{message && <p className="notice" role="status">{message}</p>}
@@ -272,6 +274,8 @@ function App() {
   const [sort, setSort] = useState("personal");
   const [member, setMember] = useState<Member | null>(null);
   const [shared, setShared] = useState<boolean | null>(null), [gate, setGate] = useState<Gate | null>(null);
+  const [listingsVisible, setListingsVisible] = useState(false), [accessVersion, setAccessVersion] = useState(0);
+  const wantsAccount = useRef(new URLSearchParams(location.search).get("review") === "1");
   const minimal = !demo && shared !== false && !action;
   const [panel, setPanel] = useState(() => {
     const info = new URLSearchParams(location.search).get("info");
@@ -280,12 +284,13 @@ function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuButton = useRef<HTMLButtonElement>(null), preferenceControls = useRef<PreferenceControls>(null);
   const panelHeading = useRef<HTMLHeadingElement>(null), privacyHeading = useRef<HTMLHeadingElement>(null);
-  const { authorize, dialog } = useSearchAccess(apiBase, gate);
+  const { authorize, dialog } = useSearchAccess(apiBase, gate, current => { setGate(current); setListingsVisible(true); });
   const [ready, setReady] = useState(false), [accepting, setAccepting] = useState(false);
   const [accountLoading, setAccountLoading] = useState(!demo && !!apiBase && !action);
   const [accountError, setAccountError] = useState("");
   const [accountReload, setAccountReload] = useState(0);
-  const refresh = () => setAccountReload(value => value + 1);
+  const recheck = () => setAccountReload(value => value + 1);
+  const refresh = () => { wantsAccount.current = true; recheck(); };
   const canSearch = demo || (shared ? !!gate : member?.state === "approved");
   const guestFlow = shared && !!gate && (!member || member.state !== "approved" || gate.pendingSave || gate.hasDraft);
   const canShowSaved = !!member && !!gate && !guestFlow;
@@ -295,6 +300,7 @@ function App() {
       if (!await authorize("account")) { menuButton.current?.focus(); return; }
       refresh();
     }
+    if (next === "account" && gate) refresh();
     setPanel(next);
     requestAnimationFrame(() => (next === "privacy" ? privacyHeading.current : panelHeading.current)?.focus());
   }
@@ -306,26 +312,38 @@ function App() {
     event.preventDefault(); void openPanel(next);
   }
   useEffect(() => {
+    return onAccessClosed(() => {
+      setAccessVersion(value => value + 1); setListingsVisible(false);
+      setGate(null); setMember(null);
+      setCatalog(current => ({ ...current, listings: [], sources, serviceReady: false }));
+      setPanel(current => ["help", "privacy"].includes(current) ? current : "");
+    });
+  }, []);
+  useEffect(() => {
     if (demo || !apiBase) return;
     let active = true;
+    const currentAccess = accessGeneration(), controller = new AbortController();
+    const current = () => active && currentAccess === accessGeneration();
     setAccountLoading(true); setAccountError("");
-    Promise.all([
-      fetch(`${apiBase}/api/status`, { credentials: "include", signal: AbortSignal.timeout(20_000) }),
-      fetch(`${apiBase}/api/me`, { credentials: "include", signal: AbortSignal.timeout(20_000) }),
-    ]).then(async ([statusResponse, memberResponse]) => {
+    privateFetch(`${apiBase}/api/status`, { signal: controller.signal }, true).then(async statusResponse => {
       if (!statusResponse.ok) throw new Error("Kunde inte kontrollera tjänstens status.");
       const status = z.object({ serviceReady: z.boolean(), acceptingApplications: z.boolean(), privacyContact: z.string().nullable(), accessMode: z.enum(["shared", "membership"]).optional() }).parse(await statusResponse.json());
-      if (!active) return;
+      if (!current()) return;
       setReady(status.serviceReady); setAccepting(status.acceptingApplications);
       setShared(status.accessMode === "shared");
       if (status.accessMode === "shared") {
-        const response = await fetch(`${apiBase}/api/gate`, { credentials: "include", signal: AbortSignal.timeout(20000) });
-        if (!active) return;
-        if (response.status === 401) setGate(null);
-        else if (!response.ok) { setGate(null); throw new Error("Lösenordsåtkomsten kunde inte kontrolleras. Försök igen senare."); }
-        else setGate(gateSchema.parse(await response.json()));
+        const response = await privateFetch(`${apiBase}/api/gate`, { signal: controller.signal }, true);
+        if (!current()) return;
+        if (response.status === 401) { closePrivateAccess(); return; }
+        if (!response.ok) throw new Error("Lösenordsåtkomsten kunde inte kontrolleras. Försök igen senare.");
+        const nextGate = gateSchema.parse(await response.json());
+        if (!current()) return;
+        setGate(nextGate); setListingsVisible(document.visibilityState !== "hidden");
       } else setGate(null);
       setCatalog(current => ({ ...current, privacyContact: status.privacyContact }));
+      if (status.accessMode === "shared" && !wantsAccount.current) return;
+      const memberResponse = await privateFetch(`${apiBase}/api/me`, { signal: controller.signal }, true);
+      if (!current()) return;
       if (memberResponse.status === 401) {
         setMember(null);
         if (status.accessMode !== "shared") setCatalog(current => ({ ...current, listings: [], sources, serviceReady: false }));
@@ -333,27 +351,58 @@ function App() {
       }
       if (!memberResponse.ok) throw new Error("Kunde inte kontrollera medlemskapet. Logga in igen.");
       const account = memberSchema.parse(await memberResponse.json());
-      if (active) setMember(account);
+      if (current()) { setMember(account); if (status.accessMode !== "shared") setListingsVisible(account.state === "approved"); }
     }).catch(error => {
-      if (active) {
+      if (current()) {
+        closePrivateAccess();
         setMember(null); setGate(null); setCatalog(current => ({ ...current, listings: [], sources, serviceReady: false }));
         setAccountError(error instanceof Error ? error.message : "Medlemskontrollen misslyckades.");
       }
     }).finally(() => { if (active) setAccountLoading(false); });
-    return () => { active = false; };
+    return () => { active = false; controller.abort(); };
   }, [accountReload]);
   useEffect(() => {
-    const check = () => { if (!demo && apiBase && !action) refresh(); };
+    const check = () => { if (!demo && apiBase && !action && document.visibilityState !== "hidden") recheck(); };
+    const suspend = () => {
+      setListingsVisible(false); setAccessVersion(value => value + 1);
+      setCatalog(current => ({ ...current, listings: [], sources, serviceReady: false }));
+    };
+    const visibility = () => { if (document.visibilityState === "hidden") suspend(); else check(); };
     window.addEventListener("focus", check);
-    return () => window.removeEventListener("focus", check);
+    window.addEventListener("pagehide", suspend);
+    window.addEventListener("pageshow", check);
+    document.addEventListener("visibilitychange", visibility);
+    return () => {
+      window.removeEventListener("focus", check); window.removeEventListener("pagehide", suspend);
+      window.removeEventListener("pageshow", check); document.removeEventListener("visibilitychange", visibility);
+    };
   }, []);
   useEffect(() => {
-    if (demo || !apiBase || action || !canSearch) return;
+    if (!gate || demo) return;
+    const expiry = setTimeout(() => closePrivateAccess(), Math.max(0, gate.expiresAt - Date.now()));
+    const interval = setInterval(() => {
+      if (document.visibilityState === "hidden") return;
+      const generation = accessGeneration();
+      void privateFetch(`${apiBase}/api/gate`).then(async response => {
+        if (!response.ok) throw new Error("Åtkomsten kunde inte kontrolleras. Öppna bostadslistan igen.");
+        const current = gateSchema.parse(await response.json());
+        if (generation === accessGeneration()) setGate(current);
+      }).catch(() => {
+        if (generation === accessGeneration()) {
+          closePrivateAccess();
+          setAccountError("Åtkomsten kunde inte kontrolleras. Öppna bostadslistan igen.");
+        }
+      });
+    }, 60_000);
+    return () => { clearTimeout(expiry); clearInterval(interval); };
+  }, [gate]);
+  useEffect(() => {
+    if (demo || !apiBase || action || !canSearch || !listingsVisible || (minimal && panel !== "results")) return;
     const controller = new AbortController();
     let active = true;
     setLoading(true); setError("");
     const timeout = setTimeout(() => controller.abort(), 20_000);
-    fetch(`${apiBase}/api/catalog`, { credentials: "include", signal: controller.signal }).then(async response => {
+    privateFetch(`${apiBase}/api/catalog`, { signal: controller.signal }).then(async response => {
       if (response.status === 401 || response.status === 403) {
         setMember(null); setGate(null); setCatalog(current => ({ ...current, listings: [], sources, serviceReady: false }));
         throw new Error("Medlemskapet behöver kontrolleras. Logga in igen.");
@@ -365,7 +414,7 @@ function App() {
     }).catch(error => { if (active) setError(error instanceof Error ? error.message : "Kunde inte hämta data."); })
       .finally(() => { clearTimeout(timeout); if (active) setLoading(false); });
     return () => { active = false; clearTimeout(timeout); controller.abort(); };
-  }, [reload, member, canSearch]);
+  }, [reload, member, canSearch, listingsVisible, accessVersion, minimal, panel]);
   const profile = demo ? demoProfile : member?.profile ?? manualProfile();
   const filtered = useMemo(() => ranked(catalog.listings, profile).sort((a, b) => {
     if (sort === "price") return (a.price ?? Infinity) - (b.price ?? Infinity);
@@ -375,7 +424,8 @@ function App() {
   }), [profile, catalog.listings, sort]);
   const enabledSources = catalog.sources.filter(source => source.authorized).length;
   const changeTheme = () => { const next = theme === "dark" ? "light" : "dark"; setTheme(next); document.documentElement.dataset.theme = next; };
-  const publicFeed = !demo && <PublicListings apiBase={apiBase}
+  const publicFeed = !demo && <PublicListings apiBase={apiBase} accessible={canSearch && listingsVisible} accessVersion={accessVersion}
+    openAccess={() => { if (shared) void authorize("browse"); else void openPanel("account"); }}
     renderFilters={(filters, change) => <FilterPanel filters={filters} onChange={change} heading="Objektfilter" />}
     renderListing={listing => <Property listing={listing} />} />;
   return <div className={minimal ? "website-shell" : undefined}>
@@ -443,7 +493,7 @@ function App() {
           {panel && <div className="secondary-heading"><h2 ref={panelHeading} tabIndex={-1}>{panel === "account" ? "Ditt konto" : panel === "results" ? "Resultat & källor" : panel === "help" ? "Så fungerar det" : "Integritet"}</h2>
             <button onClick={() => showSearch()}>Tillbaka till texten</button></div>}
           {panel === "help" && <section className="how-it-works" aria-label="Så skapar du en sökning">
-            <p>Objektlistan är öppen för alla. Filtrera utan lösenord eller AI och följ länken till källan. Täckningen beror på anslutna källor och deras tillstånd. Vi garanterar inte alla objekt eller ett försprång framför andra bostadssajter.</p>
+            <p>Objektlistan är privat, för ägaren och inbjudna med det gemensamma lösenordet. Bläddring och filtrering kräver inte e-post eller AI. Täckningen beror på anslutna källor och deras tillstånd. Vi garanterar inte alla objekt eller ett försprång framför andra bostadssajter.</p>
             <p>Först upptäckt är när Kommandekollen såg objektet, inte när mäklaren publicerade det. Vill du ha hjälp att formulera din personliga sökning är AI-hjälpen valfri:</p>
             <ol>
               <li><strong>Beskriv.</strong> Berätta var och hur du vill bo. Välj Hitta bostad, ange det gemensamma lösenordet och godkänn AI-hjälpen. Lösenordet är inte ett personligt konto.</li>
@@ -470,7 +520,7 @@ function App() {
           <Membership member={member} ready={ready} accepting={accepting} refresh={refresh} />
           {!canSearch && publicFeed}
         </>}
-        {canSearch && (!minimal || panel === "results") && <>
+        {canSearch && (demo || listingsVisible) && (!minimal || panel === "results") && <>
         {!minimal && <><section className="search-heading"><div className="search-heading-copy"><h1>Beskriv ditt nästa hem.</h1><p>Dina krav. Dina önskemål. Du godkänner innan något sparas.</p></div></section>
         <PreferenceFlow apiBase={apiBase} demo={demo} member={guestFlow ? null : member} guest={guestFlow ? { aiReady: gate!.aiReady } : undefined} ready={catalog.serviceReady && !error && !loading} refresh={refresh}
           renderFilters={(filters, change) => <FilterPanel filters={filters} onChange={change} />} onDemoPreview={setDemoProfile} onInference={shared ? refresh : undefined} />

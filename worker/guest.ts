@@ -55,7 +55,7 @@ export async function gateRoute(request: Request, env: Env, ipHash: string) {
     const pending = await env.DB.prepare("SELECT id FROM guest_saves WHERE guest_id=? AND consumed=0 AND expires_at>?")
       .bind(guest.id, Date.now()).first();
     const draft = await env.DB.prepare("SELECT id FROM guest_drafts WHERE guest_id=? AND status='ready' AND expires_at>?").bind(guest.id, Date.now()).first();
-    return json({ open: true, aiReady: aiReady(env), pendingSave: !!pending, hasDraft: !!draft, quota: await aiAvailability(env) });
+    return json({ open: true, expiresAt: guest.expires_at, aiReady: aiReady(env), pendingSave: !!pending, hasDraft: !!draft, quota: await aiAvailability(env) });
   }
   if (path === "/api/gate/logout" && request.method === "POST") {
     await env.DB.prepare("DELETE FROM guest_sessions WHERE id=?").bind(guest.id).run();

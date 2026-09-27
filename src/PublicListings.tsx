@@ -2,9 +2,13 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { z } from "zod";
 import { defaultFilters, filterSchema, type Filters } from "../shared/model";
 import { publicListingsSchema, type PublicListing, type PublicListingsPage } from "../shared/public-listings";
+import { privateFetch } from "./access";
 
-export function PublicListings({ apiBase, renderFilters, renderListing }: {
+export function PublicListings({ apiBase, accessible, accessVersion, openAccess, renderFilters, renderListing }: {
   apiBase: string;
+  accessible: boolean;
+  accessVersion: number;
+  openAccess: () => void;
   renderFilters: (filters: Filters, change: (filters: Filters) => void) => ReactNode;
   renderListing: (listing: PublicListing) => ReactNode;
 }) {
@@ -27,8 +31,8 @@ export function PublicListings({ apiBase, renderFilters, renderListing }: {
       if (!apiBase) throw new Error("Objektlistan är inte ansluten ännu. Inga objekt kan hämtas.");
       const query = new URLSearchParams({ filters: JSON.stringify(selected) });
       if (cursor) query.set("cursor", cursor);
-      const response = await fetch(`${apiBase}/api/listings?${query}`, {
-        credentials: "omit", signal: AbortSignal.any([abort.signal, AbortSignal.timeout(20_000)]),
+      const response = await privateFetch(`${apiBase}/api/listings?${query}`, {
+        signal: AbortSignal.any([abort.signal, AbortSignal.timeout(20_000)]),
       });
       const data: unknown = await response.json();
       if (!response.ok) {
@@ -51,9 +55,10 @@ export function PublicListings({ apiBase, renderFilters, renderListing }: {
     }
   }
   useEffect(() => {
-    void load(defaultFilters, null, true);
+    setItems([]); setPage(null); setError(""); setBusy(false); inFlight.current = false;
+    if (accessible) void load(filters, null, true);
     return () => { generation.current++; controller.current?.abort(); };
-  }, [apiBase]);
+  }, [apiBase, accessible, accessVersion]);
   function apply(selected: Filters) {
     const parsed = filterSchema.safeParse(selected);
     if (!parsed.success) { setError("Kontrollera objektfiltren. Minsta värdet får inte vara större än det högsta."); return; }
@@ -62,6 +67,11 @@ export function PublicListings({ apiBase, renderFilters, renderListing }: {
     void load(parsed.data, null, true);
     heading.current?.focus({ preventScroll: true });
   }
+  if (!accessible) return <section className="public-listings" aria-labelledby="public-listings-title">
+    <h2 id="public-listings-title">Senaste kommande bostäder</h2>
+    <p>Bostadslistan är privat, för ägaren och inbjudna.</p>
+    <button className="primary" onClick={openAccess}>Öppna bostadslistan</button>
+  </section>;
   return <section className="public-listings" aria-labelledby="public-listings-title">
     <div className="public-listings-heading">
       <h2 id="public-listings-title" ref={heading} tabIndex={-1}>Senaste kommande bostäder</h2>

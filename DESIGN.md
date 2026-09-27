@@ -15,7 +15,13 @@ It does not claim connected sources, complete coverage, measured speed or buying
 priority. Early source-direct discovery is the core value; AI is optional help.
 The input label remains "Beskriv ditt nästa hem". Its helper says the AI creates
 a proposal, needs a password and asks for email only at saving. Followups use
-"Uppdatera sökförslaget". The public feed follows the prompt/review immediately.
+"Uppdatera sökförslaget". The private feed follows the prompt/review immediately.
+The latest decision replaces public listing access with password-only invited
+browsing. Its locked section offers "Öppna bostadslistan"; the browse dialog
+asks only for the shared password, never email or AI consent. The shell stays
+public and the same prompt remains mounted. Later inference still asks for
+unchecked AI consent. Listing facts/counts and source diagnostics are absent
+until server access is verified; stale responses cannot restore them after logout.
 The user removed the goal sentence, global pause note and public-feed subtitle
 without replacement. Paused-only disclosures remain in review, saving and receipts.
 Password, email, private source panels, saved profiles and full legal text stay
@@ -103,8 +109,8 @@ Cloudflare processing checkbox and explicit continuation are required before
 one inference. Followups in that same consented draft stay inline; a reload or
 new draft requires consent again. Cancel/Escape/error preserves the text.
 No mount, gate restore, input edit or GET submits or saves anything.
-Questions, review and focused outcomes appear after progression. Public source
-availability is visible immediately, without reading the private source status.
+Questions, review and focused outcomes appear after progression. Source
+availability is shown only after invited browsing access is verified.
 Draft restore is explicit, except return from email review.
 Email-at-save verification and the second explicit confirmation stay separate.
 
@@ -115,7 +121,7 @@ identity without saving. "Bekräfta och spara pausad sökning" remains a separat
 second consented action. Only its successful save receipt says "Din sökning är
 sparad och pausad". Processing, provider, privacy and quota meanings are unchanged.
 
-The public section is "Senaste kommande bostäder". "Filtrera objekt" discloses
+The private section is "Senaste kommande bostäder". "Filtrera objekt" discloses
 independent ordinary filters; "Använd filter" applies them across the entire
 bounded collection. It never edits the personal draft. "Ladda fler" appends 12
 at a time; current cards survive a failed next-page request, with explicit retry.

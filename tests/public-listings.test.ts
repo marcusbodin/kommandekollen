@@ -12,6 +12,7 @@ let mf: Miniflare, env: Env;
 const origin = "https://app.example.com";
 const authorization = { id: "authorized", hosts: ["listings.example.com"], licenseReference: "Private synthetic contract reference", expiresAt: "2099-01-01T00:00:00Z" };
 const cookie = `__Host-kk_session=${"a".repeat(64)}`;
+const guestCookie = `__Host-kk_guest=${"c".repeat(64)}`;
 beforeEach(async () => {
   mf = new Miniflare({ modules: true, script: "export default { fetch() { return new Response('D1 fixture'); } }",
     compatibilityDate: "2025-09-24", d1Databases: ["DB"] });
@@ -28,9 +29,11 @@ beforeEach(async () => {
     .bind(await keyed(env.TOKEN_SECRET, "email:owner@example.com"), JSON.stringify(defaultFilters),
       Date.now() + 60000, Date.now(), Date.now() + 3600000, JSON.stringify(manualProfile({ ...defaultFilters, maxPrice: 4250123 }))).run();
   await DB.prepare("INSERT INTO sessions VALUES(?,'fixture-owner',?)").bind(await hash("a".repeat(64)), Date.now() + 3600000).run();
+  await DB.prepare("INSERT INTO guest_sessions(id,token_hash,credential_version,expires_at) VALUES('invited-browser',?,?,?)")
+    .bind(await hash("c".repeat(64)), await hash(env.SHARED_ACCESS_PASSWORD!), Date.now() + 3600000).run();
 });
 afterEach(async () => { await mf.dispose(); });
-function get(path = "/api/listings", cookies?: string) {
+function get(path = "/api/listings", cookies: string = guestCookie) {
   return worker.fetch(new Request(`${origin}${path}`, { headers: { Origin: origin, ...(cookies ? { Cookie: cookies } : {}) } }), env);
 }
 function query(filters: Filters = defaultFilters, cursor?: string | null) {
@@ -61,7 +64,7 @@ async function all(filters: Filters) {
   }
   return collected;
 }
-describe("public upcoming listings through the real Worker and local D1", () => {
+describe("private upcoming listings through the real Worker and local D1", () => {
   it("returns 12 + 12 + 5 stable newest-first facts, no private data or identity mutations", async () => {
     await seed();
     await env.DB.prepare("INSERT INTO source_runs(source_id,last_attempt,status,error_code) VALUES('authorized','2025-01-01','failed','private-source-error')").run();
@@ -77,19 +80,47 @@ describe("public upcoming listings through the real Worker and local D1", () => 
     expect(result.every(item => item.lastSeen === "2025-02-02T12:00:00.000Z")).toBe(true);
     expect(Object.keys(first).sort()).toEqual(["availability", "hasMore", "items", "nextCursor", "total"]);
     expect(Object.keys(first.items[0]).sort()).toEqual(Object.keys(publicListingSchema.shape).sort());
-    const withCookie = await get(query(), cookie);
+    const withCookie = await get(query(), `${guestCookie}; ${cookie}`);
     expect(await withCookie.json()).toEqual(first);
-    expect(await (await get(query(), "__Host-kk_guest=invalid")).json()).toEqual(first);
+    expect((await get(query(), "__Host-kk_guest=invalid")).status).toBe(401);
     const body = JSON.stringify(first);
     for (const privateValue of ["licenseReference", "source_runs", "private-source-error", "Private synthetic", "owner@example.com", "preference_profile", "externalId", "token_hash"])
       expect(body).not.toContain(privateValue);
     for (const path of ["/api/catalog", "/api/me", "/api/preferences/draft", "/api/guest/preferences/draft", "/api/admin/members"]) {
-      expect((await get(path)).status).toBe(401);
+      expect((await get(path, "")).status).toBe(401);
       expect((await get(path, cookie)).status).toBe(401);
     }
     const post = await worker.fetch(new Request(`${origin}/api/listings`, { method: "POST", headers: { Origin: origin } }), env);
     expect(post.status).toBe(401);
     expect(await snapshot()).toEqual(before);
+  });
+  it("denies anonymous facts, counts, diagnostics and cursors before parsing queries in either access mode", async () => {
+    await seed();
+    for (const mode of ["shared", "membership"]) {
+      env.ACCESS_MODE = mode;
+      for (const path of ["/api/listings", "/api/listings?limit=200", "/api/listings?cursor=invalid",
+        "/api/catalog", "/api/admin/members", "/admin/status"]) {
+        const response = await get(path, "");
+        expect(response.status).toBe(401);
+        const body = await response.json();
+        expect(body).toEqual({ code: expect.any(String), message: expect.any(String) });
+        for (const key of ["items", "total", "count", "nextCursor", "listings", "sources"]) expect(body).not.toHaveProperty(key);
+      }
+    }
+    expect((await get("/api/listings", cookie)).status).toBe(200);
+    await env.DB.prepare("UPDATE subscriptions SET state='pending'").run();
+    expect((await get("/api/listings", cookie)).status).toBe(403);
+  });
+  it("requires the current gate after logout, expiry, linked revocation and credential rotation", async () => {
+    await seed();
+    env.SHARED_ACCESS_PASSWORD = "d".repeat(64);
+    expect((await get()).status).toBe(401);
+    env.SHARED_ACCESS_PASSWORD = "b".repeat(64);
+    await env.DB.prepare("UPDATE guest_sessions SET expires_at=0").run();
+    expect((await get()).status).toBe(401);
+    await env.DB.prepare("UPDATE guest_sessions SET expires_at=?,member_id='fixture-owner'").bind(Date.now() + 60000).run();
+    await env.DB.prepare("UPDATE subscriptions SET state='revoked'").run();
+    expect((await get()).status).toBe(401);
   });
   it("applies the shared Swedish, range and unknown-value semantics across the whole collection", async () => {
     await seed();
@@ -158,7 +189,7 @@ describe("public upcoming listings through the real Worker and local D1", () => 
     expect(await page({ ...defaultFilters, municipality: "Nacka" })).toEqual({ availability: "ready", items: [], total: 0, hasMore: false, nextCursor: null });
     env.SERVICE_ENABLED = "false"; env.AUTHORIZED_SOURCES = "[]";
     const unready = await get();
-    expect(unready.status).toBe(503); expect(await unready.json()).toMatchObject({ code: "not_ready" });
+    expect(unready.status).toBe(503); expect(await unready.json()).toMatchObject({ code: "gate_unavailable" });
     env.SERVICE_ENABLED = "true"; env.AUTHORIZED_SOURCES = JSON.stringify([authorization]);
     await env.DB.prepare("UPDATE listings SET data='broken-json' WHERE id=?").bind(publicFixtures[0].id).run();
     const failed = await get();

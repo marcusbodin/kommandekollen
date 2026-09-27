@@ -9,9 +9,10 @@ web
 ## Users
 
 Swedish-speaking home seekers looking for upcoming homes in Stockholm.
-The latest explicit user decision makes the upcoming-listings feed public.
-Browsing and filtering need neither a password nor AI. Personal interpretation
-and saved searches remain protected; this does not authorize any new source.
+The latest explicit user decision makes real upcoming listings private:
+only the owner and invited people behind the shared password. Browsing and
+filtering need neither email nor AI consent. Personal interpretation and saved
+searches remain separately protected; this does not authorize any new source.
 The owner approved shared-password access on 2026-09-26. Visitors who have the
 shared password may try AI without email. Email is verified only when saving,
 followed by a second explicit review/confirmation. No manual application or
@@ -26,7 +27,7 @@ This is the product's core value, not a verified coverage or latency claim:
 there are still zero connected sources. No all-brokers/all-listings, buying
 priority or competitive head-start guarantee is justified.
 
-Show permitted upcoming facts publicly, newest observed first. Optional AI lets
+Show permitted upcoming facts to authorized visitors, newest observed first. Optional AI lets
 authorized visitors describe their next home, clarify material ambiguity,
 review hard requirements, soft preferences and unverified criteria, then
 explicitly save their personal selection. Manual filters remain a fallback.
@@ -47,8 +48,8 @@ The user's latest correction requires a recognizable lightweight website:
 existing wordmark, clear menu, short purpose explanation, dominant housing
 input and a footer with privacy/contact/copyright. This supersedes the literal
 input-only surface, not the decision to ask for the password at first search
-rather than on arrival. A calm note states paused saving and no housing emails.
-The public feed independently explains the current absence of connected sources.
+rather than on arrival. A separate password-only action opens the listing feed.
+The authorized feed explains source availability after access is checked.
 The site menu exposes privacy before authentication, manual filters without AI,
 own search/draft, account/login/logout/owner tools and source/result information.
 An already-open gate skips password entry, not AI consent. In-memory consent
@@ -67,12 +68,12 @@ unsent text in place.
 - Owner purchased kommandekollen.se.
 - Intended personal GitHub owner is marcusbodin.
 - Public source repository approved for free GitHub Pages.
-- A narrow public `GET /api/listings` exposes only authorized upcoming facts in
+- A narrow private `GET /api/listings` exposes only authorized upcoming facts in
   Stockholms län, 12 at a time, with independent filters across the bounded
   inventory. It never returns private source runs, contracts or personal data.
   The existing catalog and personal APIs stay gated; saved data requires the
   verified own-account session, plus the guest gate in shared mode.
-  Membership mode still requires approval for personal functions, not public browsing.
+  Membership mode requires approval for browsing and personal functions.
 - The initial 12-card page and explicit Load more do not remove the existing
   200-record pilot inventory cap. First seen means Kommandekollen's observation,
   not the broker's original publication date. Unknown and stale facts stay explicit.

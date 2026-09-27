@@ -17,12 +17,13 @@ run `36299417326`; no Worker, secret, configuration or migration changed.
 The user's subsequent correction restores a lightweight website shell around
 that public input: existing wordmark, navigation, purpose copy and footer with
 privacy/contact/copyright. The later user decision makes a separate upcoming
-feed public while retaining the gate for AI and saved searches. This revision
-requires the new Worker read route plus Pages; it changes no gate/save flow,
-configuration, secret or migration.
+feed public while retaining the gate for AI and saved searches. That choice is
+now superseded: real listings are private, for the owner and invited people.
+The new boundary requires matching Worker and Pages changes, not a secret
+rotation or migration. Publication status belongs to DEPLOYMENT.md.
 
 The product goal is early discovery directly at brokers, before larger portals,
-not an all-source or first-buyer guarantee. Optional AI clarifies wishes; public
+not an all-source or first-buyer guarantee. Optional AI clarifies wishes; private
 reading/filtering uses none. The homepage explicitly frames that discovery goal
 as "Vi bygger". The supporting statement "Hitta kommande bostäder före andra"
 and initial "Hitta bostad" action do not change that goal into proven coverage.
@@ -94,17 +95,29 @@ confirmation and owner routes, requires a valid gate in shared mode.
 Infrastructure `/admin/*` keeps its independent server secret.
 Signed POST `/api/unsubscribe` remains ungated for deletion.
 The public `/api/status` adds `accessMode`; it exposes no guest/member details.
-`GET /api/listings` is the other public read surface, before the guest guard in
-both access modes. Its explicit facts-only DTO, whole-inventory filters and
-12-item pagination are documented in [OPERATIONS.md](OPERATIONS.md#public-listings).
-The frontend uses `credentials:"omit"`; reading, filtering and loading more
-create no gate/account, draft, AI attempt, save or email. Existing traffic-rate
-buckets still apply. The old `/api/catalog` is not ungated or exposed wholesale.
+`GET /api/listings` requires the shared guest gate, or an approved member in
+legacy mode, before query validation, listing facts, counts or cursors are read.
+Its explicit facts-only DTO, whole-inventory filters and 12-item pagination are
+documented in [OPERATIONS.md](OPERATIONS.md#private-listings).
+The frontend uses credentialed no-store requests. Explicit password entry
+creates a bounded guest session; browsing/filtering/loading more creates no
+account, draft, AI attempt, save or email. The browse-only entry does not probe
+email identity or request AI consent. Existing traffic-rate buckets still apply.
+The old `/api/catalog` remains private, not exposed wholesale to anonymous users.
+
+Logout, expiry and observed access loss clear in-memory listings, cursors,
+catalog and private panels, abort requests and reject late responses. Local
+logout notifies other tabs without sending credentials. Hidden pages conceal
+private listings and revalidate on return; visible sessions check at most once
+per minute, with local expiry enforcement. Remote rotation/revocation is
+detected on the next server check, not through an instantaneous push. A guest's
+expected account-only 401 does not invalidate an otherwise valid password gate.
+The housing-text node remains mounted and its unsent text survives access loss.
 
 | Route | Contract |
 | --- | --- |
 | POST `/api/gate` | `{password}`; checks rates before comparison, sets guest cookie |
-| GET `/api/gate` | `{open:true,aiReady,pendingSave,hasDraft,quota:{remaining,limit:6,day}}` |
+| GET `/api/gate` | `{open:true,expiresAt,aiReady,pendingSave,hasDraft,quota:{remaining,limit:6,day}}`; expiry is epoch milliseconds, not a credential fingerprint |
 | POST `/api/gate/logout` | `{}`; deletes current guest and its draft/challenge; clears guest and account cookies |
 | GET `/api/guest/preferences/draft` | `{draft,aiReady,quota,saveIntent}`; own ready draft only; intent is null or `{id,verified,enabled,acceptUnverified}` |
 | POST `/api/guest/preferences/interpret` | Same draft request as member API, but `expectedVersion:0`; explicit `aiConsent:true` |
