@@ -365,6 +365,16 @@ async function borderlessSurfaces(page: Page, selectors: string, elevated = fals
     }
   }
 }
+async function heroGlass(page: Page, theme: "light" | "dark") {
+  for (const surface of [".home-intro", ".prompt-form"]) {
+    await expect(page.locator(surface)).toHaveCSS("background-color",
+      theme === "light" ? "rgba(255, 255, 255, 0.66)" : "rgba(32, 53, 50, 0.72)");
+    await expect(page.locator(surface)).toHaveCSS("backdrop-filter", "blur(10px) saturate(1.15)");
+    await expect(page.locator(surface)).toHaveCSS("box-shadow", /inset/);
+  }
+  for (const surface of [".prompt-shell", "#housing-prompt"])
+    await expect(page.locator(surface)).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+}
 async function consentToInterpret(page: Page, password = false) {
   await page.getByRole("button", { name: /^(Hitta bostad|Uppdatera sökförslaget)$/ }).click();
   if (password) await page.getByLabel("Gemensamt lösenord").fill(gatePassword);
@@ -730,8 +740,9 @@ test("pinned mint presentation uses borderless depth, filled states and accessib
     await brandAssets(page);
     await heroAssets(page);
     await heroGeometry(page);
-    for (const surface of [".home-intro", ".prompt-form"]) await expect(page.locator(surface))
-      .toHaveCSS("background-color", theme === "light" ? "rgb(255, 255, 255)" : "rgb(32, 53, 50)");
+    await heroGlass(page, theme);
+    await page.evaluate(() => scrollTo(0, 0));
+    await page.screenshot({ path: test.info().outputPath(`liquid-glass-${theme}.png`), animations: "disabled" });
     const primary = page.getByRole("button", { name: "Hitta bostad", exact: true });
     await prompt.fill("");
     await heading.click();
@@ -754,11 +765,12 @@ test("pinned mint presentation uses borderless depth, filled states and accessib
     await prompt.focus();
     await expect(primary).toBeEnabled();
     await expect(page.locator("body")).toHaveCSS("background-color", theme === "light" ? "rgb(255, 255, 255)" : "rgb(23, 41, 39)");
-    await expect(page.locator(".prompt-shell")).toHaveCSS("background-color", theme === "light" ? "rgb(235, 246, 245)" : "rgb(41, 67, 63)");
+    await expect(page.locator(".prompt-shell")).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
     await expect(primary).toHaveCSS("background-color", "rgb(251, 227, 232)");
     await expect(primary).toHaveCSS("color", "rgb(32, 58, 57)");
     await expect(primary).toHaveCSS("border-radius", "999px");
-    await borderlessSurfaces(page, ".prompt-form,.home-intro,.prompt-shell .primary,.site-menu-toggle,.public-filters > summary", true);
+    await borderlessSurfaces(page, ".prompt-shell .primary,.site-menu-toggle,.public-filters > summary", true);
+    await borderlessSurfaces(page, ".prompt-form,.home-intro");
     await borderlessSurfaces(page, ".prompt-shell,#housing-prompt,.compact-header,.compact-footer");
     await expect(page.locator(".site-menu-toggle")).toHaveCSS("background-color", "rgb(92, 189, 185)");
     await expect(page.locator(".site-menu-toggle")).toHaveCSS("color", "rgb(32, 58, 57)");
@@ -836,6 +848,59 @@ test("pinned mint presentation uses borderless depth, filled states and accessib
   expect(calls).toBe(0); expect(gatePosts).toBe(0);
 });
 
+test("liquid glass respects reduced transparency and falls back without remounting the prompt", async ({ page }) => {
+  env.ACCESS_MODE = "shared"; env.SHARED_ACCESS_PASSWORD = gatePassword;
+  await page.goto("/");
+  await heroAssets(page);
+  const prompt = page.locator("#housing-prompt");
+  const original = "Lägenhet med balkong och kakelugn.";
+  await prompt.fill(original);
+  const node = await prompt.elementHandle();
+  const cdp = await page.context().newCDPSession(page);
+  for (const theme of ["light", "dark"] as const) {
+    if (theme === "dark") { await more(page, "Mörkt tema"); await page.keyboard.press("Escape"); }
+    await heroGlass(page, theme);
+    await cdp.send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-transparency", value: "reduce" }] });
+    expect(await page.evaluate(() => matchMedia("(prefers-reduced-transparency: reduce)").matches)).toBe(true);
+    for (const surface of [".home-intro", ".prompt-form"]) {
+      await expect(page.locator(surface)).toHaveCSS("background-color", theme === "light" ? "rgb(255, 255, 255)" : "rgb(32, 53, 50)");
+      await expect(page.locator(surface)).toHaveCSS("backdrop-filter", "none");
+    }
+    await expect(prompt).toHaveCSS("background-color", theme === "light" ? "rgb(235, 246, 245)" : "rgb(41, 67, 63)");
+    await readableContrast(page, ".home-intro h1,.home-intro p,.prompt-shell label,#housing-prompt,#prompt-helper");
+    await heroGeometry(page);
+    await expect(prompt).toHaveValue(original);
+    expect(await prompt.evaluate((el, prior) => el === prior, node)).toBe(true);
+    await cdp.send("Emulation.setEmulatedMedia", { features: [] });
+    await heroGlass(page, theme);
+  }
+  await cdp.detach();
+  await page.emulateMedia({ forcedColors: "active" });
+  await expect(page.locator(".home-intro")).toHaveCSS("backdrop-filter", "none");
+  await page.emulateMedia({ forcedColors: "none" });
+  await heroGlass(page, "dark");
+  const removed = await page.evaluate(() => {
+    let removed = 0;
+    for (const sheet of document.styleSheets) {
+      for (let index = sheet.cssRules.length - 1; index >= 0; index--) {
+        const rule = sheet.cssRules[index];
+        if (rule instanceof CSSSupportsRule && rule.conditionText.includes("backdrop-filter")) {
+          sheet.deleteRule(index);
+          removed++;
+        }
+      }
+    }
+    return removed;
+  });
+  expect(removed).toBe(1);
+  for (const surface of [".home-intro", ".prompt-form"]) {
+    await expect(page.locator(surface)).toHaveCSS("background-color", "rgb(32, 53, 50)");
+    await expect(page.locator(surface)).toHaveCSS("backdrop-filter", "none");
+  }
+  await expect(prompt).toHaveValue(original);
+  expect(await prompt.evaluate((el, prior) => el === prior, node)).toBe(true);
+});
+
 test("photo hero remains readable and usable without its image in light and dark themes", async ({ page }) => {
   env.ACCESS_MODE = "shared"; env.SHARED_ACCESS_PASSWORD = gatePassword;
   await page.context().clearCookies();
@@ -853,8 +918,10 @@ test("photo hero remains readable and usable without its image in light and dark
   for (const theme of ["light", "dark"] as const) {
     if (theme === "dark") { await more(page, "Mörkt tema"); await page.keyboard.press("Escape"); }
     await expect(page.locator(".home-hero")).toHaveCSS("background-color", theme === "light" ? "rgb(235, 246, 245)" : "rgb(41, 67, 63)");
-    for (const surface of [".home-intro", ".prompt-form"]) await expect(page.locator(surface))
-      .toHaveCSS("background-color", theme === "light" ? "rgb(255, 255, 255)" : "rgb(32, 53, 50)");
+    for (const surface of [".home-intro", ".prompt-form"]) {
+      await expect(page.locator(surface)).toHaveCSS("background-color", theme === "light" ? "rgb(255, 255, 255)" : "rgb(32, 53, 50)");
+      await expect(page.locator(surface)).toHaveCSS("backdrop-filter", "none");
+    }
     await heroGeometry(page);
     reports.push(await readableContrast(page));
     await prompt.focus();
@@ -869,6 +936,7 @@ test("photo hero remains readable and usable without its image in light and dark
   await page.unroute("**/assets/autumn-home-*.webp");
   await page.setViewportSize({ width: page.viewportSize()!.width <= 960 ? 1440 : 390, height: 1000 });
   await heroAssets(page);
+  await heroGlass(page, "dark");
   await expect(page.locator(".hero-backdrop")).toBeVisible();
   await expect(prompt).toHaveValue(original);
   await page.getByRole("button", { name: "Hitta bostad", exact: true }).click();

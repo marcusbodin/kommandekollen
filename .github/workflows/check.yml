@@ -19,3 +19,11 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm test
       - run: npm run test:browser
+      - name: Preserve glass-panel visual checks
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: glass-panel-screenshots
+          path: test-results/**/liquid-glass-*.png
+          if-no-files-found: ignore
+          retention-days: 3

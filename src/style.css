@@ -34,6 +34,9 @@
   --cp-panel: rgba(255, 255, 255, 0.86);
   --cp-panel-strong: rgba(255, 255, 255, 0.96);
   --cp-sheen: rgba(255, 255, 255, 0.55);
+  --cp-glass-fill: rgba(255, 255, 255, 0.66);
+  --cp-glass-heading: var(--cp-accent-hover);
+  --cp-glass-shadow: var(--cp-shadow-panel), inset 0 1px 0 rgba(255, 255, 255, 0.75), inset 0 -1px 0 rgba(255, 255, 255, 0.3);
   --cp-highlight: var(--cp-mint);
   --cp-font-display: Georgia, "Times New Roman", serif;
 }
@@ -61,6 +64,9 @@ html[data-theme="dark"] {
   --cp-panel: rgba(32, 53, 50, 0.72);
   --cp-panel-strong: rgba(32, 53, 50, 0.96);
   --cp-sheen: rgba(255, 255, 255, 0.04);
+  --cp-glass-fill: rgba(32, 53, 50, 0.72);
+  --cp-glass-heading: var(--cp-text);
+  --cp-glass-shadow: var(--cp-shadow-panel), inset 0 1px 0 rgba(235, 246, 245, 0.3), inset 0 -1px 0 rgba(235, 246, 245, 0.08);
   --cp-highlight: var(--cp-surface-soft);
 }
 * { box-sizing: border-box; }
@@ -124,18 +130,55 @@ nav a { min-height: 44px; color: var(--cp-text); text-decoration: none; font-wei
 .container.compact-home { width: 100%; max-width: none; flex: 1; padding: 0 0 48px; display: grid; grid-template-columns: minmax(16px, 1fr) minmax(0, 1080px) minmax(16px, 1fr); align-content: start; }
 .compact-home > * { grid-column: 2; }
 .compact-home > .home-hero { grid-column: 1 / -1; }
-.home-hero { position: relative; isolation: isolate; background: var(--cp-surface-soft); }
+.home-hero {
+  --cp-hero-panel: var(--cp-surface);
+  --cp-hero-input: var(--cp-surface-soft);
+  --cp-hero-filter: none;
+  --cp-hero-shadow: var(--cp-shadow-control);
+  position: relative; isolation: isolate; background: var(--cp-surface-soft);
+}
 .hero-picture { position: absolute; inset: 0; z-index: -1; height: 100%; max-height: 680px; pointer-events: none; }
 .hero-backdrop { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center 40%; }
 .home-composition { max-width: 1120px; padding: 56px 20px; margin-inline: auto; }
-.home-intro h1 { max-width: 18ch; font-size: 3rem; line-height: 1.12; }
+.home-intro h1 { max-width: 18ch; font-size: 3rem; line-height: 1.12; color: var(--cp-glass-heading); }
 .home-intro p { color: var(--cp-text); max-width: 65ch; margin-bottom: 0; }
 .home-intro .home-value { margin-bottom: 12px; font-weight: 600; }
 .home-composition .preference-flow.minimal-flow { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 24px 48px; align-items: start; width: 100%; max-width: none; margin: 0; padding: 0; }
 .home-composition .preference-flow > * { grid-column: 1 / -1; margin: 0; padding: 24px; background: var(--cp-surface); border-radius: 20px; box-shadow: var(--cp-shadow-control); }
+.home-composition .preference-flow > :is(.home-intro, .prompt-form) {
+  --cp-text-muted: var(--cp-text);
+  --cp-focus: var(--cp-text);
+  background: var(--cp-hero-panel);
+  -webkit-backdrop-filter: var(--cp-hero-filter);
+  backdrop-filter: var(--cp-hero-filter);
+  box-shadow: var(--cp-hero-shadow);
+}
 .home-composition .preference-flow > .home-intro { grid-column: 2; grid-row: 1; align-self: center; padding: 28px; }
 .home-composition .preference-flow > .prompt-form { grid-column: 1; grid-row: 1; }
-.home-composition .prompt-shell { box-shadow: none; }
+.home-composition .prompt-shell { background: var(--cp-hero-input); box-shadow: none; }
+.home-composition .prompt-shell textarea { background: var(--cp-hero-input); }
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .home-hero {
+    --cp-hero-panel: var(--cp-glass-fill);
+    --cp-hero-input: transparent;
+    --cp-hero-filter: blur(10px) saturate(1.15);
+    --cp-hero-shadow: var(--cp-glass-shadow);
+  }
+}
+.home-hero:has(.hero-backdrop[hidden]) {
+  --cp-hero-panel: var(--cp-surface);
+  --cp-hero-input: var(--cp-surface-soft);
+  --cp-hero-filter: none;
+  --cp-hero-shadow: var(--cp-shadow-control);
+}
+@media (prefers-reduced-transparency: reduce), (forced-colors: active) {
+  .home-hero {
+    --cp-hero-panel: var(--cp-surface);
+    --cp-hero-input: var(--cp-surface-soft);
+    --cp-hero-filter: none;
+    --cp-hero-shadow: var(--cp-shadow-control);
+  }
+}
 .preference-flow.minimal-flow { padding: 0; margin-bottom: 0; }
 .prompt-shell { background: var(--cp-surface-soft); border: 0; border-radius: 20px; padding: 16px; box-shadow: var(--cp-shadow-control); }
 .prompt-shell > label { margin: 4px 8px 8px; }

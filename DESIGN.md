@@ -34,10 +34,18 @@ actions. It supplies a visual language, not finance content, copied artwork or
 a different product. The pinned wordmark and navigation stay.
 Georgia gives the main heading and wordmark a readable native serif voice;
 forms, navigation and supporting headings retain the compact Segoe UI stack.
-Opaque form and text surfaces protect readability above the photograph in both
-themes and when the image is missing. The picture remains visible around those
-localized surfaces, with no full-photo wash, glass or text-shadow workaround.
-Mint groups the input, empty state and footer; pink is for primary actions.
+The owner's subsequent liquid-glass request replaces the two opaque hero panels
+with translucent material: 66% white in light mode, 72% green-dark in dark mode,
+10px backdrop blur, slight saturation and restrained inset light edges over
+the existing offset shadow. The input's inner surfaces are transparent rather
+than hiding the picture behind a second solid block. Hero text/placeholders and
+focus use strong ink; the heading uses deeper teal in light and mint in dark.
+Contrast is bounded against both black and white image pixels, not just the
+fallback canvas. Unsupported backdrop filtering, reduced transparency, forced
+colors and image failure restore opaque panels and mint/dark input surfaces.
+Expanded review/filter panels, menus, dialogs and listing surfaces stay solid.
+No full-photo wash, text shadow, animation or pointer-following distortion is
+added. Mint groups the empty state and footer; pink is for primary actions.
 
 The user-supplied house/radar artwork is the pinned site mark, replacing the
 generic home-icon badge in both shared and legacy/demo headers. Its turquoise
@@ -75,7 +83,9 @@ refinement replaces persistent edges with filled controls and soft elevation:
 `--cp-shadow-control` groups the prompt, fields, factual cards and ordinary panels;
 `--cp-shadow-panel` raises menus and dialogs. There are no inset rings or
 shadow stripes in place of separators. Header/footer and section separators
-have no borders; spacing and surface colors retain their hierarchy.
+have no borders; spacing and surface colors retain their hierarchy. The
+explicitly requested hero glass is the sole exception to the no-inset-shadow
+rule: its top/bottom light edges describe the transparent material, not controls.
 Primary buttons stay visibly pink even when empty/busy/disabled. Disabled
 controls keep their native disabled semantics, muted readable ink, no elevation
 and a not-allowed cursor; hover never makes them look enabled. Secondary/Meny
@@ -88,7 +98,7 @@ outlines are retained. Text and placeholders meet their AA contrast thresholds;
 focus indicators meet 3:1. Visible labels, native semantics and focus identify
 fields and actions. Pastel fills and soft shadows are grouping cues, not a
 claim of 3:1 boundary contrast. Tests check the actual border widths are zero,
-the elevation has offset/blur rather than an outline ring, labeled controls,
+ordinary elevation has offset/blur rather than an outline ring, labeled controls,
 button states and real text/focus contrast, not colors of removed borders.
 Success, warning and error tokens retain their semantic colors and text cues;
 errors use readable red text instead of a decorative underline. They are not

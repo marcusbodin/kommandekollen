@@ -1,5 +1,15 @@
 # Deployment and launch status
 
+## Supplied homepage image, 2026-09-27
+
+Pages run `36327213219` published commit `132d4f9`, replacing the earlier house
+photograph with the owner's supplied interior image. Both local WebP versions
+(`autumn-home-800.webp`, 69,404 bytes; `autumn-home-1374.webp`, 155,438 bytes)
+and the published HTML/JavaScript/CSS matched the production build over HTTPS.
+Linux Check `36326901516` passed before publication. The prior house photograph's
+license is retained with its historical files, not assigned to the new image.
+No source grants, imported listings or property-email settings changed.
+
 ## Private listings rollout, 2026-09-27
 
 The owner's later decision supersedes anonymous browsing: real listings are

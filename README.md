@@ -110,8 +110,12 @@ aldrig hemma i `VITE_*`, JavaScript-paket, git eller Actions-loggar.
 - Startsidan har ägarens tillhandahållna interiörbild med balkong och kakelugn
   som lokal bakgrund.
   På desktop ligger sökrutan till vänster och **Vad är viktigt i ditt nästa hem?**
-  till höger över bilden; på mobil kommer texten före sökrutan. Ogenomskinliga
-  läsytor fungerar även när bilden inte laddas. Utökad granskning och vanliga
+  till höger över bilden; på mobil kommer texten före sökrutan. De två panelerna
+  använder liquid glass: genomskinlig toning, lätt bakgrundsoskärpa och diskreta
+  ljuskanter. Även textrutans inre bakgrund är genomskinlig så att bilden syns.
+  Text, platshållare och tangentbordsfokus behåller kontrast över ljusa och mörka
+  bildpartier. Utan stöd för effekten, vid minskad transparens/kontrastläge eller
+  om bilden saknas används ogenomskinliga läsytor. Utökad granskning och vanliga
   filter får hela bredden nedanför, utan att textrutan monteras om.
   Två WebP-filer i 800/1374px används med responsiv beskärning.
   [Bildens ursprung och bearbetning](public/assets/ATTRIBUTION.md) nås från

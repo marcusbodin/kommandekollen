@@ -143,7 +143,11 @@ on a dark-preferring OS, larger touch targets and numeric sliders with optional
 precise entry. Existing ranges and saved-search semantics remain available.
 The pinned supplied house/radar logo and local favicon stay unchanged.
 The user's white/mint/teal/pink palette, Georgia display, Segoe controls,
-borderless surfaces and filled buttons remain binding. The latest reference
+borderless controls and filled buttons remain binding. The explicit liquid-glass
+request replaces only the introductory hero and search panels with translucent,
+lightly blurred surfaces so the supplied image remains visible underneath.
+Text contrast, native focus and opaque accessibility/image-failure fallbacks
+remain required; no search or access behavior changes. The latest reference
 authorizes a full-width decorative background hero, with the search card left
 and "Vad är viktigt i ditt nästa hem?" right on desktop; mobile reads question
 then input. It does not authorize reference-site branding, ads or photos.
