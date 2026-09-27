@@ -7,18 +7,23 @@ upcoming cards; the named DOM parser extracted 13 Stockholm-county records into
 a private, incomplete preview. No individual detail page was fetched, and no
 login, CAPTCHA, private API or bot protection was bypassed. Production source
 activation remains empty; research did not ingest or publish inventory.
+The separately approved expansion on the same date added working local previews
+for HusmanHagberg and MOHV. SkandiaMäklarna and Länsförsäkringar were stopped at
+their explicit linked terms; MOHV was authorized as the replacement candidate.
+These are three technically demonstrated preview sources including Notar, not
+three licensed/activated production sources or complete Stockholm coverage.
 
 | Candidate | Evidence | Exact status |
 | --- | --- | --- |
 | Fastighetsbyrån | [robots.txt](https://www.fastighetsbyran.com/robots.txt) explicitly prohibits automated access without special permission; object/API paths disallowed | Explicitly prohibited without permission; disabled |
 | Svensk Fastighetsförmedling | [Terms](https://www.svenskfast.se/om-oss/anvandarvillkor/) prohibit scraping, copying/indexing and automatically generated object links without permission. [Robots](https://www.svenskfast.se/robots.txt) also exclude search parameters `t`, `maxp`, `minp`, `maxr`, `minr`, `maxla`, `minla`, `sw`, `noprice` and several paths | Explicitly prohibited without permission; disabled |
 | Bjurfors | [Robots](https://www.bjurfors.se/robots.txt) allow `/` except specified Ragnar/PDF/undefined-office paths; rechecked 2026-09-27. [Boagent terms](https://www.bjurfors.se/sv/mitt-bjurfors/anvandarvillkor/) describe personal-data processing, not a syndication license | Bounded public-HTML requests returned empty HTTP 200 responses; see investigation below. Reuse permission / suitable public license not established; disabled. Do **not** misquote Boagent terms as an explicit scraping ban |
-| Länsförsäkringar Fastighetsförmedling | [Robots](https://www.lansfast.se/robots.txt) exclude error and internal application/config/data/Umbraco directories; advertise sitemap | Bounded robots assessment only. Terms/feed license unverified; disabled |
-| SkandiaMäklarna | [Robots](https://www.skandiamaklarna.se/robots.txt) exclude `/episerver/`; sitemap advertised | Terms/feed license unverified; disabled |
-| HusmanHagberg | [Robots](https://www.husmanhagberg.se/robots.txt) allow `/`; sitemap advertised | Terms/feed license unverified; disabled |
+| Länsförsäkringar Fastighetsförmedling | Fresh [robots](https://www.lansfast.se/robots.txt) exclude error and internal application/config/data/Umbraco directories. Linked [terms](https://www.lansfast.se/anvandarvillkor/) explicitly require permission for indexing and automatically generated links on another site | Stopped before an index/browser/detail investigation; no adapter or source activation |
+| SkandiaMäklarna | Fresh [robots](https://www.skandiamaklarna.se/robots.txt) exclude `/episerver/`. Linked [terms](https://www.skandiamaklarna.se/anvandarvillkor/) prohibit indexing/automatically generated links and bulk copying without permission, including bulk storage without redistribution | Stopped before an index/browser/detail investigation; no adapter or source activation |
+| HusmanHagberg | Fresh [robots](https://www.husmanhagberg.se/robots.txt) allow `/`. [Terms](https://www.husmanhagberg.se/anvandarvillkor/) permit attributed, non-distorting linking, but restrict copying protected texts/images | 18 rendered cards, 1 unambiguous Stockholm-county match after 10 conflicting-status and 7 location exclusions. Private partial preview; no general extraction/reuse license or production activation established |
 | Notar | [Robots](https://www.notar.se/robots.txt) allow `/`; rechecked 2026-09-27. Linked [Sekretess & Villkor](https://www.notar.se/information/sekretess-villkor) describes personal-data processing | Static HTML has no cards; ordinary rendering yielded 24 upcoming cards / 13 Stockholm records in a private partial preview. Recurring extraction/republication permission and complete coverage not established; production disabled |
 | Erik Olsson | [Robots](https://www.erikolsson.se/robots.txt) exclude `/api/*`, `/dashboard/*`, `/password`, `/beta`; sitemaps advertised | Terms/feed license unverified; disabled; API exclusions must be respected |
-| MOHV | [Robots](https://www.mohv.se/robots.txt) exclude `/wp-admin/`, allow its admin-ajax path; page/office/post sitemaps advertised | Terms/feed license unverified; disabled |
+| MOHV | Fresh [robots](https://www.mohv.se/robots.txt) exclude `/wp-admin/`, allow its admin-ajax path. Linked [privacy policy](https://www.mohv.se/integritetspolicy/) describes personal-data processing, not a syndication license | Approved replacement candidate. 27 Stockholm matches in an explicit first-50-card window of a 266-card upcoming page. Private partial preview only; production disabled |
 | Authorized partner feed | Real validator/import pipeline and synthetic fixtures exist | No partner, feed credentials or suitable license supplied; zero live coverage |
 
 Search-engine summaries were not treated as legal evidence; in particular, the
@@ -172,6 +177,12 @@ To reproduce extraction from an already captured DOM with **no network**:
 ```
 
 Offline extraction does not invent a new capture/last-seen timestamp.
+Fresh Notar previews now persist an `observationId` UUID and `observedAt`;
+the legacy `capturedAt` alias is exactly that same successful-capture timestamp.
+The UUID is generated once for that capture and stored with the output. Bare
+`--from-html` has `observationId: null` and `observedAt: null`, never a newly
+minted observation. This metadata addition did not re-fetch Notar or change its
+network policy, parser, coverage, or production integration.
 Output is mode 0600, exclusive (never overwrites a file or symlink); stdout
 contains counts and non-ingestible/partial status, not property facts.
 Errors exit nonzero. Do not put real HTML or JSON in the repository.
@@ -189,6 +200,224 @@ retire inventory. Production collection, Worker, D1, quotas, source allowlists
 and authorization remain unchanged. Publication still requires a defensible
 reuse basis plus a separately designed complete-snapshot or safe-delta contract;
 copying this page's 13 records into the existing snapshot route is not safe.
+
+## HusmanHagberg and MOHV bounded previews
+
+### Fresh policy evidence and stopped candidates (2026-09-27)
+
+Each candidate's official robots, public navigation, and linked legal page
+were read freshly. All four page robots returned 200; none published a positive
+crawl delay. No sitemap was crawled. The restricted brokers were not investigated
+past their home/legal pages:
+
+- [SkandiaMäklarna terms](https://www.skandiamaklarna.se/anvandarvillkor/)
+  include automated tools in the definition of users and state:
+  “Du får inte indexera innehållet på vår webb och baserat på detta
+  automatgenerera länkar på någon annan webbplats”.
+  This is in the list requiring prior permission. Separate clauses prohibit
+  bulk copying/storage even without distribution, and copies on another site.
+- [Länsförsäkringar terms](https://www.lansfast.se/anvandarvillkor/) state:
+  “Du får inte heller utan tillstånd indexera innehållet på vår webb och
+  baserat på detta automatgenerera länkar på någon annan webbplats”.
+  Their private-use allowance covers isolated copies for later personal
+  reading and sharing links, not a general license for this indexed service.
+
+Both sites allow some ordinary private saving/sharing. That does not override
+the separate indexing restrictions. Neither broker has an implemented adapter.
+Noncommercial use, an owner/invited-user audience, and a shared password do not
+create permission. No license reference was fabricated.
+
+[HusmanHagberg terms](https://www.husmanhagberg.se/anvandarvillkor/) explicitly
+allow linking from another website, require clear attribution and no distortion,
+and restrict reproduction/distribution of protected text and images. No general
+recurring database-extraction or republication license was established.
+MOHV's linked [privacy policy](https://www.mohv.se/integritetspolicy/) concerns
+personal-data processing; no broader usage license was found in the reviewed
+navigation. Absence of an explicit prohibition in that reviewed policy is not
+a reuse grant. Reassess the actual intended use and current terms before any
+recurring collection or display.
+
+### Observed contracts and coverage
+
+| Source / canonical public entry | Observed DOM window | Eligible Stockholm records | Missing facts |
+| --- | --- | --- | --- |
+| [HusmanHagberg Kommande](https://www.husmanhagberg.se/kopa/?c=true) | 18 property cards; promotional panels are not cards | 1; exclude 10 cards displaying both `Budgivning` and `Kommande®`, then 7 outside the exact municipality allowlist | Type and monthly fee null; price, rooms and living area present |
+| [MOHV Snart här](https://www.mohv.se/snart-har/) | First 50 cards in DOM order, from 266 cards actually present in the captured index | 27; 23 location exclusions in the sampled window | All 27 have explicit type, rooms and living area; 11 have price, 16 have null price; all monthly fees null |
+
+HusmanHagberg's public home navigation linked the exact `?c=true` URL.
+The source's card grid has direct `div.group` property cards and unrelated
+promotional siblings. The parser uses the card's `div.mt-4`, `h3`, area and
+municipality paragraph, visible status badges, and `rum`/`kvm`/`kr` spans.
+Every included card has `Kommande®` and no contradictory `Budgivning` label.
+Three of the four geographic Stockholm matches had that contradiction; they
+were excluded, not silently counted as verified upcoming. Canonical links are
+`https://www.husmanhagberg.se/objekt/<slug>/<stable-id>/`.
+
+MOHV's ordinary [property navigation](https://www.mohv.se/till-salu/) linked
+the exact `/snart-har/` entry. Observed cards are direct
+`section.vitec-estate-list-item.is-coming` children of
+`section.vitec-estate-list`, with `a.estate-listitem-kommande` and an explicit
+`Snart här` badge. The geographic `data-municipality`, `data-county` and
+`data-area` attributes are part of that observed public DOM, not a guessed API
+schema. County must say `Stockholm` and municipality must independently match
+the shared Stockholm-county allowlist exactly. The parser reads displayed
+title, rooms, living area, type and price from the named card elements.
+`Friliggande villa` explicitly maps to `Villa`; unsupported labels such as
+`Parhus`/`Kedjehus` remain null rather than being guessed to mean `Radhus`.
+Plot area and unlabelled numeric data attributes are never substituted.
+Canonical links are `https://www.mohv.se/objekt/<locality-slug>/<address-slug>/<stable-id>/`.
+An out-of-county card with an empty locality URL segment was excluded by its
+geography; malformed links on included records fail validation.
+
+Both parsers reject changed required structure, malformed recognized facts,
+unsafe or differently bound links, and conflicting duplicate included IDs.
+Identical included records are deduplicated explicitly. Unknown/combined floor
+areas stay null. No descriptions, photos, seller/contact details, new type
+inference, or complete-inventory claims are added. No detail pages were needed.
+There was no source paging, query rewriting, API replay, authentication or
+challenge workaround.
+
+### Browser dependency evidence and limits
+
+HusmanHagberg used two normal fresh-context Chromium investigation loads.
+The first allowed only source-declared runtime, blocked unclassified data reads
+and produced no usable cards; it was diagnostic, not a successful empty preview.
+It established the anonymous page-initiated public search dependency:
+
+| Origin/path | Role | Observed methods / parameter names |
+| --- | --- | --- |
+| `assets.cdn.husmanhagberg.se/assets-production/_next/static/` | HTML-declared first-party application scripts/styles | GET |
+| `api.husmanhagberg.se/object/api/objects/` | Public card search and coordinates used by that index | GET; `c`, `ps`, optionally `onlyCoordinates`; normal OPTIONS preflight eligible |
+
+The second load narrowly allowed those operations without constructing,
+replaying or altering them and rendered the 18 cards. The API-host robots
+returned 404: no published policy or reuse grant was established. The runner
+checks again on every live run, respects a published policy, tolerates only
+that missing-policy status, and rejects denial/other errors. It requires a
+successful primary card-search response; coordinates or retained cards alone
+are insufficient. Account/session checks, CMS broker-directory reads and
+evidenced Next navigation/detail prefetches remain blocked as unnecessary for
+this fixed public index. Any other unclassified functional read fails the run.
+
+MOHV used one normal generic-index discovery load and one normal load of its
+linked upcoming index. There were no XHR/fetch operations in the successful
+upcoming load. Its HTML-declared first-party jQuery, Divi and Vitec
+`vitec`/`ractive`/`search` runtime and styles were sufficient. The tool does not
+guess/replay a WordPress endpoint. Even the robots-allowed admin-ajax path is
+blocked as an unobserved functional operation. Form/lead/contact scripts,
+maps, media, Google/reCAPTCHA scripts, ads/analytics, third-party widgets and
+unrelated origins are not enabled. An actual access challenge or functional
+failure stops the run; none was worked around.
+
+| Investigation browser load | Attempted | Allowed | Blocked | Decoded bytes | Encoded bytes |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| HusmanHagberg dependency discovery | 56 | 24 | 32 | 3,828,752 | 606,516 |
+| HusmanHagberg successful card load | 77 | 26 | 51 | 5,615,751 | 659,939 |
+| MOHV generic-index discovery | 75 | 33 | 42 | 3,791,411 | 572,431 |
+| MOHV upcoming index | 69 | 33 | 36 | 2,840,660 | 493,277 |
+
+These are measured research observations, not future network counts or
+Free-tier guarantees. Robots reads are additional and separately bounded.
+The initial static HusmanHagberg upcoming and MOHV generic-index attempts
+returned 200 but exceeded the 500 KB body limit and were stopped; no large-body
+retry or alternate identity was used. Browser documents were larger, but
+actual property results fit the existing parser limit: the HusmanHagberg
+results region was 78,128 bytes including promotional siblings, and MOHV's
+first-50-card region was 87,099 bytes. The committed runner further removes
+promotional siblings, images, scripts and unrelated attributes from the saved
+results fragment. No DOM, network, production or quota cap was increased.
+
+`scripts/broker-browser.ts` shares safeguards between the two new sources.
+Both use fresh contexts, default Chromium identity, blocked service workers,
+100 allowed / 200 attempted requests, 12 MB actual decoded traffic, a
+30-second browser-phase deadline, 15-second launch/navigation and 10-second
+readiness bounds. Images/fonts/media are blocked and still count as attempts.
+Fresh robots use the existing 12-second/64 KB bounds. Positive published
+`Crawl-delay` is rejected before browser work rather than pretending a startup
+sleep enforces it; otherwise the initial two-second wait is retained.
+Allowed page/runtime/data HTTP failures, redirects, request failures,
+unclassified functional operations, missing cards and visible challenges fail
+explicitly, never as retained-card or empty-inventory success.
+
+### Manual private commands and capture identity
+
+The new source-specific parsers share a manual CLI, not a production collector:
+
+```bash
+./node_modules/node/bin/node --import tsx scripts/preview-broker.ts \
+  --source husmanhagberg --output /absolute/private/hh-preview.json \
+  --capture-output /absolute/private/hh-capture.json
+
+./node_modules/node/bin/node --import tsx scripts/preview-broker.ts \
+  --source mohv --output /absolute/private/mohv-preview.json \
+  --capture-output /absolute/private/mohv-capture.json
+```
+
+Each invocation opens only the fixed public upcoming index, takes at most the
+first 50 property cards in original DOM order, and closes the browser. There is
+no arbitrary URL, paging, filter-rewrite, automatic retry, paid dependency,
+recurring job or newly opened app server. Recheck current terms before live use.
+
+Results keep `kind: "<source>-rendered-preview"`, `ingestible: false` and `items`
+(including the existing-style computed `id`). `coverage.complete` is always
+false and `totalAvailable` always null. `renderedCards` records the authentic
+pre-window DOM count; `sampledCards` records the captured card count;
+`windowLimit: 50` and `truncated` make the deliberate window explicit.
+Exclusions/duplicates apply to that sampled window only. There is no implication
+that MOHV's 27 matches exhaust Stockholm, or that no more HH homes exist.
+
+Successful live capture creates one UUID `observationId` and one canonical UTC
+`observedAt`. Optional capture output stores a versioned `broker-dom-capture`
+envelope with source ID, the same identity/time, pre-window count, minimal DOM,
+and its SHA-256 hash. An offline replay preserves them:
+
+```bash
+./node_modules/node/bin/node --import tsx scripts/preview-broker.ts \
+  --source mohv --from-capture /absolute/private/mohv-capture.json \
+  --output /absolute/private/mohv-replayed-preview.json
+```
+
+The hash detects mismatched DOM/metadata files; it is **not** a publisher
+signature, legal authorization, or proof that arbitrary user-supplied capture
+metadata is genuine. Only trusted, actually observed capture files should be
+used. Replaying a capture never renews its time, changes its UUID or makes an
+old observation fresh. The backend's separate importer owns any controlled
+conversion and freshness enforcement; these envelopes are not ingestion feeds.
+
+Bare DOM extraction also works without any network:
+
+```bash
+./node_modules/node/bin/node --import tsx scripts/preview-broker.ts \
+  --source husmanhagberg --from-html /absolute/private/hh-results.html \
+  --output /absolute/private/hh-offline-preview.json
+```
+
+Bare HTML has no authenticated capture metadata: `observationId`, `observedAt`,
+`renderedCards` and `truncated` are null. The known `sampledCards` remains the
+actual number of cards in that fragment. Do not attach “now” or an invented full
+page count. A raw DOM containing more than 50 property cards is rejected; the
+caller must not hide backend truncation inside an importer.
+
+All outputs are exclusive mode-0600 files outside the checkout, with
+symlink-aware repository/existing-file rejection. Stdout contains counts only;
+errors are sanitized and exit nonzero. Real DOM, listings and traffic proof stay
+in private session files, never fixtures, bundles, logs or public artifacts.
+Only anonymized observed-structure fixtures are committed.
+
+```bash
+./node_modules/node/bin/node ./node_modules/vitest/vitest.mjs run \
+  tests/broker-preview.test.ts tests/notar-preview.test.ts tests/model.test.ts
+npm run build
+```
+
+These tests use actual Chromium with **all network intercepted**, including
+denials, changed operations, request/decoded-byte caps, the exact 266-to-50
+window, metadata replay, exclusions, malformed facts and private file handling.
+Separate local offline parsing verified the real captured HH and MOHV windows.
+The existing Notar parser/behavior is retained; only shared private-file
+safeguards/browser limits and genuine Notar live-capture metadata were added.
+`collector.ts`, `ingest.ts`, `source-config.ts`, Worker/shared schemas and
+production source grants/configuration were not changed by this expansion.
 
 ## Existing complete-snapshot collector (unchanged)
 

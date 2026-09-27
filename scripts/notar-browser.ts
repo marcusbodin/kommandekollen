@@ -1,9 +1,11 @@
 import { chromium, type Request } from "@playwright/test";
 import robotsParser from "robots-parser";
+import { randomUUID } from "node:crypto";
 import { boundedText, CollectionError, LIMITS, USER_AGENT } from "./collector";
 import { NOTAR_INDEX, NotarPreviewError, parseNotarDom } from "./notar-dom";
+import { BROWSER_LIMITS } from "./preview-common";
 
-export const BROWSER_LIMITS = { allowedRequests: 100, attemptedRequests: 200, decodedBytes: 12_000_000, totalMs: 30_000, navigationMs: 15_000, readinessMs: 10_000 };
+export { BROWSER_LIMITS } from "./preview-common";
 const dataParameters: Record<string, readonly string[]> = {
   "/areas": ["country", "types[]"],
   "/objects": ["limit", "sortBy", "sortOrder", "assignmentStatus", "compactObjects"],
@@ -128,7 +130,8 @@ export async function renderNotarPreview() {
     await checkChallenge();
     if (failure) throw failure;
     const preview = parseNotarDom(await page.content());
-    return { ...preview, capturedAt: new Date().toISOString(), traffic: metrics };
+    const observedAt = new Date().toISOString();
+    return { ...preview, observationId: randomUUID(), observedAt, capturedAt: observedAt, traffic: metrics };
   } catch (error) {
     if (failure) throw failure;
     if (error instanceof NotarPreviewError) throw error;

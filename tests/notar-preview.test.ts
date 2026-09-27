@@ -151,6 +151,8 @@ describe("actual Chromium with intercepted synthetic pages only", () => {
     expect(result.traffic.allowedRequests).toBe(1);
     expect(result.traffic.decodedBytes).toBeGreaterThan(0);
     expect(result.ingestible).toBe(false);
+    expect(result.observationId).toMatch(/^[0-9a-f-]{36}$/);
+    expect(result.observedAt).toBe(result.capturedAt);
   }, 15_000);
   it("stops at the request cap without a retry or empty-success fallback", async () => {
     await syntheticBrowser(fixture.replace("</body>", `<script>for(let i=0;i<${BROWSER_LIMITS.allowedRequests + 5};i++)fetch('/_nuxt/synthetic.js?i='+i).catch(()=>{});</script></body>`));
@@ -197,6 +199,7 @@ it("CLI keeps facts in an exclusive private file, emits counts only, and rejects
     expect(stdout).toContain('"matchedItems":2');
     expect(stdout).not.toContain("Exempelgatan");
     expect(statSync(output).mode & 0o777).toBe(0o600);
+    expect(JSON.parse(readFileSync(output, "utf8"))).toMatchObject({ observedAt: null, observationId: null });
     expect(feedSchema.safeParse(JSON.parse(readFileSync(output, "utf8"))).success).toBe(false);
     expect(spawnSync(process.execPath, args).status).toBe(1);
     const inRepo = resolve("notar-preview-must-not-exist.json");
