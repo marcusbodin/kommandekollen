@@ -47,7 +47,7 @@ export const listingSchema = z.object({
   municipality: z.enum(municipalities),
   area: z.string().trim().min(1).max(80),
   address: z.string().trim().min(1).max(120),
-  type: z.enum(types),
+  type: z.enum(types).nullable(),
   price: optionalNumber(100_000_000),
   rooms: optionalNumber(30),
   size: optionalNumber(10_000),
@@ -58,7 +58,13 @@ export const listingSchema = z.object({
   }, "Endast HTTPS-länkar utan inloggningsuppgifter eller fragment tillåts.")),
 }).strict();
 export type ListingInput = z.infer<typeof listingSchema>;
-export type Listing = ListingInput & { id: string; firstSeen: string; lastSeen: string };
+export type Listing = ListingInput & { id: string; firstSeen: string; lastSeen: string; coverage?: "complete" | "partial" };
+const factNumber = new Intl.NumberFormat("sv-SE");
+export function listingFacts(listing: ListingInput | Omit<ListingInput, "externalId">) {
+  const fact = (value: number | null, unit = "") => value === null ? "Ej angivet" : `${factNumber.format(value)}${unit}`;
+  return { type: listing.type ?? "Ej angivet", price: fact(listing.price, " kr"),
+    rooms: fact(listing.rooms), size: fact(listing.size, " m²"), fee: fact(listing.fee, " kr") };
+}
 export function listingId(listing: Pick<ListingInput, "sourceId" | "externalId">): string {
   return `${listing.sourceId}:${listing.externalId}`;
 }

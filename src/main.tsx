@@ -1,7 +1,7 @@
 import { StrictMode, useEffect, useMemo, useRef, useState, type FormEvent, type MouseEvent } from "react";
 import { createRoot } from "react-dom/client";
 import { z } from "zod";
-import { defaultFilters, filterSchema, listingSchema, municipalities, sourceIds, types, type Filters, type Listing } from "../shared/model";
+import { defaultFilters, filterSchema, listingFacts, listingSchema, municipalities, sourceIds, types, type Filters, type Listing } from "../shared/model";
 import { assess, manualProfile, profileSchema, ranked, type Profile } from "../shared/preferences";
 import { sources, type Source } from "../shared/sources";
 import { demoListings } from "./demo";
@@ -22,20 +22,19 @@ function takeAction() {
 }
 const initialAction = takeAction();
 type Run = { last_success: string | null; last_attempt: string; status: string; error_code: string | null; item_count: number };
-type SourceState = Source & { authorized?: boolean; run?: Run | null };
+type SourceState = Source & { authorized?: boolean; coverage?: "complete" | "partial" | null; run?: Run | null };
 type Catalog = { listings: Listing[]; sources: SourceState[]; serviceReady: boolean; privacyContact: string | null };
 const catalogSchema = z.object({
-  listings: z.array(listingSchema.extend({ id: z.string(), firstSeen: z.string().datetime(), lastSeen: z.string().datetime() })).max(200),
+  listings: z.array(listingSchema.extend({ id: z.string(), firstSeen: z.string().datetime(), lastSeen: z.string().datetime(), coverage: z.enum(["complete", "partial"]) })).max(200),
   sources: z.array(z.object({
     id: z.enum(sourceIds), name: z.string(), status: z.enum(["blocked", "unverified", "awaiting-feed"]), reason: z.string(),
     robots: z.string().nullable(), terms: z.string().nullable(), checked: z.string().nullable(),
-    authorized: z.boolean(), run: z.object({
+    authorized: z.boolean(), coverage: z.enum(["complete", "partial"]).nullable(), run: z.object({
       last_success: z.string().nullable(), last_attempt: z.string(), status: z.string(), error_code: z.string().nullable(), item_count: z.number(),
     }).nullable(),
   })),
   serviceReady: z.boolean(), privacyContact: z.string().nullable(),
 });
-const number = (value: number) => new Intl.NumberFormat("sv-SE").format(value);
 const date = (value: string) => new Intl.DateTimeFormat("sv-SE", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Stockholm" }).format(new Date(value));
 const stale = (value: string) => Date.now() - Date.parse(value) > 48 * 3600_000;
 
@@ -101,7 +100,7 @@ function ActionPage({ shared, action }: { shared: boolean; action: RegExpExecArr
 const memberSchema = z.object({
   id: z.string(), email: z.string(), state: z.enum(["unverified", "pending", "approved", "rejected", "revoked"]),
   owner: z.boolean(), filters: filterSchema, alertsEnabled: z.boolean(),
-  profile: profileSchema, searchVersion: z.number().int().nonnegative(), aiReady: z.boolean(),
+  profile: profileSchema, searchVersion: z.number().int().nonnegative(), aiReady: z.boolean(), alertsReady: z.boolean(),
 });
 type Member = z.infer<typeof memberSchema>;
 type Application = { id: string; email: string; application: string; state: string };
@@ -217,8 +216,8 @@ function FilterPanel({ filters, onChange, heading = "Din sökning" }: { filters:
         {field("minSize", "Minsta boarea", "m²", 5, 300, 10000)}
         {field("maxSize", "Största boarea", "m²", 5, 300, 10000)}
         {field("maxFee", "Högsta månadsavgift", "kr/mån", 250, 15000, 100000)}
-        <label className="check"><input type="checkbox" checked={filters.includeUnknown} onChange={event => update("includeUnknown", event.target.checked)} /><span>Ta även med objekt där filtrerade uppgifter saknas</span></label>
-        <p className="small muted">Saknade uppgifter räknas aldrig som noll. Om en min- och maxgräns korsas följer den andra gränsen med. Exakta värden kan skrivas in utan avrundning.</p>
+        <label className="check"><input type="checkbox" checked={filters.includeUnknown} onChange={event => update("includeUnknown", event.target.checked)} /><span>Ta även med objekt där filtrerade sifferuppgifter saknas</span></label>
+        <p className="small muted">Saknade uppgifter räknas aldrig som noll. Vald bostadstyp kräver en angiven typ. Om en min- och maxgräns korsas följer den andra gränsen med. Exakta värden kan skrivas in utan avrundning.</p>
       </div>
     </details>
     {!filterSchema.safeParse(filters).success && <p role="alert" className="error">Kontrollera intervallen. Minsta värdet får inte vara större än det högsta.</p>}
@@ -226,20 +225,22 @@ function FilterPanel({ filters, onChange, heading = "Din sökning" }: { filters:
 }
 function Property({ listing, profile }: { listing: Listing | PublicListing; profile?: Profile }) {
   const assessment = profile && "externalId" in listing ? assess(listing, profile) : null;
+  const facts = listingFacts(listing);
   return <article className="property surface">
-    <div className="property-top"><span className="badge">{demo ? "Demo · kommande" : "Kommande"}</span><span className="small muted">{listing.type}</span></div>
+    <div className="property-top"><span className="badge">{demo ? "Demo · kommande" : "Kommande"}</span><span className="small muted">Bostadstyp: {facts.type}</span></div>
     <div className="property-location">{listing.area} · {listing.municipality}</div>
     <h3>{listing.address}</h3>
-    <p className="price">{listing.price === null ? "Pris ej angivet" : `${number(listing.price)} kr`}</p>
+    <p className="price">{listing.price === null ? `Pris: ${facts.price}` : facts.price}</p>
     <dl className="facts">
-      <div><dt>Boarea</dt><dd>{listing.size === null ? "Ej angivet" : `${number(listing.size)} m²`}</dd></div>
-      <div><dt>Rum</dt><dd>{listing.rooms === null ? "Ej angivet" : number(listing.rooms)}</dd></div>
-      <div><dt>Avgift/mån</dt><dd>{listing.fee === null ? "Ej angivet" : `${number(listing.fee)} kr`}</dd></div>
+      <div><dt>Boarea</dt><dd>{facts.size}</dd></div>
+      <div><dt>Rum</dt><dd>{facts.rooms}</dd></div>
+      <div><dt>Avgift/mån</dt><dd>{facts.fee}</dd></div>
     </dl>
     {assessment && <p className="small">{assessment.needsCheck ? "Matchar kända filter. Manuell kontroll krävs." : "Matchar dina faktabaserade krav."}</p>}
     {!!assessment?.reasons.length && <ul className="match-reasons small">{assessment.reasons.map(reason => <li key={reason}>{reason}</li>)}</ul>}
     {!!profile?.unverified.length && <p className="small muted">Inte bedömt: {profile.unverified.map(c => c.text).join("; ")}.</p>}
     {!profile && <p className="small muted">Först upptäckt: {date(listing.firstSeen)}</p>}
+    {listing.coverage === "partial" && <p className="small muted">Observerat i ett begränsat urval, inte en fullständig inventering.</p>}
     <div className="property-bottom">
       {demo ? <span className="small muted">Fiktivt objekt · ingen annons</span> : <><div className="small muted">{sources.find(source => source.id === listing.sourceId)?.name}<br />
         <span className={stale(listing.lastSeen) ? "stale" : ""}>{stale(listing.lastSeen) ? "Äldre uppgift: " : "Kontrollerad: "}{date(listing.lastSeen)}</span></div>
@@ -251,10 +252,10 @@ function Sources({ data }: { data: SourceState[] }) {
   return <section id="kallor" className="sources-section">
     <h2>Källor och täckning</h2><p className="muted">Vi visar bara objekt från tillåtna källor. En tillåtande robots.txt är inte en licens att återpublicera data. Ingen fullständig Stockholmstäckning utlovas.</p>
     <div className="source-list surface">{data.map(source => <div className="source-row" key={source.id}>
-      <div><h3>{source.name}</h3><p className="small muted">{source.authorized ? "Licens konfigurerad av tjänstens ansvariga." : source.reason}</p>
-        {source.run?.last_success && <p className="small">Senast lyckad import: {date(source.run.last_success)} · {source.run.item_count} objekt</p>}
+      <div><h3>{source.name}</h3><p className="small muted">{source.authorized ? source.coverage === "partial" ? "Privat observationsåtkomst konfigurerad av ansvarig. Detta är ingen återpubliceringslicens." : "Licens konfigurerad av tjänstens ansvariga." : source.reason}</p>
+        {source.run?.last_success && <p className="small">Senast observerat: {date(source.run.last_success)} · {source.run.item_count} objekt i importen{source.coverage === "partial" ? ", inte hela källans utbud" : ""}</p>}
         {source.run?.status === "failed" && <p className="error small">Senaste hämtningen misslyckades. Tidigare objekt behålls och märks som äldre när de passerat 48 timmar.</p>}
-      </div><span className="source-status">{source.authorized ? source.run?.last_success ? stale(source.run.last_success) ? "Äldre data" : source.run.status === "failed" ? "Hämtningsfel" : "Importerad feed" : "Väntar på data" : source.status === "blocked" ? "Tillstånd krävs" : source.status === "awaiting-feed" ? "Ingen feed ansluten" : "Ej verifierad"}</span>
+      </div><span className="source-status">{source.authorized ? source.run?.last_success ? stale(source.run.last_success) ? "Äldre data" : source.run.status === "failed" ? "Hämtningsfel" : source.coverage === "partial" ? "Partiellt urval" : "Importerad feed" : "Väntar på data" : source.status === "blocked" ? "Tillstånd krävs" : source.status === "awaiting-feed" ? "Ingen feed ansluten" : "Ej verifierad"}</span>
     </div>)}</div>
   </section>;
 }
@@ -483,7 +484,7 @@ function App() {
             </section>}
             controlsRef={preferenceControls}
             member={guestFlow || !gate ? null : member} guest={guestFlow || !gate ? { aiReady: gate?.aiReady ?? false } : undefined}
-            ready={catalog.serviceReady && !error && !loading} refresh={refresh} onInference={refresh}
+            ready={gate?.alertsReady ?? false} refresh={refresh} onInference={refresh}
             renderFilters={(filters, change) => <FilterPanel filters={filters} onChange={change} />} onDemoPreview={setDemoProfile} />
           </div>
           </div>
@@ -522,7 +523,7 @@ function App() {
         </>}
         {canSearch && (demo || listingsVisible) && (!minimal || panel === "results") && <>
         {!minimal && <><section className="search-heading"><div className="search-heading-copy"><h1>Beskriv ditt nästa hem.</h1><p>Dina krav. Dina önskemål. Du godkänner innan något sparas.</p></div></section>
-        <PreferenceFlow apiBase={apiBase} demo={demo} member={guestFlow ? null : member} guest={guestFlow ? { aiReady: gate!.aiReady } : undefined} ready={catalog.serviceReady && !error && !loading} refresh={refresh}
+        <PreferenceFlow apiBase={apiBase} demo={demo} member={guestFlow ? null : member} guest={guestFlow ? { aiReady: gate!.aiReady } : undefined} ready={gate?.alertsReady ?? member?.alertsReady ?? false} refresh={refresh}
           renderFilters={(filters, change) => <FilterPanel filters={filters} onChange={change} />} onDemoPreview={setDemoProfile} onInference={shared ? refresh : undefined} />
           {publicFeed}</>}
         {shared && !member && <details className="surface"><summary>Har du redan en sparad sökning? Logga in</summary>

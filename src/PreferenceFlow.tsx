@@ -336,7 +336,7 @@ export function PreferenceFlow({ apiBase, demo, member, ready, refresh, renderFi
       {guest && saveIntent?.verified && <p className="notice" role="status">E-postadressen är verifierad. Granska den här sammanfattningen och godkänn sparandet igen. Den sparade sökningen har inte ändrats.</p>}
       {text.trim() && <p className="notice">Din nya text är inte tolkad än. Tolka den eller töm textfältet innan du godkänner sammanfattningen.</p>}
       <p className="small">Resultaten uppdateras från tillgängliga källor. Morgonmejl gäller bara nya objekt, inte varje ändring. Högst 20 per mejl. En sparad sökning per medlem.</p>
-      {!ready && !demo && <p className="notice">Inga redo källor för bevakning. Du kan spara sökningen pausad – inga bostadsmejl startas.</p>}
+      {!ready && !demo && <p className="notice">Bostadsmejlen är pausade. Du kan spara sökningen pausad – inga bostadsmejl startas.</p>}
       {profile.unverified.some(c => c.must) && <label className="check"><input type="checkbox" checked={accept} onChange={event => setAccept(event.target.checked)} disabled={dirty || busy} />
         <span>Jag accepterar att själv kontrollera kraven ovan. De används inte som bekräftade matchningskrav.</span></label>}
       <label className="check"><input type="checkbox" checked={consent} onChange={event => setConsent(event.target.checked)} disabled={dirty || blocking || busy} />
@@ -384,7 +384,7 @@ export function PreferenceFlow({ apiBase, demo, member, ready, refresh, renderFi
       <button disabled={busy || !valid} onClick={() => void review()}>{activity === "review" ? "Granskar ändringarna…" : "Granska ändringarna"}</button>
       </fieldset>
     </details>
-    {!demo && member && <details hidden={minimal && !savedOpen} className="saved-profile" open={savedOpen} onToggle={event => setSavedOpen(event.currentTarget.open)}><summary ref={savedSummary}>Din sparade sökning · {member.alertsEnabled ? "bevakning startad" : "pausad"}</summary>
+    {!demo && member && <details hidden={minimal && !savedOpen} className="saved-profile" open={savedOpen} onToggle={event => setSavedOpen(event.currentTarget.open)}><summary ref={savedSummary}>Din sparade sökning · {member.alertsEnabled && ready ? "bevakning startad" : "pausad"}</summary>
       <ProfileSummary profile={member.profile} /><p className="small">Version {version}. Den här sökningen används för resultaten och eventuella mejl, inte ditt osparade utkast.</p>
       <button disabled={busy} onClick={() => { edits.current++; setProfile(member.profile); setEditing(true); setDirty(true); setConsent(false); setAccept(false); }}>Ändra sparad sökning</button>
       {member.alertsEnabled && <button disabled={busy} onClick={async () => {

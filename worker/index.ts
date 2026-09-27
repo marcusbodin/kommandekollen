@@ -1,14 +1,15 @@
 import { z } from "zod";
-import { defaultFilters, feedSchema, filterSchema, listingId, sourceIds } from "../shared/model";
+import { defaultFilters, filterSchema, sourceIds } from "../shared/model";
 import { sources } from "../shared/sources";
 import { manualProfile } from "../shared/preferences";
 import { aiReady } from "./ai";
 import { preferenceRoute, savedProfile } from "./preferences";
 import { gateRoute, guestPreferenceRoute } from "./guest";
-import { publicListings } from "./listings";
+import { publicListings, readListings } from "./listings";
+import { ingestBatch } from "./observations";
 import { approvalNotice, cleanup, dispatchOne, prepareDigest, queueVerification } from "./mail";
 import {
-  ApiError, authenticate, authorizations, equalSecrets, hash, isOwner, json, keyed, randomToken,
+  ApiError, authenticate, listingAuthorizations, propertyEmailsReady, equalSecrets, hash, isOwner, json, keyed, randomToken,
   rate, readJson, serviceReady, sessionCookie, authenticateGuest, guestCookie, sharedAccess, type Env, type Member,
 } from "./support";
 
@@ -169,26 +170,30 @@ async function route(request: Request, env: Env): Promise<Response> {
     const member = await authenticate(request, env, false);
     return json({ id: member.id, email: member.email, state: member.state, owner: isOwner(env, member),
       filters: filterSchema.parse(JSON.parse(member.filters)), alertsEnabled: !!member.alerts_enabled,
-      profile: savedProfile(member), searchVersion: member.search_version, aiReady: aiReady(env) && serviceReady(env) });
+      profile: savedProfile(member), searchVersion: member.search_version, aiReady: aiReady(env) && serviceReady(env),
+      alertsReady: propertyEmailsReady(env) });
   }
   if (path.startsWith("/api/preferences/")) return preferenceRoute(request, env, ipHash);
   if (!guest) await authenticate(request, env);
   if (request.method === "GET" && path === "/api/catalog") {
-    const ids = new Set(authorizations(env).map(source => source.id));
-    const rows = await env.DB.prepare("SELECT id,data,first_seen,last_seen FROM listings WHERE active=1 ORDER BY first_seen DESC LIMIT 200")
-      .all<{ id: string; data: string; first_seen: string; last_seen: string }>();
-    const runs = await env.DB.prepare("SELECT * FROM source_runs").all<{ source_id: string }>();
+    const grants = listingAuthorizations(env), ids = new Set(grants.map(source => source.id));
+    const runs = await env.DB.prepare("SELECT source_id,last_attempt,last_success,status,error_code,item_count FROM source_runs")
+      .all<{ source_id: string; last_attempt: string; last_success: string | null; status: string; error_code: string | null; item_count: number }>();
     return json({
-      listings: rows.results.map(row => ({ ...JSON.parse(row.data), id: row.id, firstSeen: row.first_seen, lastSeen: row.last_seen }))
-        .filter(listing => ids.has(listing.sourceId)),
-      sources: sources.map(source => ({ ...source, authorized: ids.has(source.id), run: runs.results.find(run => run.source_id === source.id) || null })),
-      serviceReady: serviceReady(env) && ids.size > 0, privacyContact: env.PRIVACY_CONTACT || null,
+      listings: await readListings(env),
+      sources: sources.map(source => {
+        const run = runs.results.find(run => run.source_id === source.id);
+        return { ...source, authorized: ids.has(source.id), coverage: grants.find(grant => grant.id === source.id)?.coverage ?? null,
+          run: run ? { last_attempt: run.last_attempt, last_success: run.last_success, status: run.status,
+            error_code: run.error_code, item_count: run.item_count } : null };
+      }),
+      serviceReady: serviceReady(env) && ids.size > 0, alertsReady: propertyEmailsReady(env), privacyContact: env.PRIVACY_CONTACT || null,
     });
   }
   if (request.method === "POST" && path === "/api/search") {
     const member = await authenticate(request, env);
     const data = z.object({ filters: filterSchema, enabled: z.boolean(), consent: z.literal(true), expectedVersion: z.number().int().nonnegative() }).strict().parse(await readJson(request));
-    if (data.enabled && (!serviceReady(env) || !authorizations(env).length)) throw new ApiError(503, "no_sources", "Ingen tillåten källa är ansluten. Bevakning kan inte aktiveras ännu.");
+    if (data.enabled && !propertyEmailsReady(env)) throw new ApiError(503, "alerts_paused", "Bostadsmejlen är pausade. Spara sökningen pausad.");
     const profile = JSON.stringify(data.filters) === JSON.stringify(filterSchema.parse(JSON.parse(member.filters)))
       ? savedProfile(member) : manualProfile(data.filters);
     const commit = crypto.randomUUID();
@@ -258,27 +263,8 @@ async function infrastructure(request: Request, env: Env, path: string, now: num
       .bind(data.sourceId, new Date(now).toISOString(), data.code).run();
     return json({ recorded: true });
   }
-  if (request.method === "POST" && path === "/admin/ingest") {
-    const data = feedSchema.parse(await readJson(request, 100_000));
-    const authorization = authorizations(env).find(source => source.id === data.sourceId);
-    if (!authorization) throw new ApiError(403, "source_disabled", "Källan saknar en aktiv licens i tillåtelselistan.");
-    if (data.listings.some(listing => !authorization.hosts.includes(new URL(listing.url).hostname))) throw new ApiError(400, "source_url", "En objektlänk är inte tillåten för källan.");
-    if (Math.abs(now - Date.parse(data.observedAt)) > 3600_000) throw new ApiError(400, "feed_age", "Feedens tidsstämpel måste vara inom en timme.");
-    const previous = await env.DB.prepare("SELECT last_success FROM source_runs WHERE source_id=?").bind(data.sourceId).first<{ last_success: string | null }>();
-    if (previous?.last_success && previous.last_success >= data.observedAt) return json({ accepted: true, duplicate: true });
-    if (!await rate(env, `ingest:${data.sourceId}`, 1, 300)) throw new ApiError(429, "source_rate", "Vänta fem minuter mellan källans uppdateringar.");
-    await env.DB.batch([
-      env.DB.prepare("UPDATE listings SET active=0 WHERE source_id=?").bind(data.sourceId),
-      ...data.listings.map(listing => env.DB.prepare(`INSERT INTO listings(id,source_id,data,first_seen,last_seen,active) VALUES(?,?,?,?,?,1)
-        ON CONFLICT(id) DO UPDATE SET data=excluded.data,last_seen=excluded.last_seen,active=1`)
-        .bind(listingId(listing), data.sourceId, JSON.stringify(listing), data.observedAt, data.observedAt)),
-      env.DB.prepare(`INSERT INTO source_runs(source_id,last_attempt,last_success,status,item_count) VALUES(?,?,?,'ok',?)
-        ON CONFLICT(source_id) DO UPDATE SET last_attempt=excluded.last_attempt,last_success=excluded.last_success,
-        status='ok',error_code=NULL,item_count=excluded.item_count`)
-        .bind(data.sourceId, new Date(now).toISOString(), data.observedAt, data.listings.length),
-    ]);
-    return json({ accepted: true, count: data.listings.length });
-  }
+  if (request.method === "POST" && path === "/admin/ingest") return ingestBatch(request, env, "complete", now);
+  if (request.method === "POST" && path === "/admin/observations") return ingestBatch(request, env, "partial", now);
   throw new ApiError(404, "not_found", "Sidan finns inte.");
 }
 export default {

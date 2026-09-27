@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { defaultFilters, filterSchema, listingId, listingSchema, matches, type Filters } from "../shared/model";
+import { defaultFilters, filterSchema, listingId, listingSchema, matches, type Filters, type Listing } from "../shared/model";
 import { LISTINGS_PAGE_SIZE, publicListingSchema, type PublicListing, type PublicListingsPage } from "../shared/public-listings";
-import { ApiError, authorizations, json, serviceReady, sharedAccess, type Env } from "./support";
+import { ApiError, listingAuthorizations, json, serviceReady, sharedAccess, type Env } from "./support";
 
 const timestamp = z.string().datetime();
 const cursorSchema = z.object({
@@ -31,6 +31,40 @@ function parseCursor(value: string | null, filters: Filters) {
     return cursor;
   } catch { throw new ApiError(400, "invalid_cursor", "Sidmarkören är ogiltig eller hör till andra filter. Uppdatera objektlistan."); }
 }
+export async function readListings(env: Env, licensedOnly = false) {
+  const allowed = listingAuthorizations(env).filter(source => !licensedOnly || source.coverage === "complete");
+  if (!allowed.length) return [];
+  const rows = await env.DB.prepare(`SELECT l.id,l.source_id,l.data,l.first_seen,l.last_seen,
+    CASE WHEN p.listing_id IS NULL THEN 'complete' ELSE 'partial' END AS coverage FROM listings l
+    LEFT JOIN private_listing_observations p ON p.listing_id=l.id
+    WHERE l.active=1 AND l.source_id IN (${allowed.map(() => "?").join(",")}) LIMIT 200`)
+    .bind(...allowed.map(source => source.id))
+    .all<{ id: string; source_id: string; data: string; first_seen: string; last_seen: string; coverage: "complete" | "partial" }>();
+  const valid: (Listing & { coverage: "complete" | "partial" })[] = [];
+  let excluded = 0;
+  for (const row of rows.results) {
+    let data: unknown;
+    try { data = JSON.parse(row.data); }
+    catch { throw new ApiError(503, "listings_unavailable", "Objektlistan kunde inte läsas. Försök senare."); }
+    const parsed = listingSchema.safeParse(data);
+    if (!parsed.success) { excluded++; continue; }
+    const listing = parsed.data;
+    const authorization = allowed.find(source => source.id === listing.sourceId);
+    if (listing.sourceId !== row.source_id || row.id !== listingId(listing) || authorization?.coverage !== row.coverage
+      || !authorization?.hosts.includes(new URL(listing.url).hostname)
+      || !timestamp.safeParse(row.first_seen).success || !timestamp.safeParse(row.last_seen).success) {
+      excluded++; continue;
+    }
+    valid.push({
+      id: row.id, externalId: listing.externalId, sourceId: listing.sourceId, status: listing.status, county: listing.county,
+      municipality: listing.municipality, area: listing.area, address: listing.address, type: listing.type,
+      price: listing.price, rooms: listing.rooms, size: listing.size, fee: listing.fee, url: listing.url,
+      firstSeen: new Date(row.first_seen).toISOString(), lastSeen: new Date(row.last_seen).toISOString(), coverage: row.coverage,
+    });
+  }
+  if (excluded) console.warn(JSON.stringify({ event: "listings_excluded", count: excluded }));
+  return valid;
+}
 export async function publicListings(request: Request, env: Env) {
   const url = new URL(request.url);
   if (url.search.length > 4096 || [...url.searchParams.keys()].some(key =>
@@ -41,41 +75,12 @@ export async function publicListings(request: Request, env: Env) {
   const cursor = parseCursor(url.searchParams.get("cursor"), filters);
   sharedAccess(env);
   if (!serviceReady(env)) throw new ApiError(503, "not_ready", "Objektlistan är inte aktiverad just nu. Försök senare.");
-  const allowed = authorizations(env);
   const empty = (availability: "no_sources" | "empty"): PublicListingsPage =>
     ({ availability, items: [], total: 0, hasMore: false, nextCursor: null });
-  if (!allowed.length) return json(empty("no_sources"));
-  const rows = await env.DB.prepare(`SELECT id,source_id,data,first_seen,last_seen FROM listings
-    WHERE active=1 AND source_id IN (${allowed.map(() => "?").join(",")}) LIMIT 200`)
-    .bind(...allowed.map(source => source.id))
-    .all<{ id: string; source_id: string; data: string; first_seen: string; last_seen: string }>();
-  const valid: { item: PublicListing; match: boolean }[] = [];
-  let excluded = 0;
-  for (const row of rows.results) {
-    let data: unknown;
-    try { data = JSON.parse(row.data); }
-    catch { throw new ApiError(503, "listings_unavailable", "Objektlistan kunde inte läsas. Försök senare."); }
-    const parsed = listingSchema.safeParse(data);
-    if (!parsed.success) { excluded++; continue; }
-    const listing = parsed.data;
-    const authorization = allowed.find(source => source.id === listing.sourceId);
-    if (listing.sourceId !== row.source_id || row.id !== listingId(listing)
-      || !authorization?.hosts.includes(new URL(listing.url).hostname)
-      || !timestamp.safeParse(row.first_seen).success || !timestamp.safeParse(row.last_seen).success) {
-      excluded++; continue;
-    }
-    // Explicit public projection: never copy arbitrary stored JSON or source metadata.
-    const item: PublicListing = {
-      id: row.id, sourceId: listing.sourceId, status: listing.status, county: listing.county,
-      municipality: listing.municipality, area: listing.area, address: listing.address, type: listing.type,
-      price: listing.price, rooms: listing.rooms, size: listing.size, fee: listing.fee, url: listing.url,
-      firstSeen: new Date(row.first_seen).toISOString(), lastSeen: new Date(row.last_seen).toISOString(),
-    };
-    valid.push({ item, match: matches(listing, filters) });
-  }
-  if (excluded) console.warn(JSON.stringify({ event: "public_listings_excluded", count: excluded }));
+  if (!listingAuthorizations(env).length) return json(empty("no_sources"));
+  const valid = await readListings(env);
   if (!valid.length) return json(empty("empty"));
-  const matching = valid.filter(entry => entry.match).map(entry => entry.item)
+  const matching = valid.filter(item => matches(item, filters)).map(({ externalId: _externalId, ...item }): PublicListing => item)
     .sort((a, b) => a.firstSeen === b.firstSeen ? (a.id < b.id ? 1 : a.id > b.id ? -1 : 0) : (a.firstSeen < b.firstSeen ? 1 : -1));
   const remaining = cursor ? matching.filter(item =>
     item.firstSeen < cursor.firstSeen || (item.firstSeen === cursor.firstSeen && item.id < cursor.id)) : matching;

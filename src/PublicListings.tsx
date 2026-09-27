@@ -103,5 +103,6 @@ export function PublicListings({ apiBase, accessible, accessVersion, openAccess,
     </div>}
     {!busy && page && <button className="text-button refresh-listings" onClick={() => void load(filters, null, true)}>Uppdatera listan</button>}
     {items.length > 0 && <p className="small muted results-note">Uppgifter och kommande-status kan ändras. Äldre uppgifter än 48 timmar markeras. Kontrollera alltid hos källan. Uppdatera listan för nytillkomna objekt.</p>}
+    {items.some(item => item.coverage === "partial") && <p className="small muted">Antalet gäller sparade fynd i tjänsten, inte mäklarnas hela utbud. Urvalen kan vara partiella.</p>}
   </section>;
 }

@@ -31,8 +31,9 @@ Show permitted upcoming facts to authorized visitors, newest observed first. Opt
 authorized visitors describe their next home, clarify material ambiguity,
 review hard requirements, soft preferences and unverified criteria, then
 explicitly save their personal selection. Manual filters remain a fallback.
-New matching objects may be emailed each morning only after separate consent
-and source readiness; with no ready sources, save paused.
+New matching objects may be emailed each morning only after separate consent,
+licensed-source readiness and explicit property-email enablement. This phase
+keeps property emails paused even when private observations are available.
 
 ## Operating Context
 
@@ -77,6 +78,17 @@ unsent text in place.
 - The initial 12-card page and explicit Load more do not remove the existing
   200-record pilot inventory cap. First seen means Kommandekollen's observation,
   not the broker's original publication date. Unknown and stale facts stay explicit.
+- Authenticated partial observations update only explicitly seen IDs, preserving
+  firstSeen and genuine capture times; missing/empty pages never imply retirement
+  or sale. Complete licensed snapshots retain their separate contract.
+  Counts describe stored eligible finds, not a broker's complete inventory.
+- Missing type, price, rooms, size and fee display "Ej angivet". Unrestricted
+  type search includes unknowns; a restrictive type constraint, including
+  exclusion-only constraints, requires a known type. Numeric unknown handling
+  remains separately controlled.
+- Private-source usage references are operator-reviewed configuration, not
+  fabricated licenses. No source, recurring collection or property-email
+  capability is activated by the local observation integration.
 - The owner role is fixed by private server configuration, never first-signup
   or a client-selected role. Owner identity is configured privately in production.
 - Authorized public controller identity: Marcus Bodin (privatperson);
@@ -143,7 +155,7 @@ source-direct discovery goal from the zero-source pilot actually operating.
 The user removed the goal sentence, global pause note and public-feed subtitle;
 paused-only review/save/receipt information and backend guards remain.
 The adjacent helper explains that the protected AI step makes a search proposal,
-not a saved profile. Public browsing/filtering is separate and needs no AI.
+not a saved profile. Password-only browsing/filtering is separate and needs no AI.
 
 ## Evidence on Hand
 

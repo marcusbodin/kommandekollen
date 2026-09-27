@@ -6,6 +6,7 @@ export const publicListingSchema = listingSchema.omit({ externalId: true }).exte
   id: z.string().max(128).regex(/^[a-z]+:[a-zA-Z0-9_-]+$/),
   firstSeen: z.string().datetime(),
   lastSeen: z.string().datetime(),
+  coverage: z.enum(["complete", "partial"]),
 }).strict();
 export type PublicListing = z.infer<typeof publicListingSchema>;
 export const publicListingsSchema = z.object({

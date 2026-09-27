@@ -20,7 +20,8 @@ privacy/contact/copyright. The later user decision makes a separate upcoming
 feed public while retaining the gate for AI and saved searches. That choice is
 now superseded: real listings are private, for the owner and invited people.
 The new boundary requires matching Worker and Pages changes, not a secret
-rotation or migration. Publication status belongs to DEPLOYMENT.md.
+rotation or migration on its own. The separate observation-storage increment
+requires additive 0005; see OPERATIONS.md. Publication status belongs to DEPLOYMENT.md.
 
 The product goal is early discovery directly at brokers, before larger portals,
 not an all-source or first-buyer guarantee. Optional AI clarifies wishes; private
@@ -35,7 +36,8 @@ needed and explicitly consent to Cloudflare processing -> interpret -> review
 the draft -> explicitly choose saving -> enter email -> open its link in the
 same browser -> explicitly verify -> review again and explicitly confirm saving.
 Email verification creates account identity, **not a saved profile or alerts**.
-No ready sources means paused saving only. Existing approved email sessions
+Property emails remain independently paused in this phase, including when
+private observations exist. Existing approved email sessions
 can manage their own search after passing the shared gate; they do not need to
 verify again for every edit. The owner keeps the existing saved search and role.
 
@@ -117,7 +119,7 @@ The housing-text node remains mounted and its unsent text survives access loss.
 | Route | Contract |
 | --- | --- |
 | POST `/api/gate` | `{password}`; checks rates before comparison, sets guest cookie |
-| GET `/api/gate` | `{open:true,expiresAt,aiReady,pendingSave,hasDraft,quota:{remaining,limit:6,day}}`; expiry is epoch milliseconds, not a credential fingerprint |
+| GET `/api/gate` | `{open:true,expiresAt,aiReady,alertsReady,pendingSave,hasDraft,quota:{remaining,limit:6,day}}`; expiry is epoch milliseconds, not a credential fingerprint |
 | POST `/api/gate/logout` | `{}`; deletes current guest and its draft/challenge; clears guest and account cookies |
 | GET `/api/guest/preferences/draft` | `{draft,aiReady,quota,saveIntent}`; own ready draft only; intent is null or `{id,verified,enabled,acceptUnverified}` |
 | POST `/api/guest/preferences/interpret` | Same draft request as member API, but `expectedVersion:0`; explicit `aiConsent:true` |
@@ -126,6 +128,16 @@ The housing-text node remains mounted and its unsent text survives access loss.
 | POST `/api/guest/preferences/save` | `{id,revision,expectedVersion:0,enabled,acceptUnverified,consent:true,email,website:""}`; generic 202, queues verification only if eligible |
 | POST `/api/guest/preferences/verify` | `{token}`; same gate/browser, one-time email verification; sets account session, no save |
 | POST `/api/guest/preferences/confirm` | Review fields plus `challengeId`, without email; requires guest and verified account session; atomic exact-version save |
+
+`alertsReady` is separate from source count, browsing and AI readiness; the
+authenticated member/catalog responses expose it too. Default-off
+`PROPERTY_EMAILS_ENABLED`, existing service prerequisites and licensed-source
+readiness all must pass before activation. Private observation grants cannot
+enable property mail. Both save-intent creation and final confirmation enforce
+this server-side; existing queued digests are also guarded. Verification and
+login mail remain available under their existing quotas. See
+[OPERATIONS.md](OPERATIONS.md#property-emails-remain-paused) for the independent
+capability and migration/import contract. No flag or source is enabled here.
 
 `Draft` and profile validation/matching stay as documented in PREFERENCES.md.
 Guest draft baseVersion zero is not an existing member search version. At the

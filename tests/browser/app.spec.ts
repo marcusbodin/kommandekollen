@@ -54,10 +54,11 @@ async function mockApi(page: Page, options: MockOptions = {}) {
       : { status: 503, json: { code: "not_ready", message: "Objektlistan är inte aktiverad just nu. Försök senare." } });
     else if (path === "/api/me" && ["approved", "pending"].includes(options.state ?? "")) await route.fulfill({ json: {
       id: ownerId, email: "member@example.com", state: options.state, owner: options.owner ?? false, filters, alertsEnabled, profile, searchVersion: version, aiReady: options.ai ?? false,
+      alertsReady: options.catalogReady ?? false,
     } });
     else if (path === "/api/me") await route.fulfill({ status: 401, json: { message: "Ingen giltig medlemssession." } });
     else if (path === "/api/catalog" && options.state === "approved") await route.fulfill({ json: {
-      listings: [], sources: sources.map(source => ({ ...source, authorized: !!options.catalogReady && source.id === "authorized", run: null })),
+      listings: [], sources: sources.map(source => ({ ...source, authorized: !!options.catalogReady && source.id === "authorized", coverage: null, run: null })),
       serviceReady: options.catalogReady ?? false, privacyContact: null,
     } });
     else if (path === "/api/preferences/draft") await route.fulfill({ json: { draft, aiReady: options.ai ?? false } });
@@ -89,7 +90,7 @@ async function touchAndType(page: Page) {
     if (await field.isVisible()) expect(await field.evaluate(el => parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(16);
   }
 }
-test("legacy shell keeps private account controls and public feed, light by default, with the local logo only", async ({ page }) => {
+test("legacy shell keeps account controls and listing facts private, light by default, with the local logo only", async ({ page }) => {
   const { posts, reads } = await mockApi(page);
   const images: string[] = [];
   page.on("request", request => { if (request.resourceType() === "image") images.push(request.url()); });
@@ -151,7 +152,7 @@ test("native sliders filter synthetic results, distinguish finite endpoints and 
   await page.locator(".more-filters > summary").click();
   await page.getByLabel("Ta även med objekt").check();
   await expect(page.locator(".property")).toHaveCount(1);
-  await expect(page.locator(".property")).toContainText("Pris ej angivet");
+  await expect(page.locator(".property")).toContainText("Pris: Ej angivet");
   await page.getByRole("button", { name: "Rensa", exact: true }).click();
   await expect(price).toHaveAttribute("aria-valuetext", "Ingen gräns");
   await expect(page.locator(".property")).toHaveCount(6);
@@ -200,7 +201,8 @@ test("exact saved values survive rendering and saving; bounds remain coordinated
   await price.press("ArrowLeft");
   await expect(price).toHaveAttribute("aria-valuetext", "4 200 000 kr");
   expect(posts).toHaveLength(2);
-  await page.locator(".more-filters > summary").click();
+  const personalFilters = page.locator(".manual-search");
+  await personalFilters.locator(".more-filters > summary").click();
   await expect(page.getByRole("slider", { name: "Minsta boarea", exact: true })).toHaveAttribute("aria-valuetext", "56,75 m²");
   await expect(page.getByRole("slider", { name: "Högsta månadsavgift", exact: true })).toHaveAttribute("aria-valuetext", "4 321 kr/mån");
   const maxRooms = page.getByRole("slider", { name: "Högsta antal rum", exact: true });
@@ -211,10 +213,10 @@ test("exact saved values survive rendering and saving; bounds remain coordinated
   await expect(maxSize).toHaveAttribute("aria-valuetext", "142,25 m²");
   await maxSize.press("ArrowLeft");
   await expect(maxSize).toHaveAttribute("aria-valuetext", "140 m²");
-  await page.getByText("Skriv exakt: Lägsta pris", { exact: true }).click();
+  await personalFilters.getByText("Skriv exakt: Lägsta pris", { exact: true }).click();
   await page.getByRole("spinbutton", { name: "Lägsta pris – exakt (kr)", exact: true }).fill("5000001");
   await expect(price).toHaveAttribute("aria-valuetext", "5 000 001 kr");
-  await page.getByText("Skriv exakt: Högsta pris", { exact: true }).click();
+  await personalFilters.getByText("Skriv exakt: Högsta pris", { exact: true }).click();
   const exact = page.getByRole("spinbutton", { name: "Högsta pris – exakt (kr)", exact: true });
   await exact.fill("25000000");
   await expect(price).toHaveAttribute("aria-valuetext", "25 000 000 kr");

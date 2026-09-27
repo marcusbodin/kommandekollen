@@ -25,7 +25,8 @@ queries or returning any facts/counts/cursors. It requires `serviceReady` and
 valid access configuration; disabled/unconfigured service returns explicit
 HTTP 503 `gate_unavailable` in shared mode or `not_ready` in legacy mode, not empty
 success. CORS, `no-store`, allowed origins, 180/IP/hour and 10,000/day remain
-unchanged. No cache, migration, index, secret or configuration is added.
+unchanged. The private read boundary alone needs no migration; the separately
+implemented observation path below requires additive migration 0005.
 
 | Input | Contract |
 | --- | --- |
@@ -40,12 +41,13 @@ Response contract is strict `PublicListingsPage` in `shared/public-listings.ts`:
 | --- | --- |
 | `availability` | `no_sources`: no unexpired source authorization; `empty`: authorizations exist but no eligible records; `ready`: eligible inventory exists, even if filters yield zero matches. |
 | `items` | At most 12 explicit factual DTOs, never arbitrary stored JSON or database rows. |
-| `total` | Current matching count, at most 200; this may change between requests. |
+| `total` | Current matching stored eligible finds, at most 200; never the broker's whole inventory. This may change between requests. |
 | `hasMore`, `nextCursor` | More current matching facts follow this page; otherwise false and null. |
 
 Private item fields are exactly `id`, `sourceId`, `status`, `county`,
 `municipality`, `area`, `address`, `type`, nullable `price/rooms/size/fee`, `url`,
-`firstSeen` and `lastSeen`. There are no source runs, license references, feed
+`firstSeen`, `lastSeen` and `coverage` (`complete` or `partial`). Type is nullable,
+as are price/rooms/size/fee; missing values display "Ej angivet". There are no source runs, license references, feed
 URLs, account/profile/draft/consent fields or internal source error codes.
 Browser-known static source names label source links. Only `active=1` records
 with validated upcoming status, Stockholms län scope, consistent stable IDs,
@@ -72,6 +74,160 @@ cards with an explicit retry, except access loss clears them. Private reads neve
 or enqueue mail; only existing traffic-rate counters can change.
 The old catalog, private source-run view and all personal/owner APIs stay gated.
 The 12-card UI is **not** unlimited collection or Free CPU capacity certification.
+
+### Unknown facts
+
+Unrestricted type browsing includes unknown types. A selected type, type
+alternative or exclusion-only type constraint requires a known type; unknown
+cannot establish either "Villa" or "not Villa". Unknown type earns no type-wish
+score. Numeric `includeUnknown` retains its existing range semantics and never
+turns null into zero or overrides a type constraint. Listing schema, private
+catalog, filters, deterministic ranking, cards and mail share this model.
+
+## Private observation imports
+
+This is a separate admin-only path, **not** an instruction to activate sources.
+Password-only or noncommercial use is not a license. Parent/operator review of
+access, extraction and use conditions remains required; no real grant was
+created, source fetched or production record imported during implementation.
+
+`PRIVATE_OBSERVATION_SOURCES` defaults to `[]`. Each configured entry has
+`id`, exact `hosts`, `expiresAt` and `basisReference`: a truthful private
+reference to the operator's reviewed usage basis, not an invented
+`licenseReference`. The existing licensed `AUTHORIZED_SOURCES` stays separate.
+Duplicate/overlapping IDs, malformed grants and more than **four combined
+sources**, including configured expired entries, fail closed. Remove an old
+entry explicitly before changing its capability. Neither grant type implies
+the other. Browsing checks each record's provenance and current corresponding
+grant/host; a private record never becomes licensed merely by changing flags.
+
+`POST /admin/observations` uses the existing infrastructure bearer credential,
+not a guest or member cookie. It accepts only `shared/observations.ts`:
+
+```text
+kind: "listing-observations"
+version: 1
+observationId: UUID retained from the capture
+sourceId: known source ID
+observedAt: canonical UTC ISO timestamp, e.g. YYYY-MM-DDTHH:mm:ss.sssZ
+coverage: "partial"
+items: 0..50 strict ListingInput facts, each with the same sourceId
+```
+
+Items contain externalId, sourceId, upcoming status, Stockholms län, a known
+municipality, area/address, nullable type/price/rooms/size/fee and an approved
+HTTPS URL. IDs must be unique within the batch. Backend-owned id/firstSeen/
+lastSeen, descriptions, photos and contact fields are rejected.
+New batches require genuine capture time within the previous hour, never a
+future timestamp. A captured page that ages out is not relabeled as "now".
+
+The entire request is at most 100,000 bytes. One accepted new batch per source
+per five-minute bucket applies jointly to complete and partial imports.
+Inventory remains at most **200 stored records**, including inactive records.
+A 51-item batch or capacity overflow fails explicitly; nothing is truncated.
+The response is `{accepted:true,duplicate,coverage,count,inserted,updated,
+ignored,retired}`. Counts account for submitted records; partial `retired`
+is always zero. Ignored records are older or unchanged observations, not
+silently dropped capacity overflow.
+
+### Atomicity, ordering and retention
+
+Additive `0005_private_observations.sql` adds provenance, ingestion receipts
+and per-source complete-snapshot ordering state. Migrations 0001-0004 and all
+account/profile/consent/seen/quota data remain unchanged. Existing source
+success timestamps seed the complete-snapshot watermark.
+
+A single receipt insert executes an atomic SQLite trigger: conflict checks,
+source-rate reservation, capacity-checked upserts, applicable retirement,
+provenance and source metadata succeed together or roll back. The receipt's
+temporary payload is cleared in the same transaction; persisted receipts
+contain hashes/timestamps/counts, not copied listing facts.
+
+Only explicitly seen IDs are inserted/updated by partial batches. Existing
+firstSeen is retained; newer genuine observation times update facts/lastSeen.
+Older disjoint pages can add their observed IDs, but cannot overwrite a newer
+ID. Same UUID with different canonical content or equal-time conflicting
+facts gives 409. Concurrent identical retries apply once. Exact receipt replay
+returns the recorded counts without refreshing listing/source timestamps.
+
+Complete snapshots retain their separate `/admin/ingest` contract and licensed
+authorization. Only a newer complete snapshot can retire missing IDs, and not
+records observed after that snapshot. The durable complete watermark prevents
+an older partial page from resurrecting absent records. Partial/empty/failed
+pages never retire anything. Absence is not evidence of sale. New complete
+snapshots older than the watermark fail explicitly.
+
+Receipts are retained for **48 hours**, longer than the one-hour new-batch
+window, and pruned by existing cleanup. Exact authorized replay while its
+receipt exists remains idempotent even after the new-acceptance window.
+After pruning, old evidence fails age validation. Unrefreshed inventory retains
+the existing 30-day cleanup and 48-hour stale disclosure. A delayed capture
+does not clear a source failure newer than its observation time.
+
+### Controlled importer
+
+The source preview kinds remain `ingestible:false`, never accepted by either
+ingestion endpoint. `scripts/import-observations.ts` deliberately validates and
+projects a captured preview into the new partial contract. Supported source
+preview kinds are Notar, HusmanHagberg and MOHV; the source branch supplies
+their genuine observationId/observedAt metadata. A bare offline HTML replay
+without that capture evidence cannot convert. Computed preview item IDs are
+checked and removed; timestamps and observation identity are preserved.
+
+Set the reviewed private allowlist in the operator's private environment,
+not the public repository. Preparation makes **no network requests**:
+
+```sh
+./node_modules/node/bin/node --import tsx scripts/import-observations.ts \
+  --prepare /absolute/private/captured-preview.json \
+  --output /absolute/private/new-observation-envelope.json
+```
+
+The output must be new, outside the checkout, in an existing private directory;
+it is written exclusively with mode 0600. Existing files/symlinks are not
+overwritten. To send separately, explicitly configure `INGEST_API_URL` as
+the exact HTTPS admin origin and `INGEST_TOKEN` privately, then:
+
+```sh
+./node_modules/node/bin/node --import tsx scripts/import-observations.ts \
+  --send /absolute/private/new-observation-envelope.json
+```
+
+Only explicit `--local` permits `http://127.0.0.1:<port>` for synthetic tests.
+Redirects are refused. The importer does not fetch brokers, inspect raw API
+responses, automatically enroll sources or retry with a new identity. stdout
+has counts only; failures are sanitized. Capture metadata is trusted
+operator-supplied evidence, not a cryptographic attestation of broker consent.
+
+### Property emails remain paused
+
+`PROPERTY_EMAILS_ENABLED` is a separate default-off capability. Only exact
+`"true"` plus existing service readiness and licensed sources can make
+authenticated `alertsReady` true. Do **not** enable it in this phase.
+Inventory/source presence or a private grant alone never enables alerts.
+Gate/me/catalog expose readiness separately from browsing availability.
+
+Activation, member/legacy saves, guest save intent and final confirmation,
+digest enqueue and dispatch enforce the capability. Existing queued digests
+are expired without sending or marking unseen IDs; uncertain prior attempts
+retain `delivery_uncertain`. Verification/login mail still uses the existing
+provider/outbox/quotas. Private-observation provenance is excluded from digest
+preparation and send-time rechecks even if email enablement is later approved.
+The only enabled email flag added here is an explicit **synthetic test binding**
+for pre-existing mail regression cases, not production configuration.
+
+### Future morning runner (not enabled)
+
+Reuse the bounded GitHub Actions/Node tooling after a separate operator
+decision. Keep a single non-overlapping job, existing source/request/body/time
+bounds and a Stockholm calendar-day idempotency guard; evaluate the IANA zone
+instead of assuming a fixed UTC offset. Prepare private capture/envelope files
+in ephemeral storage and send authenticated partial batches; keep UUID/time
+for transport retries. Never send a truncated page as a complete snapshot.
+Keep all raw facts, HTML, tokens and diagnostics out of public logs/artifacts.
+Do not run a browser in the Worker, increase free-tier caps, use paid fallback
+or trigger AI/mail per listing. No new schedule, collection flag or recurring
+browser operation is enabled by this implementation.
 
 ### Legacy membership mode
 

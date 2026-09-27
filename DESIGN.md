@@ -127,11 +127,21 @@ bounded collection. It never edits the personal draft. "Ladda fler" appends 12
 at a time; current cards survive a failed next-page request, with explicit retry.
 Cards carry only factual attributes, source links, first discovered and last
 checked dates. First discovered is not original publication time. Older-than-48h
-facts and unknown values stay explicit. The public response's absence of sources
+facts and unknown values stay explicit. The private response's absence of sources
 reads "Inga bostadskällor är anslutna ännu. Därför visas inga bostäder just nu."
 This is different from no current inventory, no filter matches and fetch/service
 failures. No count is invented, no synthetic fallback is substituted, and the
 12-card initial page does not remove the 200-record inventory cap.
+
+Unknown type/price/rooms/size/fee consistently read "Ej angivet"; no type is
+inferred from fee, address or photography. Unrestricted types include unknowns;
+explicit type choices or exclusions do not. Partial cards say that they are
+observed in a limited selection, not a complete inventory. List counts mean
+stored finds. Source details distinguish private observations from licensed
+complete snapshots without exposing configuration references.
+Available private finds do not enable property email. Review/save/receipt
+disclosures remain paused until the independent server capability is ready;
+no global homepage pause sentence is restored.
 
 The old inspiration card, its visible caption/credit and the former photo-led
 layouts remain removed, including legacy membership and demo. The newly requested
@@ -162,7 +172,8 @@ focus; checkbox labels provide the larger touch target.
 The primary search interaction is a compact housing-description textarea,
 one material followup and an editable
 summary separating requirements, wishes and manual checks. One explicit
-confirmation saves the reviewed profile; with no ready sources it saves paused.
+confirmation saves the reviewed profile; with property-email capability off it
+saves paused regardless of the number of private observations.
 No endless chat transcript or fake AI in the deterministic public demo.
 The compact homepage has a full-width photo region below the header and a
 bounded 1120px inner composition. At desktop widths the opaque search card is
@@ -172,9 +183,9 @@ At 960px and below the heading precedes the search card in one natural-height
 column. There is no viewport-height hero, parallax or image-only mobile screen.
 Expanded review, manual filters and save receipts span the row below the top
 pair on opaque surfaces. A presentation slot keeps the same PreferenceFlow and
-textarea mounted; changing public filters, panels or theme cannot reset them.
+textarea mounted; changing listing filters, panels or theme cannot reset them.
 The background height is bounded instead of stretching a photo across a long
-expanded form. The public feed stays on a plain surface in a centered 1080px
+expanded form. The private feed stays on a plain surface in a centered 1080px
 column, using a full-width page grid rather than overflowing 100vw offsets.
 Factual cards use two columns on wider desktops and one below 1050px;
 filters disclose in one easy-to-scan column.

@@ -10,6 +10,7 @@ import { manualProfile, type Interpretation } from "../../shared/preferences";
 import { readableContrast } from "./contrast";
 import { brandAssets } from "./brand";
 import { publicFixtures } from "../fixtures/public-listings";
+import { prepareObservations, sendObservations } from "../../scripts/import-observations";
 
 const frontend = "http://127.0.0.1:5174";
 const api = "http://127.0.0.1:8787";
@@ -969,7 +970,7 @@ test("private feed reads real HTTP/D1 pages after password only and filters with
   await feed.getByRole("button", { name: "Använd filter", exact: true }).click();
   await expect(cards).toHaveCount(1);
   await expect(cards.first()).toContainText("Syntetiska gatan 1");
-  await expect(cards.first()).toContainText("Pris ej angivet");
+  await expect(cards.first()).toContainText("Pris: Ej angivet");
   await expect(cards.first()).toContainText("Först upptäckt:");
   await expect(cards.first()).toContainText("Äldre uppgift:");
   await expect(cards.first().getByRole("link", { name: "Visa objekt" })).toHaveAttribute("href", publicFixtures[0].url);
@@ -1099,5 +1100,58 @@ test("private feed clears facts and late pages on logout and rejects rotated acc
   await expect(cards).toHaveCount(0);
   await expect(feed.getByRole("button", { name: "Öppna bostadslistan", exact: true })).toBeVisible();
   await expect(page.locator("#housing-prompt")).toHaveValue("Texten ska vara kvar efter stängd åtkomst.");
+  expect(calls).toBe(0);
+});
+
+test("private observations travel through importer HTTP Worker D1 and render unknown facts with paused saving", async ({ page }) => {
+  env.ACCESS_MODE = "shared"; env.SHARED_ACCESS_PASSWORD = gatePassword;
+  env.PRIVATE_OBSERVATION_SOURCES = JSON.stringify([{ id: "notar", hosts: ["www.notar.se"],
+    basisReference: "Synthetic test evidence only; not a real source grant", expiresAt: "2099-01-01T00:00:00.000Z" }]);
+  const preview = {
+    kind: "notar-rendered-preview", ingestible: false, sourceId: "notar", coverage: { complete: false },
+    observationId: crypto.randomUUID(), observedAt: new Date(Date.now() - 60000).toISOString(),
+    items: publicFixtures.slice(0, 15).map(({ firstSeen: _first, lastSeen: _last, ...item }) => ({
+      ...item, id: `notar:${item.externalId}`, sourceId: "notar", type: null, price: null, fee: null,
+      url: `https://www.notar.se/kopa-bostad/objekt/${item.externalId}`,
+    })),
+  };
+  const data = prepareObservations(preview, env);
+  expect(await sendObservations(data, env, base, env.ADMIN_TOKEN, true)).toMatchObject({ inserted: 15, retired: 0 });
+  await page.context().clearCookies();
+  await page.goto("/");
+  const feed = page.locator(".public-listings");
+  await expect(feed.locator(".property")).toHaveCount(0);
+  await browseWithPassword(page);
+  await expect(feed.locator(".property")).toHaveCount(12);
+  await expect(feed.locator(".property").first()).toContainText("Bostadstyp: Ej angivet");
+  await expect(feed.locator(".property").first()).toContainText("Pris: Ej angivet");
+  await expect(feed).toContainText("inte mäklarnas hela utbud");
+  await heroGeometry(page);
+  for (const theme of ["light", "dark"] as const) {
+    if (theme === "dark") { await more(page, "Mörkt tema"); await page.keyboard.press("Escape"); }
+    await readableContrast(page, ".home-intro h1,.home-intro p,.public-listings h2,.public-listings p,.property span,.property dt,.property dd,.property a");
+    if (process.env.VISUAL_PRIVATE === "1") {
+      await page.locator("#public-listings-title").evaluate(element => window.scrollTo({ top: element.getBoundingClientRect().top + scrollY - 24, behavior: "instant" }));
+      await page.screenshot({ path: test.info().outputPath(`private-observations-${theme}.png`), animations: "disabled" });
+    }
+  }
+  for (const width of test.info().project.name === "mobile" ? [320, 360, 390, 430] : [1440]) {
+    await page.setViewportSize({ width, height: width === 1440 ? 1000 : 850 });
+    await heroGeometry(page);
+  }
+  await feed.getByRole("button", { name: "Ladda fler" }).click();
+  await expect(feed.locator(".property")).toHaveCount(15);
+  await feed.locator(":scope > details > summary").click();
+  await feed.getByRole("button", { name: "Villa", exact: true }).click();
+  await feed.getByRole("button", { name: "Använd filter", exact: true }).click();
+  await expect(feed.getByRole("heading", { name: "Inga objekt matchar filtren" })).toBeVisible();
+  await feed.getByRole("button", { name: "Rensa filter", exact: true }).click();
+  await expect(feed.locator(".property")).toHaveCount(12);
+  await more(page, "Använd vanliga filter");
+  await page.getByRole("button", { name: "Granska ändringarna" }).click();
+  await expect(page.getByRole("button", { name: "Fortsätt till e-post", exact: true })).toBeVisible();
+  await expect(page.locator(".draft-review")).toContainText("pausad");
+  expect(await env.DB.prepare("SELECT count(*) AS n FROM outbox").first()).toEqual({ n: 0 });
+  expect(await env.DB.prepare("SELECT count(*) AS n FROM ai_attempts").first()).toEqual({ n: 0 });
   expect(calls).toBe(0);
 });

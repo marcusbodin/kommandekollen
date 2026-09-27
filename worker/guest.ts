@@ -4,7 +4,7 @@ import { draftSchema, manualProfile, profileSchema, type Draft, type Interpretat
 import { aiReady, interpret } from "./ai";
 import { queueVerification } from "./mail";
 import {
-  ApiError, authenticate, authenticateGuest, authorizations, equalSecrets, gateVersion, guestCookie, hash, json,
+  ApiError, authenticate, authenticateGuest, propertyEmailsReady, equalSecrets, gateVersion, guestCookie, hash, json,
   keyed, randomToken, rate, readJson, serviceReady, sessionCookie, type Env, type Guest, type Member,
 } from "./support";
 
@@ -55,7 +55,8 @@ export async function gateRoute(request: Request, env: Env, ipHash: string) {
     const pending = await env.DB.prepare("SELECT id FROM guest_saves WHERE guest_id=? AND consumed=0 AND expires_at>?")
       .bind(guest.id, Date.now()).first();
     const draft = await env.DB.prepare("SELECT id FROM guest_drafts WHERE guest_id=? AND status='ready' AND expires_at>?").bind(guest.id, Date.now()).first();
-    return json({ open: true, expiresAt: guest.expires_at, aiReady: aiReady(env), pendingSave: !!pending, hasDraft: !!draft, quota: await aiAvailability(env) });
+    return json({ open: true, expiresAt: guest.expires_at, aiReady: aiReady(env), alertsReady: propertyEmailsReady(env),
+      pendingSave: !!pending, hasDraft: !!draft, quota: await aiAvailability(env) });
   }
   if (path === "/api/gate/logout" && request.method === "POST") {
     await env.DB.prepare("DELETE FROM guest_sessions WHERE id=?").bind(guest.id).run();
@@ -87,7 +88,7 @@ async function reserve(env: Env, guest: Guest, id: string, previousId: string | 
 function review(draft: Draft, enabled: boolean, accepted: boolean, env: Env) {
   if (draft.question?.required || draft.conflicts.length) throw new ApiError(409, "clarify", "Granska och lös först frågan eller motsägelsen.");
   if (draft.profile.unverified.some(c => c.must) && !accepted) throw new ApiError(400, "unverified", "Godkänn manuell kontroll av kraven, eller ändra dem.");
-  if (enabled && (!serviceReady(env) || !authorizations(env).length)) throw new ApiError(503, "no_sources", "Inga redo källor. Spara sökningen pausad.");
+  if (enabled && !propertyEmailsReady(env)) throw new ApiError(503, "alerts_paused", "Bostadsmejlen är pausade. Spara sökningen pausad.");
 }
 export async function guestPreferenceRoute(request: Request, env: Env, ipHash: string, guest: Guest) {
   const path = new URL(request.url).pathname.split("/").at(-1), now = Date.now();

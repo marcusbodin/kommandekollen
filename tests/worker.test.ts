@@ -16,6 +16,7 @@ const bindings = {
   RESEND_API_KEY: "test-no-live-mail", MAIL_FROM: "Kommandekollen <alerts@example.com>",
   PUBLIC_URL: `${ORIGIN}/`, ALLOWED_ORIGINS: ORIGIN, PRIVACY_CONTACT: "privacy@example.com",
   OWNER_EMAIL: "owner@example.com", SERVICE_ENABLED: "true",
+  PROPERTY_EMAILS_ENABLED: "true", // Explicit fixture opt-in for existing mail regression cases.
   AUTHORIZED_SOURCES: JSON.stringify([{ id: "authorized", hosts: ["listings.example.com"], licenseReference: "Synthetic test fixture license", expiresAt: "2099-01-01T00:00:00Z" }]),
 };
 let mf: Miniflare, env: Env;

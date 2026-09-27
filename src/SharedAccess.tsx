@@ -3,7 +3,7 @@ import { z } from "zod";
 import { closePrivateAccess, privateFetch } from "./access";
 
 export const quotaSchema = z.object({ remaining: z.number().int().min(0).max(6), limit: z.literal(6), day: z.string() });
-export const gateSchema = z.object({ open: z.literal(true), expiresAt: z.number().int().positive(), aiReady: z.boolean(), pendingSave: z.boolean(), hasDraft: z.boolean(), quota: quotaSchema });
+export const gateSchema = z.object({ open: z.literal(true), expiresAt: z.number().int().positive(), aiReady: z.boolean(), alertsReady: z.boolean(), pendingSave: z.boolean(), hasDraft: z.boolean(), quota: quotaSchema });
 export type Gate = z.infer<typeof gateSchema>;
 export async function accessRequest(apiBase: string, path: string, body?: unknown, signal?: AbortSignal) {
   let response: Response;

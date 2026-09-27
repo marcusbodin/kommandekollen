@@ -57,7 +57,7 @@ export function describeFilters(f: Filters): string[] {
     ["minPrice", "Minst", "kr"], ["maxPrice", "Högst", "kr"], ["minRooms", "Minst", "rum"], ["maxRooms", "Högst", "rum"],
     ["minSize", "Minst", "m²"], ["maxSize", "Högst", "m²"], ["maxFee", "Högst", "kr/mån"],
   ] as const) if (f[key] !== null) lines.push(`${label} ${n(f[key])} ${unit}`);
-  if (f.includeUnknown) lines.push("Saknade filtrerade uppgifter får tas med för manuell kontroll");
+  if (f.includeUnknown) lines.push("Saknade filtrerade sifferuppgifter får tas med för manuell kontroll");
   return lines;
 }
 export function hardDescription(p: Profile): string[] {
@@ -73,8 +73,9 @@ export function assess(listing: ListingInput, profile: Profile) {
   const a = profile.alternatives, e = profile.excluded;
   const eligible = matches(listing, profile.filters)
     && (!a.municipalities.length || a.municipalities.includes(listing.municipality))
-    && (!a.types.length || a.types.includes(listing.type)) && (!a.areas.length || a.areas.some(inArea))
-    && !e.municipalities.includes(listing.municipality) && !e.types.includes(listing.type) && !e.areas.some(inArea);
+    && (!a.types.length || (listing.type !== null && a.types.includes(listing.type))) && (!a.areas.length || a.areas.some(inArea))
+    && !e.municipalities.includes(listing.municipality)
+    && (!e.types.length || (listing.type !== null && !e.types.includes(listing.type))) && !e.areas.some(inArea);
   const reasons = profile.wishes.filter(wish => describeFilters(wish).length && matches(listing, { ...wish, includeUnknown: false }))
     .map(wish => `Önskemål uppfyllt: ${describeFilters({ ...wish, includeUnknown: false }).join(", ")}`);
   const needsCheck = profile.unverified.length > 0 || !matches(listing, { ...profile.filters, includeUnknown: false });

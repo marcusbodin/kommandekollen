@@ -1,7 +1,9 @@
-import { stockholmClock, type Listing } from "../shared/model";
+import { listingFacts, stockholmClock, type Listing } from "../shared/model";
+import { RECEIPT_RETENTION_MS } from "../shared/observations";
 import { assess, hardDescription, ranked } from "../shared/preferences";
 import { savedProfile } from "./preferences";
-import { actionUrl, authorizations, escapeHtml, seal, sharedAccess, unseal, unsubscribeToken, type Env } from "./support";
+import { actionUrl, escapeHtml, propertyEmailsReady, seal, sharedAccess, unseal, unsubscribeToken, type Env } from "./support";
+import { readListings } from "./listings";
 
 interface Subscription {
   id: string; email: string; filters: string; created_at: number; activated_at: number;
@@ -41,6 +43,7 @@ export async function approvalNotice(env: Env, member: { id: string; email: stri
     .bind(crypto.randomUUID(), member.id, crypto.randomUUID(), await seal(env.TOKEN_SECRET, mail), now, now, auditId);
 }
 export async function prepareDigest(env: Env, now = Date.now()) {
+  if (!propertyEmailsReady(env)) return;
   const { day, hour } = stockholmClock(new Date(now));
   if (hour < 7 || hour >= 10) return;
   const subscriber = await env.DB.prepare(`SELECT id,email,filters,preference_profile,search_version,created_at,activated_at FROM subscriptions
@@ -49,21 +52,19 @@ export async function prepareDigest(env: Env, now = Date.now()) {
       AND (state IN ('pending','sending') OR error_code='delivery_uncertain'))
     ORDER BY last_digest_day,created_at LIMIT 1`).bind(now, day).first<Subscription>();
   if (!subscriber) return;
-  const rows = await env.DB.prepare(`SELECT l.id,l.data,l.first_seen,l.last_seen FROM listings l
-    WHERE l.active=1 AND l.last_seen>=?
-    AND NOT EXISTS(SELECT 1 FROM seen s WHERE s.subscription_id=? AND s.listing_id=l.id)
-    ORDER BY l.first_seen,l.id LIMIT 200`)
-    .bind(new Date(now - 48 * 3600_000).toISOString(), subscriber.id)
-    .all<{ id: string; data: string; first_seen: string; last_seen: string }>();
+  const seenRows = await env.DB.prepare("SELECT listing_id FROM seen WHERE subscription_id=? AND listing_id IN (SELECT id FROM listings) LIMIT 200")
+    .bind(subscriber.id).all<{ listing_id: string }>();
+  const seenIds = new Set(seenRows.results.map(row => row.listing_id));
   const profile = savedProfile(subscriber);
-  const allowed = new Set<string>(authorizations(env).map(source => source.id));
-  const listings = ranked<Listing>(rows.results.map(row => ({
-    ...JSON.parse(row.data), id: row.id, firstSeen: row.first_seen, lastSeen: row.last_seen,
-  })).filter(l => allowed.has(l.sourceId)), profile).slice(0, 20);
+  const listings = ranked<Listing>((await readListings(env, true))
+    .filter(listing => !seenIds.has(listing.id) && Date.parse(listing.lastSeen) >= now - 48 * 3600_000), profile).slice(0, 20);
   const markDay = env.DB.prepare("UPDATE subscriptions SET last_digest_day=? WHERE id=? AND search_version=?").bind(day, subscriber.id, subscriber.search_version);
   if (!listings.length) { await markDay.run(); return; }
   const remove = actionUrl(env, "unsubscribe", await unsubscribeToken(env, subscriber.id));
-  const facts = (l: Listing) => `${l.type} · ${l.rooms ?? "?"} rum · ${l.size ?? "?"} m² · ${l.price === null ? "Pris saknas" : `${l.price.toLocaleString("sv-SE")} kr`}`;
+  const facts = (l: Listing) => {
+    const values = listingFacts(l);
+    return `Bostadstyp: ${values.type} · Rum: ${values.rooms} · Boarea: ${values.size} · Pris: ${values.price} · Avgift/mån: ${values.fee}`;
+  };
   const checks = profile.unverified.map(c => `${c.must ? "Krav att kontrollera själv" : "Önskemål att kontrollera själv"}: ${c.text}`).join("\n");
   const why = (l: Listing) => [assess(l, profile).needsCheck ? "Matchar kända filter; manuell kontroll krävs." : "Matchar dina faktabaserade krav.",
     ...assess(l, profile).reasons].join("\n");
@@ -86,6 +87,11 @@ export async function dispatchOne(env: Env, now = Date.now()) {
       ((state='pending' AND next_attempt<=?) OR (state='sending' AND lease_until<?))
       ORDER BY created_at LIMIT 1) RETURNING *`).bind(now + 300_000, now, now).first<Outbox>();
   if (!outbox) return;
+  if (outbox.kind === "digest" && !propertyEmailsReady(env)) {
+    await env.DB.prepare(`UPDATE outbox SET state='expired',payload='',error_code=CASE WHEN first_attempt IS NULL THEN 'alerts_paused' ELSE 'delivery_uncertain' END WHERE id=?`)
+      .bind(outbox.id).run();
+    return;
+  }
   const eligible = () => env.DB.prepare(`SELECT id FROM subscriptions WHERE id=? AND expires_at>?
     AND ((?='verification' AND state IN ('unverified','pending','approved'))
       OR (?='notice' AND state='approved')
@@ -108,10 +114,7 @@ export async function dispatchOne(env: Env, now = Date.now()) {
   }
   if (outbox.kind === "digest") {
     const ids = JSON.parse(outbox.listing_ids) as string[];
-    const allowed = new Set<string>(authorizations(env).map(source => source.id));
-    const rows = await env.DB.prepare("SELECT id,source_id FROM listings WHERE active=1 AND last_seen>=?")
-      .bind(new Date(now - 48 * 3600_000).toISOString()).all<{ id: string; source_id: string }>();
-    const current = new Set(rows.results.filter(row => allowed.has(row.source_id)).map(row => row.id));
+    const current = new Set((await readListings(env, true)).filter(row => Date.parse(row.lastSeen) >= now - 48 * 3600_000).map(row => row.id));
     if (ids.some(id => !current.has(id))) {
       await env.DB.prepare("UPDATE outbox SET state='expired',payload='',error_code=? WHERE id=?")
         .bind(outbox.first_attempt === null ? "source_unavailable" : "delivery_uncertain", outbox.id).run();
@@ -135,7 +138,7 @@ export async function dispatchOne(env: Env, now = Date.now()) {
   let response: Response;
   try {
     const payload = await unseal<Mail>(env.TOKEN_SECRET, outbox.payload);
-    if (!await eligible()) return;
+    if (!await eligible() || (outbox.kind === "digest" && !propertyEmailsReady(env))) return;
     response = await fetch("https://api.resend.com/emails", {
       method: "POST", headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json", "Idempotency-Key": outbox.id },
       body: JSON.stringify(payload), signal: AbortSignal.timeout(12_000),
@@ -186,5 +189,6 @@ export async function cleanup(env: Env, now = Date.now()) {
     env.DB.prepare("DELETE FROM quotas WHERE period<?").bind(new Date(now - 65 * 86400_000).toISOString().slice(0, 7)),
     env.DB.prepare("DELETE FROM outbox WHERE state IN ('sent','failed','expired') AND COALESCE(error_code,'')!='delivery_uncertain' AND created_at<?").bind(now - 7 * 86400_000),
     env.DB.prepare("DELETE FROM listings WHERE last_seen<?").bind(new Date(now - 30 * 86400_000).toISOString()),
+    env.DB.prepare("DELETE FROM ingestion_receipts WHERE received_at<?").bind(now - RECEIPT_RETENTION_MS),
   ]);
 }

@@ -13,6 +13,8 @@ export interface Env {
   PRIVACY_CONTACT: string;
   SERVICE_ENABLED: string;
   AUTHORIZED_SOURCES: string;
+  PRIVATE_OBSERVATION_SOURCES?: string;
+  PROPERTY_EMAILS_ENABLED?: string;
   OWNER_EMAIL: string;
   AI_ENABLED?: string;
   ACCESS_MODE?: string;
@@ -79,15 +81,47 @@ export async function rate(env: Env, key: string, limit: number, seconds: number
     .bind(`${key}:${bucket}`, now + seconds * 2000, limit).first<{ count: number }>();
   return !!row && row.count <= limit;
 }
-const authorizationSchema = z.array(z.object({
+const grantFields = {
   id: z.enum(sourceIds),
   hosts: z.array(z.string().regex(/^(?=.{1,253}$)[a-z0-9]+(?:[.-][a-z0-9]+)*\.[a-z]{2,}$/)).min(1).max(5),
-  licenseReference: z.string().min(10).max(300),
   expiresAt: z.string().datetime(),
-}).strict()).max(10);
-export function authorizations(env: Env) {
-  return authorizationSchema.parse(JSON.parse(env.AUTHORIZED_SOURCES || "[]"))
-    .filter(source => Date.parse(source.expiresAt) > Date.now());
+};
+const authorizationSchema = z.array(z.object({
+  ...grantFields, licenseReference: z.string().min(10).max(300),
+}).strict()).max(4);
+const privateAuthorizationSchema = z.array(z.object({
+  ...grantFields, basisReference: z.string().trim().min(10).max(300),
+}).strict()).max(4);
+export type SourceConfiguration = Pick<Env, "AUTHORIZED_SOURCES" | "PRIVATE_OBSERVATION_SOURCES">;
+function sourceGrants(env: SourceConfiguration) {
+  let licensedInput: unknown, privateInput: unknown;
+  try {
+    licensedInput = JSON.parse(env.AUTHORIZED_SOURCES || "[]");
+    privateInput = JSON.parse(env.PRIVATE_OBSERVATION_SOURCES || "[]");
+  } catch { throw new ApiError(503, "source_config", "Källkonfigurationen är inte giltig JSON."); }
+  const licensedResult = authorizationSchema.safeParse(licensedInput), privateResult = privateAuthorizationSchema.safeParse(privateInput);
+  if (!licensedResult.success || !privateResult.success)
+    throw new ApiError(503, "source_config", "Källkonfigurationen är inte giltig.");
+  const licensed = licensedResult.data, observations = privateResult.data;
+  const all = [...licensed, ...observations];
+  if (all.length > 4 || new Set(all.map(source => source.id)).size !== all.length)
+    throw new ApiError(503, "source_config", "Källkonfigurationen har överlappande ID eller överskrider fyra källor.");
+  const active = (source: { expiresAt: string }) => Date.parse(source.expiresAt) > Date.now();
+  return { licensed: licensed.filter(active), observations: observations.filter(active) };
+}
+export function authorizations(env: SourceConfiguration) {
+  return sourceGrants(env).licensed;
+}
+export function observationAuthorizations(env: SourceConfiguration) {
+  return sourceGrants(env).observations;
+}
+export function listingAuthorizations(env: SourceConfiguration) {
+  const grants = sourceGrants(env);
+  return [...grants.licensed.map(source => ({ ...source, coverage: "complete" as const })),
+    ...grants.observations.map(source => ({ ...source, coverage: "partial" as const }))];
+}
+export function propertyEmailsReady(env: Env) {
+  return env.PROPERTY_EMAILS_ENABLED === "true" && serviceReady(env) && authorizations(env).length > 0;
 }
 export function serviceReady(env: Env) {
   return env.SERVICE_ENABLED === "true" && env.TOKEN_SECRET?.length >= 32

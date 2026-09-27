@@ -2,7 +2,7 @@ import { z } from "zod";
 import { filterSchema } from "../shared/model";
 import { draftSchema, manualProfile, profileSchema, type Draft, type Interpretation, type Profile } from "../shared/preferences";
 import { aiReady, interpret } from "./ai";
-import { ApiError, authenticate, authorizations, json, readJson, serviceReady, type Env, type Member } from "./support";
+import { ApiError, authenticate, propertyEmailsReady, json, readJson, serviceReady, type Env, type Member } from "./support";
 
 const version = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
 const stale = () => new ApiError(409, "stale_draft", "Sökningen eller utkastet har ändrats. Läs in din sparade sökning igen; inget skrevs över.");
@@ -45,8 +45,8 @@ async function confirm(env: Env, member: Member, draft: Draft, enabled: boolean,
   if (draft.profile.unverified.some(c => c.must) && !acceptUnverified) {
     throw new ApiError(400, "unverified", "Godkänn uttryckligen manuell kontroll av krav som uppgifterna inte kan avgöra, eller ändra kraven.");
   }
-  if (enabled && (!serviceReady(env) || !authorizations(env).length)) {
-    throw new ApiError(503, "no_sources", "Bevakning kan inte aktiveras utan en redo tjänst och tillåtna källor. Spara pausat i stället.");
+  if (enabled && !propertyEmailsReady(env)) {
+    throw new ApiError(503, "alerts_paused", "Bostadsmejlen är pausade. Spara sökningen pausad.");
   }
   const result = await env.DB.batch([
     env.DB.prepare(`UPDATE subscriptions SET filters=?,preference_profile=?,alerts_enabled=?,consent_version=?,search_version=search_version+1,search_commit=?,draft_id=NULL
